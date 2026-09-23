@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://linoleighton-bot.github.io/sitemap.xml
