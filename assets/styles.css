@@ -2573,3 +2573,220 @@ section {
     color: #000;
   }
 }
+
+/* ------------------------------------------------------------- web offers */
+
+/*
+ * What the website itself sells.
+ *
+ * Two prices inside the Pro card rather than two more cards: the plans are the
+ * same product billed differently, and giving each its own column implies a
+ * choice of *product* that does not exist.
+ */
+.offers {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.offers__lead {
+  font-size: 0.9063rem;
+  color: var(--ink-soft);
+}
+
+.offers__list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.offer {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+/* The recommended plan is marked, never pre-selected without saying so. */
+.offer--best {
+  border-color: color-mix(in srgb, var(--clay) 40%, transparent);
+  background: var(--clay-wash);
+}
+
+.offer__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.offer__head b {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+
+.offer__tag {
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-pill);
+  background: var(--clay);
+  color: var(--on-clay);
+  font-family: var(--font-ui);
+  font-size: 0.6563rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.offer__price {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+}
+
+.offer__price b {
+  font-size: 1.65rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.offer__price span {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.offer__note {
+  margin-top: 0.3rem;
+  font-size: 0.8438rem;
+  color: var(--muted);
+}
+
+.offer .btn {
+  margin-top: 0.85rem;
+  width: 100%;
+}
+
+.offers__soon {
+  margin-top: 0.9rem;
+  font-size: 0.8438rem;
+  color: var(--muted);
+}
+
+/*
+ * The offers are list items inside `.plan`, so they inherit the tick that
+ * marks a feature. A price is not a feature; the tick made each plan read as
+ * something already included rather than something to choose.
+ */
+.plan .offers__list .offer {
+  padding-left: 1.1rem;
+}
+
+.plan .offers__list .offer::before {
+  content: none;
+}
+
+/* ----------------------------------------------------------------- account */
+
+.account {
+  min-height: 60vh;
+  display: grid;
+  align-items: start;
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.account__panel {
+  max-width: 26rem;
+  margin-inline: auto;
+  width: 100%;
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.account__panel h1 {
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+}
+
+.account__lead {
+  margin-top: 0.75rem;
+  color: var(--ink-soft);
+  font-size: 0.9688rem;
+}
+
+.account__alt {
+  margin-top: 1rem;
+  font-size: 0.9063rem;
+  color: var(--muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-field span {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--ink-soft);
+}
+
+.auth-field input {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+}
+
+.auth-field input:focus-visible {
+  border-color: var(--clay);
+}
+
+.auth-actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+}
+
+/*
+ * One line for every outcome, coloured by what kind it is.
+ *
+ * A failed sign-in and a "check your inbox" are not the same event, and
+ * painting both red teaches people to ignore the message.
+ */
+.auth-status {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-md);
+  font-size: 0.9063rem;
+  margin-top: 1rem;
+  border: 1px solid;
+}
+
+.auth-status[data-kind='error'] {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: color-mix(in srgb, var(--danger) 62%, var(--ink));
+}
+
+.auth-status[data-kind='notice'] {
+  background: color-mix(in srgb, var(--moss) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--moss) 32%, transparent);
+  color: color-mix(in srgb, var(--moss) 62%, var(--ink));
+}
+
+/* Everything is disabled while a request is in flight, so say so. */
+.account__panel[data-busy] {
+  opacity: 0.7;
+  pointer-events: none;
+}
