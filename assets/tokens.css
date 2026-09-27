@@ -27,8 +27,6 @@
   --line: color-mix(in srgb, #171A1F 11%, #ffffff);
   --line-strong: color-mix(in srgb, #171A1F 20%, #ffffff);
   --glow: #E0815026;
-  --screen-bg: #171A1F;
-  --screen-edge: color-mix(in srgb, #171A1F 86%, #ffffff);
 
   /*
    * The tile hues.
