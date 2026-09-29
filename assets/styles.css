@@ -481,6 +481,19 @@ section {
 
 /* ----------------------------------------------------------------- buttons */
 
+/*
+ * `hidden` has to be said again for anything that sets `display`.
+ *
+ * The browser's own `[hidden] { display: none }` is a bare type selector and
+ * loses to any class that sets `display` — so a `.btn` marked hidden in
+ * JavaScript stays on screen, and the only sign is a control that should not
+ * be there. This has now caught the funnel's Back arrow and the account page's
+ * Manage button, so it is fixed once, here, for every button on the site.
+ */
+.btn[hidden] {
+  display: none;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -2746,4 +2759,220 @@ section {
 .account__panel[data-busy] {
   opacity: 0.7;
   pointer-events: none;
+}
+
+
+/* ------------------------------------------------------------- account */
+
+.header-signin {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  margin-right: 0.9rem;
+  white-space: nowrap;
+}
+
+.header-signin:hover {
+  color: var(--clay);
+}
+
+/* The subscription, stated plainly rather than buried in a settings list. */
+.account__plan {
+  margin-top: 1.75rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.account__planhead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.account__planname {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.account__planbadge {
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  background: var(--moss);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.account__planline {
+  margin-top: 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.9688rem;
+}
+
+.account__plan .btn {
+  margin-top: 1.1rem;
+}
+
+.account__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.account__forgot {
+  display: block;
+  margin-top: 1rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.9062rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.account__forgot:hover {
+  color: var(--clay);
+}
+
+
+/* ------------------------------------------------------------- sign in */
+
+/*
+ * The shape the app uses: mark, one sentence, two provider buttons.
+ *
+ * `AuthForm.tsx` dropped the email half on purpose — two buttons is the
+ * shortest path to an account and a password is one more thing to invent and
+ * forget. Email stays here, folded away, because the funnel creates email
+ * accounts and those people have to be able to get back in.
+ */
+.signin {
+  text-align: center;
+}
+
+.signin__mark {
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+}
+
+.signin__mark .mark {
+  width: 2.5rem;
+  height: auto;
+}
+
+.signin__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.signin__lead {
+  margin: 0.85rem auto 0;
+  max-width: 26rem;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.signin__providers {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.75rem;
+}
+
+.provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.95rem 1.2rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.provider:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.provider:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.provider .ic {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Apple's mark is a silhouette and takes the page's ink; Google's carries its
+   own four colours and must not be recoloured. */
+.provider[data-oauth='apple'] .ic {
+  color: var(--ink);
+}
+
+.signin__email {
+  display: block;
+  width: 100%;
+  margin-top: 1.1rem;
+  padding: 0.5rem;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.signin__email:hover {
+  color: var(--clay);
+}
+
+.signin__emailform {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.signin__legal {
+  margin-top: 1.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.signin__legal a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.signin__legal a:hover {
+  color: var(--clay);
 }

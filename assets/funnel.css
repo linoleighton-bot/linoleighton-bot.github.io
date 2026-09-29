@@ -1,0 +1,1304 @@
+@charset "utf-8";
+
+/*
+ * The funnel — /start.
+ *
+ * Its own stylesheet, loaded only on that page. The marketing pages are a
+ * document: a wide measure, a scroll, a header that follows you. This is an
+ * app: one question on screen, a thumb-sized target, nothing to scroll past.
+ * Sharing a stylesheet between the two would mean every rule here fighting one
+ * there.
+ *
+ * Colour and type come from `tokens.css`, so the funnel cannot drift from the
+ * brand. Nothing below hard-codes a brand colour.
+ */
+
+/* The site header and footer are wrong here — a way out of a funnel on every
+   screen is a way out taken. The mark stays, as the only chrome. */
+body.page-funnel .site-header,
+body.page-funnel .site-footer {
+  display: none;
+}
+
+.funnel {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+/* ------------------------------------------------------------------- bar */
+
+/* Nothing to progress through on the opening screen, and an empty bar above a
+   headline is noise the headline has to compete with. */
+.funnel[data-current-step='hook'] .funnel__bar {
+  visibility: hidden;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.funnel__bar {
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem max(1rem, env(safe-area-inset-left)) 0.9rem max(1rem, env(safe-area-inset-right));
+  background: var(--paper);
+}
+
+.funnel__back {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.funnel__back:hover {
+  border-color: var(--ink);
+}
+
+/* `display: grid` above outranks the browser's `[hidden] { display: none }`,
+   so the button has to be told again — otherwise Back is offered on step one,
+   where there is nothing behind it. */
+.funnel__back[hidden] {
+  display: none;
+}
+
+/*
+ * Segmented progress.
+ *
+ * One bar per named section rather than one bar for the whole funnel. Eleven
+ * questions behind a single bar is eleven questions; the same eleven split into
+ * three named stretches is three short things, and the section behind you
+ * visibly finishes. It is the cheapest pacing device there is.
+ */
+.funnel__sections {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.funnel__section {
+  flex: 1 1 0;
+}
+
+.funnel__track {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.funnel__track span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--clay);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* A finished section stops competing for attention with the current one. */
+.funnel__section[data-done] .funnel__track span {
+  background: var(--moss);
+}
+
+.funnel__label {
+  flex-basis: 100%;
+  order: 3;
+  margin-top: 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clay);
+  text-align: center;
+}
+
+.funnel__label:empty {
+  display: none;
+}
+
+.funnel__count {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ step */
+
+.funnel__body {
+  flex: 1 1 auto;
+  width: min(100% - 2rem, 34rem);
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 5vw, 3rem) 3rem;
+}
+
+.fstep[hidden] {
+  display: none;
+}
+
+/*
+ * Without the script every step is visible, stacked, with a rule between them.
+ * That is a long page rather than a broken one, which is the right failure.
+ *
+ * Scoped to the un-taken-over funnel: once the script marks itself live only
+ * one step is on screen, and a rule above it separates it from nothing.
+ */
+.funnel:not([data-live]) .fstep + .fstep {
+  margin-top: 3rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--line);
+}
+
+.fs__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clay);
+  margin-bottom: 0.9rem;
+}
+
+.fs__hook {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 2.9rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.fs__hook em {
+  font-style: normal;
+  color: var(--clay);
+}
+
+.fs__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.fs__title:focus-visible {
+  outline: 2.5px solid var(--clay);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+.fs__body {
+  margin-top: 0.85rem;
+  color: var(--ink-soft);
+  font-size: 1.0312rem;
+  line-height: 1.55;
+}
+
+.fs__answer {
+  margin-top: 1.1rem;
+  padding: 1rem 1.1rem;
+  border-left: 3px solid var(--clay);
+  background: var(--tint);
+  border-radius: 0 10px 10px 0;
+  color: var(--ink);
+  font-size: 1.0312rem;
+}
+
+.fs__answer:empty {
+  display: none;
+}
+
+.fs__cta {
+  display: flex;
+  width: 100%;
+  margin-top: 1.75rem;
+  padding-block: 0.95rem;
+  font-size: 1.0312rem;
+}
+
+.fs__cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fs__note {
+  margin-top: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.fs__note--warn {
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.fs__skip {
+  display: block;
+  width: 100%;
+  margin-top: 0.9rem;
+  padding: 0.6rem;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  text-align: center;
+}
+
+.fs__skip:hover {
+  color: var(--ink);
+}
+
+.fs__field {
+  display: block;
+  margin-top: 1.5rem;
+}
+
+.fs__field input {
+  width: 100%;
+  font: inherit;
+  font-size: 1.125rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/*
+ * The line under a question saying why it is asked.
+ *
+ * Set quieter than the question and louder than nothing: it has to be read
+ * without competing with what it explains.
+ */
+.fs__why {
+  margin-top: 0.7rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- trust */
+
+/*
+ * What can be checked, instead of what cannot.
+ *
+ * The category opens with install counts and award laurels. We have neither,
+ * and inventing them in a category whose audience checks is the fastest way to
+ * lose it. These three are true and verifiable on the site itself.
+ */
+.ftrust {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding-block: 1.1rem;
+}
+
+.ftrust li {
+  display: grid;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.ftrust b {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--clay);
+  line-height: 1;
+}
+
+.ftrust span {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- grid */
+
+.fgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+}
+
+.fgrid__cell {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.5rem;
+  min-height: 5.5rem;
+  padding: 0.9rem 0.8rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  line-height: 1.3;
+  text-align: center;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fgrid__cell[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 7%, var(--surface));
+}
+
+.fgrid__icon .ic {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--ink-soft);
+}
+
+.fgrid__cell[data-chosen] .fgrid__icon .ic {
+  color: var(--clay);
+}
+
+/* --------------------------------------------------------------- scale */
+
+/*
+ * A different shape for a question about a feeling.
+ *
+ * Eleven questions rendered as eleven identical lists reads as a form. One that
+ * looks like a scale, at the point the funnel stops asking about preferences
+ * and starts asking about how the reader feels, resets the attention.
+ */
+.fscale {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+}
+
+.fscale__step {
+  flex: 1 1 0;
+  min-height: 4.5rem;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem 0.5rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 550;
+  line-height: 1.25;
+  text-align: center;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fscale__step[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 7%, var(--surface));
+}
+
+.fscale__ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- options */
+
+.fq {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+}
+
+/*
+ * One answer is one target, full width and thumb-height.
+ *
+ * Not a radio and a label: a 44px row that is entirely tappable is the
+ * difference between a funnel that works one-handed on a phone and one that
+ * asks for aim, and aim is drop-off.
+ */
+.fq__option {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 3.75rem;
+  padding: 0.95rem 3rem 0.95rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(23, 26, 31, 0.04);
+  text-align: left;
+  font: inherit;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.fq__option:hover {
+  border-color: var(--line-strong);
+}
+
+.fq__option:active {
+  transform: scale(0.99);
+}
+
+.fq__option[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 7%, var(--surface));
+}
+
+/* An icon column, so a list of six is scanned by shape before it is read. */
+.fq__option--icon {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 0.85rem;
+}
+
+.fq__icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  background: var(--tint);
+  color: var(--ink-soft);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fq__icon .ic {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.fq__option[data-chosen] .fq__icon {
+  background: var(--clay);
+  color: var(--on-clay);
+}
+
+.fq__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.fq__label {
+  font-size: 1.0312rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.fq__detail {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.fq__flag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 5px;
+  background: var(--clay);
+  color: var(--on-clay);
+  font-size: 0.6562rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+}
+
+/* The tick is drawn, not a glyph, so it cannot fall back to a missing font. */
+.fq__tick {
+  position: absolute;
+  right: 1.1rem;
+  top: 50%;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-top: -0.65rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fq__option[data-chosen] .fq__tick {
+  border-color: var(--clay);
+  background: var(--clay);
+}
+
+.fq__option[data-chosen] .fq__tick::after {
+  content: '';
+  position: absolute;
+  left: 0.42rem;
+  top: 0.2rem;
+  width: 0.3rem;
+  height: 0.6rem;
+  border: solid var(--on-clay);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ---------------------------------------------------------------- build */
+
+.fbuild {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.fbuild__line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 1rem;
+  transition: color 0.3s ease;
+}
+
+.fbuild__line::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.fbuild__line[data-done] {
+  color: var(--ink);
+}
+
+.fbuild__line[data-done]::before {
+  border-color: var(--moss);
+  background: var(--moss);
+}
+
+.fbuild__bar {
+  height: 4px;
+  margin-top: 2rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fbuild__bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--clay);
+  border-radius: inherit;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ----------------------------------------------------------------- plan */
+
+.fplan {
+  margin: 1.75rem 0 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.fplan__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.fplan__row + .fplan__row {
+  border-top: 1px solid var(--line);
+}
+
+.fplan dt {
+  font-size: 0.875rem;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.fplan dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 550;
+  text-align: right;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- plans */
+
+.fplans {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.fplans__plan {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.15rem 1rem;
+  padding: 1.1rem 1.2rem;
+  text-align: left;
+  font: inherit;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.fplans__plan[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 7%, var(--surface));
+}
+
+.fplans__name {
+  font-size: 1.0312rem;
+  font-weight: 650;
+}
+
+.fplans__amount {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.fplans__period,
+.fplans__equiv {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.fplans__period {
+  grid-column: 2;
+  text-align: right;
+}
+
+.fplans__trial {
+  grid-column: 1 / -1;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--moss);
+}
+
+.fplans__flag {
+  position: absolute;
+  top: -0.6rem;
+  left: 1.1rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 5px;
+  background: var(--clay);
+  color: var(--on-clay);
+  font-size: 0.6562rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------- auth */
+
+.page-funnel .auth-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.75rem;
+}
+
+.page-funnel .auth-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.page-funnel .auth-field span {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.page-funnel .auth-field input {
+  width: 100%;
+  font: inherit;
+  font-size: 1.0312rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.page-funnel .auth-status {
+  margin-top: 1.25rem;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  background: var(--tint);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.page-funnel .auth-status[data-kind='error'] {
+  border-color: color-mix(in srgb, var(--clay) 45%, transparent);
+  color: var(--ink);
+}
+
+.page-funnel .auth-status[data-kind='ok'] {
+  border-color: color-mix(in srgb, var(--moss) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funnel__progress span,
+  .fbuild__bar span,
+  .fbuild__line,
+  .fbuild__line::before,
+  .fq__option {
+    transition-duration: 0.01ms;
+  }
+}
+
+
+/* ==========================================================================
+   The opening screen
+   ========================================================================== */
+
+/*
+ * Laid out the way this category's ad funnels are, because the arrangement is
+ * load-bearing: the promise, then proof, then a picture of the moment you are
+ * in, then somebody else's voice, then a button that never leaves the screen.
+ * Every element in it is ours.
+ */
+
+.fhook {
+  text-align: center;
+  padding-top: 1.25rem;
+  padding-bottom: 1rem;
+}
+
+.fhook__head {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 8.5vw, 3rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+/*
+ * The strike is drawn rather than typographic.
+ *
+ * `text-decoration: line-through` inherits the text colour and lands wherever
+ * the font's metrics put it. A drawn rule can be the accent, thicker than a
+ * hairline, and sits where it reads as a correction rather than as a deletion.
+ */
+/*
+ * Inline, so the sentence flows through the strike rather than stepping around
+ * it. `inline-block` is what keeps the drawn rule the width of its own word
+ * instead of the width of the line it happens to sit on.
+ */
+.fhook__head s {
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.fhook__head s::after {
+  content: '';
+  position: absolute;
+  left: -0.04em;
+  right: -0.04em;
+  top: 55%;
+  height: 0.075em;
+  border-radius: 999px;
+  background: var(--clay);
+  transform: rotate(-1.4deg);
+}
+
+.fhook__head em {
+  font-style: normal;
+  color: var(--clay);
+}
+
+/* --------------------------------------------------------------- badges */
+
+.fhook__badges {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fhook__badges li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--ink-soft);
+  max-width: 10rem;
+}
+
+.fhook__badges span {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--muted);
+}
+
+.fhook__badges b {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.fhook__laurel {
+  width: 1.15rem;
+  height: auto;
+  flex: 0 0 auto;
+  color: var(--clay);
+  opacity: 0.55;
+}
+
+.fhook__laurel.is-flipped {
+  transform: scaleX(-1);
+}
+
+/* ---------------------------------------------------------------- scene */
+
+.fhook__scene {
+  position: relative;
+  margin: 1.75rem 0 0;
+  padding: 1.25rem 0 0;
+}
+
+.fhook__art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/*
+ * The reader's own thought, in their voice, before we say anything.
+ *
+ * Tilted and overlapping the drawing so it reads as a caption on a moment
+ * rather than as another line of marketing copy stacked above it.
+ */
+.fhook__bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  max-width: 14rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 14px 14px 14px 3px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.35;
+  text-align: left;
+  transform: rotate(-2.5deg);
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+.fhook__quote {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.fhook__quote::before { content: '“'; }
+.fhook__quote::after { content: '”'; }
+
+.fhook__body {
+  margin-top: 0.9rem;
+  font-size: 0.9688rem;
+}
+
+/* ----------------------------------------------------------------- dock */
+
+/*
+ * The button never leaves the screen.
+ *
+ * On the opening screen the reader is deciding whether to start at all, and a
+ * CTA they have to find is a CTA some of them do not. It sits on the paper with
+ * a soft fade above it so the content reads as continuing underneath.
+ */
+/*
+ * The dock floats over the content, so the content has to end above it.
+ *
+ * Without the clearance below, the last thing on the opening screen — the
+ * quote — was cut in half by the button. The gradient is deep enough that text
+ * scrolling underneath fades rather than being sliced.
+ */
+.fdock {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 2rem 0 max(1rem, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--paper) 45%);
+}
+
+.fdock .fs__cta {
+  margin-top: 0;
+}
+
+body.page-funnel .funnel__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.fstep {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+/* ==========================================================================
+   Movement
+   ========================================================================== */
+
+/*
+ * One step replaces another rather than appearing where it was.
+ *
+ * A questionnaire that cuts between screens feels like a form being submitted;
+ * a short slide makes it feel like one thing moving. Kept to 260ms — long
+ * enough to read as motion, short enough that eleven of them do not add up to
+ * a wait.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .funnel[data-live] .fstep:not([hidden]) {
+    animation: fstep-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .funnel[data-live][data-back] .fstep:not([hidden]) {
+    animation-name: fstep-back;
+  }
+
+  /* The options arrive just behind the question, so the eye lands on the
+     question first. */
+  .funnel[data-live] .fstep:not([hidden]) .fq__option,
+  .funnel[data-live] .fstep:not([hidden]) .fgrid__cell,
+  .funnel[data-live] .fstep:not([hidden]) .fscale__step {
+    animation: fopt-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(60ms + var(--i, 0) * 34ms);
+  }
+}
+
+@keyframes fstep-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fstep-back {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fopt-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* A tap should feel like it registered before the screen changes. */
+.fq__option[data-chosen],
+.fgrid__cell[data-chosen],
+.fscale__step[data-chosen] {
+  animation: fpick 0.22s ease;
+}
+
+@keyframes fpick {
+  50% { transform: scale(0.975); }
+}
+
+
+/* --------------------------------------------------------------- brand */
+
+.fhook__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  letter-spacing: -0.02em;
+}
+
+.fhook__brand .mark {
+  width: 1.35rem;
+  height: auto;
+}
+
+/* The legal links the category puts under the button, and regulators expect. */
+.fhook__legal {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.fhook__legal a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.fhook__legal a:hover {
+  color: var(--clay);
+}
+
+/*
+ * Clearance for the dock.
+ *
+ * The button is sticky, so without room at the end of the content the last
+ * line of copy sits underneath it — which is exactly where a promise about
+ * what the reader gets should not be.
+ */
+/*
+ * Clearance for the sticky dock.
+ *
+ * Without it the last paragraph — the one that says what the reader actually
+ * gets — sits underneath the button and is never read.
+ */
+.fhook {
+  padding-bottom: 1rem;
+}
+
+.fhook__body {
+  margin-bottom: 0.5rem;
+}
+
+.fhook__scene {
+  margin-top: 1.5rem;
+}
+
+/* The drawing takes its ink from the theme, like the text around it. */
+.fhook__art {
+  max-width: 21rem;
+  margin-inline: auto;
+  color: var(--ink);
+}
+
+
+/* ==========================================================================
+   The paywall
+   ========================================================================== */
+
+.pw__benefits {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pw__benefits li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.9688rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.pw__benefits .ic {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--clay);
+}
+
+.pw__plans {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.75rem;
+}
+
+/*
+ * One row per plan: a tick, the name and what is actually billed, and the
+ * headline rate on the right where the eye lands last and stays.
+ */
+.pw__plan {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 1.05rem 1.1rem;
+  text-align: left;
+  font: inherit;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.pw__plan.is-recommended {
+  margin-top: 0.5rem;
+}
+
+.pw__plan[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 6%, var(--surface));
+}
+
+.pw__tick {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  position: relative;
+}
+
+.pw__plan[data-chosen] .pw__tick {
+  border-color: var(--clay);
+  background: var(--clay);
+}
+
+.pw__plan[data-chosen] .pw__tick::after {
+  content: '';
+  position: absolute;
+  left: 0.38rem;
+  top: 0.17rem;
+  width: 0.27rem;
+  height: 0.55rem;
+  border: solid var(--on-clay);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.pw__body {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pw__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.0312rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.pw__save {
+  padding: 0.12rem 0.4rem;
+  border-radius: 5px;
+  background: var(--moss);
+  color: #fff;
+  font-size: 0.6562rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The real charge. Quiet, never absent. */
+.pw__billed {
+  font-size: 0.8438rem;
+  color: var(--muted);
+}
+
+.pw__lead {
+  display: grid;
+  justify-items: end;
+  gap: 0;
+  text-align: right;
+}
+
+.pw__lead b {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.pw__lead small {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.pw__flag {
+  position: absolute;
+  top: -0.62rem;
+  left: 1.1rem;
+  padding: 0.16rem 0.5rem;
+  border-radius: 5px;
+  background: var(--clay);
+  color: var(--on-clay);
+  font-size: 0.6562rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pw__smallprint {
+  margin-top: 0.9rem;
+  font-size: 0.8438rem;
+  line-height: 1.45;
+  color: var(--muted);
+  text-align: center;
+}
