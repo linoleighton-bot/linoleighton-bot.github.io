@@ -1401,3 +1401,80 @@ body.page-funnel .funnel__body {
 .signin--funnel .fs__cta {
   margin-top: 1.25rem;
 }
+
+
+/* ---------------------------------------------------------------- books */
+
+/*
+ * A shelf, not a list.
+ *
+ * This is the first screen that shows the reader what is actually inside the
+ * product, and five recognisable titles do more than any sentence about the
+ * catalogue. The coloured spine is drawn rather than a cover image: covers
+ * would be five more requests on the screen where somebody is still deciding
+ * whether to continue.
+ */
+.fbooks {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+  text-align: left;
+}
+
+.fbooks[hidden] {
+  display: none;
+}
+
+.fbook {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.85rem 3rem 0.85rem 0.85rem;
+  text-align: left;
+  font: inherit;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fbook[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 7%, var(--surface));
+}
+
+.fbook__spine {
+  width: 1.6rem;
+  height: 2.4rem;
+  border-radius: 3px 5px 5px 3px;
+  background: linear-gradient(105deg, var(--clay) 0%, var(--clay-deep) 100%);
+  box-shadow: inset 0.18rem 0 0 rgba(255, 255, 255, 0.28);
+}
+
+.fbook__text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fbook__title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.fbook__author {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.fbook .fq__tick {
+  right: 0.95rem;
+}

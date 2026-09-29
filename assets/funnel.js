@@ -178,6 +178,7 @@
 
     if (step.kind === 'insight') fillInsight(id);
     if (step.kind === 'note') fillNote(id);
+    if (step.kind === 'books') showShelf(id);
     if (step.kind === 'build') runBuild();
     if (step.kind === 'plan') fillPlan();
     if (step.kind === 'done') markDone();
@@ -219,7 +220,7 @@
     const step = byId[id];
     if (!step) continue;
 
-    if (['single', 'multi', 'grid', 'scale'].includes(step.kind)) {
+    if (['single', 'multi', 'grid', 'scale', 'books'].includes(step.kind)) {
       const buttons = [...el.querySelectorAll('[data-option]')];
       /* Each option carries its position, so the stylesheet can bring them in
          one after another instead of all at once. */
@@ -241,7 +242,7 @@
         button.addEventListener('click', () => {
           const value = button.dataset.option;
 
-          if (step.kind === 'multi' || step.kind === 'grid') {
+          if (['multi', 'grid', 'books'].includes(step.kind)) {
             const held = Array.isArray(answers[step.answer]) ? answers[step.answer] : [];
             answers[step.answer] = held.includes(value) ? held.filter((v) => v !== value) : [...held, value];
           } else {
@@ -261,6 +262,23 @@
 
       paint();
       if (cta) cta.addEventListener('click', next);
+
+      /*
+       * "None of these" is a real answer, not an escape.
+       *
+       * Somebody who recognises none of the five is telling us something worth
+       * knowing, and a Continue that stays disabled until they pick a book they
+       * have not read is a screen that teaches people to lie.
+       */
+      const skipBooks = el.querySelector('[data-skip]');
+      if (skipBooks) {
+        skipBooks.addEventListener('click', () => {
+          answers[step.answer] = [];
+          save();
+          next();
+        });
+      }
+      if (step.kind === 'books' && cta) cta.disabled = false;
     }
 
     if (step.kind === 'text') {
@@ -358,6 +376,30 @@
     if (!node) return;
 
     node.textContent = template.replace('{goalPhrase}', goal ? goal.phrase : 'read more and keep it');
+  }
+
+  /**
+   * Show the shelf that matches the goal, hide the rest.
+   *
+   * Every goal's five books are in the document; only one set is ever on
+   * screen. A reader who goes back and changes their goal gets the new shelf,
+   * because this runs on every render rather than once.
+   */
+  function showShelf(id) {
+    const goalId = Array.isArray(answers.goals) ? answers.goals[0] : answers.goals;
+    const el = stepEls.get(id);
+    const shelves = [...el.querySelectorAll('[data-shelf]')];
+    let shown = false;
+
+    for (const shelf of shelves) {
+      const match = shelf.dataset.shelf === goalId;
+      shelf.hidden = !match;
+      if (match) shown = true;
+    }
+
+    /* No goal answered — fall back to the first shelf rather than an empty
+       screen with a Continue button and nothing above it. */
+    if (!shown && shelves[0]) shelves[0].hidden = false;
   }
 
   /* ------------------------------------------------------------ the build */
