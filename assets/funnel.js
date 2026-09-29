@@ -688,7 +688,19 @@
 
         await persist();
         say('');
-        next();
+
+        /*
+         * Only if nothing has moved already.
+         *
+         * `onAuthStateChange` also reacts to this sign-in, and when it wins the
+         * race it re-renders the account step — which is what carries a
+         * signed-in reader on to the offer. Calling `next()` unconditionally
+         * then advanced a second time, straight past the offer to the closing
+         * screen: an account created, the answers saved, and the price never
+         * shown. Whichever of the two fires first, the reader lands on the
+         * offer exactly once.
+         */
+        if (byId[order[index]]?.kind === 'account') next();
       } catch (error) {
         say(error?.message || 'That did not work. Try again in a moment.');
       } finally {
