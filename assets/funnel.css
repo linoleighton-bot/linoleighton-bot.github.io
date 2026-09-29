@@ -1478,3 +1478,177 @@ body.page-funnel .funnel__body {
 .fbook .fq__tick {
   right: 0.95rem;
 }
+
+
+/* ==========================================================================
+   Polish
+   ========================================================================== */
+
+/*
+ * The marketing page's section rhythm, taken back off the steps.
+ *
+ * Every step is a `<section>`, and `styles.css` gives a section
+ * `padding-top: clamp(4rem, 9.5vw, 7.5rem)` because on the home page a section
+ * is a band of the page. Here it was 64px of nothing on a phone and 120px on a
+ * desktop, above a question that is the only thing on the screen — pushing the
+ * first options below the fold on exactly the screens that decide whether
+ * somebody keeps going. The body's own `padding-block` is the spacing that was
+ * actually designed for this.
+ */
+.funnel .fstep {
+  padding-top: 0;
+}
+
+/* -------------------------------------------------------------- movement */
+
+/*
+ * The step arrives as a composition rather than as one sliding block.
+ *
+ * The step still travels in the direction of the answer, but the question, the
+ * line under it and the answers now arrive a beat apart instead of together.
+ * The eye lands on the question first because the question gets there first,
+ * which is the whole reason to spend motion on a questionnaire — and it is the
+ * difference between a screen that changed and a screen that was composed.
+ *
+ * Deliberately tight: the last option of six is fully in at ~300ms. Fifteen
+ * questions means fifteen of these, and anything statelier becomes a wait.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .funnel[data-live] .fstep:not([hidden]) {
+    animation-duration: 0.22s;
+  }
+
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__title,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__why,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__field,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__cta,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__skip {
+    animation: fopt-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /*
+   * The delays carry the full selector, not a shorter one.
+   *
+   * `animation:` above is a shorthand, so it writes `animation-delay: 0s` as
+   * well — and a shorter selector setting the delay afterwards loses to it on
+   * specificity rather than winning on order. Written short, the whole cascade
+   * silently collapsed into two beats instead of four.
+   */
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__why {
+    animation-delay: 45ms;
+  }
+
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__field,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__cta,
+  .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__skip {
+    animation-delay: 85ms;
+  }
+
+  /*
+   * The answers come in behind the question, one after another.
+   *
+   * Re-stated here rather than edited above so the two halves of the cascade
+   * sit together: the base delay clears the question, and the step is 26ms so
+   * a list of eight still finishes before anybody has read the second option.
+   */
+  .funnel[data-live] .fstep:not([hidden]) .fq__option,
+  .funnel[data-live] .fstep:not([hidden]) .fgrid__cell,
+  .funnel[data-live] .fstep:not([hidden]) .fscale__step {
+    animation-delay: calc(95ms + var(--i, 0) * 26ms);
+  }
+}
+
+/* ------------------------------------------------------------- selection */
+
+/*
+ * An answer that answers back.
+ *
+ * Picking an option used to change two colours. Now the row lifts very
+ * slightly off the page and the tick is drawn into place — the same pair of
+ * cues a native control gives, and the reason a tap feels decided rather than
+ * merely registered. The lift is 1px and the shadow is barely there on
+ * purpose; anything more and fifteen screens of it becomes noise.
+ */
+.fq__option {
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.2s ease,
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * The lift is a shadow, not a `translate`.
+ *
+ * `fpick` already animates `transform` on this exact selector, and a running
+ * animation beats a normal declaration — so a `translateY` here would have sat
+ * in the stylesheet doing nothing. Widening `fpick` to settle on a raised
+ * position instead would have meant filling it forwards, which then swallows
+ * the `:active` press on an option that is already chosen. The shadow reads as
+ * the lift on its own, and leaves the press alone.
+ */
+.fq__option[data-chosen] {
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--clay) 16%, transparent);
+}
+
+.fq__option:active {
+  transform: scale(0.985);
+  box-shadow: 0 1px 2px rgba(23, 26, 31, 0.04);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fq__option[data-chosen] .fq__tick::after {
+    animation: ftick 0.26s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  }
+}
+
+/*
+ * The tick is drawn in, from its own corner.
+ *
+ * `transform` on the mark already carries the 45deg that makes two borders
+ * into a check, so the keyframes have to restate it — a bare `scale()` here
+ * would unrotate the tick and it would render as an L.
+ */
+@keyframes ftick {
+  from {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+/* --------------------------------------------------------------- buttons */
+
+/*
+ * The primary action takes a press.
+ *
+ * A full-width button that does not move under the thumb is the single most
+ * common reason a page feels like a document rather than an app — and on the
+ * steps that carry a price, it is the last thing somebody touches.
+ */
+.fs__cta {
+  transition:
+    background-color 0.15s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fs__cta:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+/* Becoming answerable is worth showing; it is the cue that a choice landed. */
+.fs__cta:disabled {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs__cta:active,
+  .fq__option:active {
+    transform: none;
+  }
+}

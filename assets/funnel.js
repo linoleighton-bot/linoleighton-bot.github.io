@@ -471,17 +471,29 @@
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
 
-    client.auth.getSession().then(({ data }) => {
-      user = data.session?.user ?? null;
-      if (user) showSignedIn();
-    });
+    /*
+     * A session that arrives after the account step is already on screen.
+     *
+     * This is the ordinary case coming back from a provider: the page opens at
+     * `?q=account`, draws the sign-in screen, and the session resolves a moment
+     * later. `render` is what moves a signed-in reader on to the offer, and
+     * nothing was calling it again — so a *successful* sign-in left the reader
+     * looking at the sign-in screen, which is indistinguishable from a failed
+     * one. Re-rendering hands the step back to the skip that already exists.
+     */
+    const sessionArrived = (session) => {
+      const wasSignedOut = !user;
+      user = session?.user ?? null;
+      if (!user) return;
+      showSignedIn();
+      if (wasSignedOut && byId[order[index]]?.kind === 'account') render({ push: false });
+    };
+
+    client.auth.getSession().then(({ data }) => sessionArrived(data.session));
 
     /* A sign-in in another tab, or a token refresh, must not leave this page
        believing the reader is a stranger. */
-    client.auth.onAuthStateChange((_event, session) => {
-      user = session?.user ?? null;
-      if (user) showSignedIn();
-    });
+    client.auth.onAuthStateChange((_event, session) => sessionArrived(session));
   }
 
   const accountEl = stepEls.get('account');
@@ -508,37 +520,88 @@
       status.hidden = !message;
     };
 
+    const oauth = window.mindrollOAuth;
+    const returnTo = `${location.origin}${location.pathname}?q=account`;
+
+    /*
+     * A provider that cannot work is taken off the screen before it is clicked.
+     *
+     * `preflight` asks the auth server whether the provider would actually go
+     * anywhere. A provider switched on without a client secret answers 400 with
+     * a JSON body, and since `signInWithOAuth` navigates rather than fetches,
+     * clicking it used to drop the reader onto a Supabase URL showing raw JSON.
+     *
+     * Runs unawaited: the buttons start usable, and only a definite refusal
+     * takes one away. A slow or failed check leaves everything as it was.
+     */
+    const unusable = new Map();
+    for (const button of accountEl.querySelectorAll('[data-oauth]')) {
+      const provider = button.dataset.oauth;
+      if (!oauth) break;
+      oauth.preflight(boot.supabase.url, provider, returnTo).then((verdict) => {
+        if (verdict.ok) return;
+        unusable.set(provider, verdict.message);
+        oauth.retire(button, accountEl);
+      });
+    }
+
     for (const button of accountEl.querySelectorAll('[data-oauth]')) {
       button.addEventListener('click', async () => {
         const provider = button.dataset.oauth;
-        const label = provider === 'apple' ? 'Apple' : 'Google';
+        const label = oauth ? oauth.label(provider) : provider;
 
-        for (const control of accountEl.querySelectorAll('button, input')) control.disabled = true;
+        /* Known bad from the check above, or from a previous click. */
+        if (unusable.has(provider)) {
+          tell(`${unusable.get(provider)} Use your email address instead.`);
+          return;
+        }
+
+        const controls = accountEl.querySelectorAll('button, input');
+        for (const control of controls) control.disabled = true;
         tell(`Taking you to ${label}…`, 'busy');
 
+        const restore = () => {
+          for (const control of controls) control.disabled = false;
+        };
+
         try {
+          /* The check may not have finished, or may not have run at all. One
+             round trip here is cheaper than a dead end on somebody else's
+             domain, and on the happy path it overlaps nothing the reader sees. */
+          if (oauth) {
+            const verdict = await oauth.preflight(boot.supabase.url, provider, returnTo);
+            if (!verdict.ok) {
+              unusable.set(provider, verdict.message);
+              restore();
+              oauth.retire(button, accountEl);
+              tell(`${verdict.message} Use your email address instead.`);
+              return;
+            }
+          }
+
           const { error } = await client.auth.signInWithOAuth({
             provider,
-            options: { redirectTo: `${location.origin}${location.pathname}?q=account` },
+            options: { redirectTo: returnTo },
           });
           if (error) throw error;
           /* On success the browser leaves; nothing after this runs. */
         } catch (error) {
-          for (const control of accountEl.querySelectorAll('button, input')) control.disabled = false;
+          restore();
           tell(error?.message || `We could not reach ${label}. Try email instead.`);
         }
       });
     }
 
-    /* A provider that refuses comes back with the reason in the fragment. */
-    const failed = new URLSearchParams(location.hash.slice(1)).get('error_description');
-    if (failed) {
-      tell(decodeURIComponent(failed.replace(/\+/g, ' ')));
-      try {
-        history.replaceState(null, '', `${location.pathname}${location.search}`);
-      } catch {
-        /* No history access; the message is shown either way. */
-      }
+    /*
+     * A provider that refused sends the reader back here with the reason in the
+     * URL — in the query string under PKCE, in the fragment under the older
+     * implicit flow. Reading only the fragment, which this did, meant every
+     * refusal looked like a button that simply did nothing.
+     */
+    const failure = oauth?.readFailure();
+    if (failure) {
+      tell(failure.message);
+      oauth.clean();
     }
 
     /* The email half, kept out of the way until it is asked for. */
@@ -795,6 +858,28 @@
   if (lastAnswered.length) {
     const resumeAt = order.indexOf(lastAnswered[lastAnswered.length - 1]);
     if (resumeAt > 0) index = Math.min(resumeAt + 1, order.indexOf('building'));
+  }
+
+  /*
+   * `?q=` on load, which is how a provider brings the reader back.
+   *
+   * Until now the step in the URL was read only on `popstate`, so it worked for
+   * the browser's Back button and for nothing else. `signInWithOAuth` sends the
+   * reader away and returns them to `?q=account` — and the funnel ignored it,
+   * put them back at their last answered question, and left the sign-in result
+   * (a confirmation, or the reason it failed) written into a step that was
+   * never on screen. From the reader's side the button did nothing at all.
+   *
+   * An earlier step is always allowed: those are answers they have already
+   * given. A *later* one is not, because `?q=offer` would otherwise be a link
+   * that skips the funnel and shows a price to somebody with no plan. The
+   * account step is the exception the redirect needs, and it costs nothing —
+   * it asks for a sign-in, and `render` sends a reader who already has one
+   * straight on to the offer.
+   */
+  const requested = order.indexOf(new URLSearchParams(location.search).get('q') ?? '');
+  if (requested !== -1 && (requested <= index || order[requested] === 'account')) {
+    index = requested;
   }
 
   render();

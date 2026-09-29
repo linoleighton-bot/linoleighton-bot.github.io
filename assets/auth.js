@@ -172,10 +172,14 @@
    * URL fragment and no session. Without this the page simply looks like the
    * sign-in did nothing.
    */
-  const hashError = new URLSearchParams(location.hash.slice(1)).get('error_description');
-  if (hashError) {
-    say(decodeURIComponent(hashError.replace(/\+/g, ' ')));
-    history.replaceState(null, '', location.pathname);
+  const oauth = window.mindrollOAuth;
+  const failure = oauth?.readFailure();
+  if (failure) {
+    say(failure.message);
+    /* Clears the error and keeps the rest of the query string — the old code
+       replaced the whole URL with its pathname, which on a page reached with
+       parameters quietly threw them away. */
+    oauth.clean();
   }
 
   client.auth.getSession().then(({ data }) => render(data.session));
@@ -190,25 +194,62 @@
    * provider returns the user to the site root with an error in the URL and no
    * session. That is a dashboard setting, not something this file can arrange.
    */
+  const returnTo = `${location.origin}/account`;
+
+  /*
+   * A provider that cannot complete is disabled before anyone clicks it.
+   *
+   * See `oauth.js`: a provider enabled without a client secret answers the
+   * authorize endpoint with a 400, and because signing in *navigates*, the
+   * reader lands on the auth server showing raw JSON rather than on a sign-in
+   * screen. Unawaited on purpose — the buttons work until a check says one
+   * does not, so a slow or blocked check costs nothing.
+   */
+  const unusable = new Map();
+  for (const button of root.querySelectorAll('[data-oauth]')) {
+    if (!oauth) break;
+    const provider = button.dataset.oauth;
+    oauth.preflight(url, provider, returnTo).then((verdict) => {
+      if (verdict.ok) return;
+      unusable.set(provider, verdict.message);
+      oauth.retire(button, root);
+    });
+  }
+
   for (const button of root.querySelectorAll('[data-oauth]')) {
     button.addEventListener('click', async () => {
       const provider = button.dataset.oauth;
+      const name = oauth ? oauth.label(provider) : provider;
+
+      if (unusable.has(provider)) {
+        say(`${unusable.get(provider)} Use your email address instead.`);
+        return;
+      }
+
       busy(true);
-      say('Taking you to ' + (provider === 'apple' ? 'Apple' : 'Google') + '…', 'busy');
+      say(`Taking you to ${name}…`, 'busy');
 
       try {
+        if (oauth) {
+          const verdict = await oauth.preflight(url, provider, returnTo);
+          if (!verdict.ok) {
+            unusable.set(provider, verdict.message);
+            busy(false);
+            oauth.retire(button, root);
+            say(`${verdict.message} Use your email address instead.`);
+            return;
+          }
+        }
+
         const { error } = await client.auth.signInWithOAuth({
           provider,
-          options: { redirectTo: `${location.origin}/account` },
+          options: { redirectTo: returnTo },
         });
         if (error) throw error;
         /* On success the browser leaves this page, so nothing follows. */
       } catch (error) {
         busy(false);
-        say(
-          error?.message ||
-            `We could not reach ${provider === 'apple' ? 'Apple' : 'Google'}. Try email instead.`,
-        );
+        say(error?.message || `We could not reach ${name}. Try email instead.`);
       }
     });
   }
@@ -299,27 +340,6 @@
         }
       } catch (error) {
         say(error?.message || 'That did not work. Try again.');
-      } finally {
-        busy(false);
-      }
-    });
-  }
-
-  /* ------------------------------------------------------------ apple */
-
-  const apple = el('auth-apple');
-  if (apple) {
-    apple.addEventListener('click', async () => {
-      say('');
-      busy(true);
-      try {
-        const { error } = await client.auth.signInWithOAuth({
-          provider: 'apple',
-          options: { redirectTo: window.location.href.split('#')[0] },
-        });
-        if (error) say(error.message);
-      } catch (error) {
-        say(error?.message || 'Sign in with Apple is unavailable.');
       } finally {
         busy(false);
       }
