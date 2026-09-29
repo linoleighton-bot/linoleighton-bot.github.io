@@ -20,7 +20,22 @@ body.page-funnel .site-footer {
   display: none;
 }
 
+/*
+ * A warm ground, with white cards on it.
+ *
+ * The site's tokens set `--paper` and `--surface` to the same white, which is
+ * fine for a document and flattens a questionnaire completely: an option card
+ * has nothing to sit on, so a screen of six of them reads as six lines of text
+ * with strokes round them. Every funnel in this category puts white cards on a
+ * warm ground for exactly this reason, and it is the single change that makes
+ * the difference between "a form" and "an app".
+ *
+ * Scoped to the funnel so the marketing pages keep the white they chose.
+ */
 .funnel {
+  --paper: #F6F2EC;
+  --surface: #ffffff;
+  --tint: #EFE9E1;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -31,6 +46,7 @@ body.page-funnel .site-footer {
 
 /* Nothing to progress through on the opening screen, and an empty bar above a
    headline is noise the headline has to compete with. */
+.funnel[data-current-step='hook'] .funnel__mark,
 .funnel[data-current-step='hook'] .funnel__bar {
   visibility: hidden;
   height: 0;
@@ -50,19 +66,45 @@ body.page-funnel .site-footer {
   background: var(--paper);
 }
 
+/*
+ * A labelled Back, not a bare arrow.
+ *
+ * An arrow alone in the corner of a questionnaire reads as browser chrome and
+ * gets ignored; the word is what tells somebody their last answer is not
+ * final, which is what makes them willing to give the next one.
+ */
 .funnel__back {
   flex: 0 0 auto;
-  width: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   height: 2.25rem;
-  display: grid;
-  place-items: center;
+  padding: 0 0.85rem 0 0.7rem;
   border: 1px solid var(--line);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
   font: inherit;
-  font-size: 1.05rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.funnel__back:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+/* The mark, centred above the progress, on every step. */
+.funnel__mark {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.9rem;
+}
+
+.funnel__mark .mark {
+  width: 1.65rem;
+  height: auto;
 }
 
 .funnel__back:hover {
@@ -191,6 +233,30 @@ body.page-funnel .site-footer {
   color: var(--clay);
 }
 
+/*
+ * Centred, like every funnel in this category.
+ *
+ * A left-aligned question reads as a form field; a centred one reads as
+ * something being asked. The options stay left-aligned underneath, because a
+ * list of choices is scanned down an edge.
+ */
+.fstep[data-kind='single'],
+.fstep[data-kind='multi'],
+.fstep[data-kind='grid'],
+.fstep[data-kind='scale'],
+.fstep[data-kind='text'],
+.fstep[data-kind='note'],
+.fstep[data-kind='insight'],
+.fstep[data-kind='build'] {
+  text-align: center;
+}
+
+.fstep[data-kind] .fq,
+.fstep[data-kind] .fplan,
+.fstep[data-kind] .fbuild {
+  text-align: left;
+}
+
 .fs__title {
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 5vw, 2rem);
@@ -300,6 +366,8 @@ body.page-funnel .site-footer {
  */
 .fs__why {
   margin-top: 0.7rem;
+  margin-inline: auto;
+  max-width: 26rem;
   color: var(--muted);
   font-size: 0.9375rem;
   line-height: 1.5;
