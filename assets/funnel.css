@@ -1302,3 +1302,34 @@ body.page-funnel .funnel__body {
   color: var(--muted);
   text-align: center;
 }
+
+
+/* ------------------------------------------ providers, inside the funnel */
+
+/*
+ * The account step borrows the sign-in page's components, which live in the
+ * main stylesheet. What it needs on top is funnel spacing: left-aligned like
+ * every other step rather than centred like a standalone page, and no second
+ * logo — the funnel has its own chrome above.
+ */
+.signin--funnel {
+  text-align: left;
+}
+
+.signin--funnel .signin__lead {
+  margin-inline: 0;
+  max-width: none;
+  margin-top: 0.85rem;
+}
+
+.signin--funnel .signin__providers {
+  margin-top: 1.75rem;
+}
+
+.signin--funnel .signin__legal {
+  text-align: left;
+}
+
+.signin--funnel .fs__cta {
+  margin-top: 1.25rem;
+}

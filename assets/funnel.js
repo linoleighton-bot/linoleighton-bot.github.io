@@ -441,6 +441,76 @@
   }
 
   const accountEl = stepEls.get('account');
+
+  /*
+   * Apple and Google, which is how the app signs people in.
+   *
+   * A provider takes the browser away from this page and brings it back, so
+   * `redirectTo` has to name the step to return to. The answers are already in
+   * localStorage, so the funnel resumes with everything intact — and because
+   * the reader now has a session, `render()` steps straight past the account
+   * screen to the offer rather than asking again.
+   *
+   * The redirect URL must be on Supabase's allow-list for the project or the
+   * provider returns here with an error and no session. That is a dashboard
+   * setting; `signInWithOAuth` cannot arrange it.
+   */
+  if (client && accountEl) {
+    const status = accountEl.querySelector('[data-auth-status]');
+    const tell = (message, kind = 'error') => {
+      if (!status) return;
+      status.textContent = message || '';
+      status.dataset.kind = kind;
+      status.hidden = !message;
+    };
+
+    for (const button of accountEl.querySelectorAll('[data-oauth]')) {
+      button.addEventListener('click', async () => {
+        const provider = button.dataset.oauth;
+        const label = provider === 'apple' ? 'Apple' : 'Google';
+
+        for (const control of accountEl.querySelectorAll('button, input')) control.disabled = true;
+        tell(`Taking you to ${label}…`, 'busy');
+
+        try {
+          const { error } = await client.auth.signInWithOAuth({
+            provider,
+            options: { redirectTo: `${location.origin}${location.pathname}?q=account` },
+          });
+          if (error) throw error;
+          /* On success the browser leaves; nothing after this runs. */
+        } catch (error) {
+          for (const control of accountEl.querySelectorAll('button, input')) control.disabled = false;
+          tell(error?.message || `We could not reach ${label}. Try email instead.`);
+        }
+      });
+    }
+
+    /* A provider that refuses comes back with the reason in the fragment. */
+    const failed = new URLSearchParams(location.hash.slice(1)).get('error_description');
+    if (failed) {
+      tell(decodeURIComponent(failed.replace(/\+/g, ' ')));
+      try {
+        history.replaceState(null, '', `${location.pathname}${location.search}`);
+      } catch {
+        /* No history access; the message is shown either way. */
+      }
+    }
+
+    /* The email half, kept out of the way until it is asked for. */
+    const emailToggle = accountEl.querySelector('[data-email-toggle]');
+    const emailForm = accountEl.querySelector('.signin__emailform');
+    if (emailToggle && emailForm) {
+      emailToggle.addEventListener('click', () => {
+        const open = emailForm.hidden;
+        emailForm.hidden = !open;
+        emailToggle.setAttribute('aria-expanded', String(open));
+        emailToggle.textContent = open ? 'Use a provider instead' : 'Use email instead';
+        if (open) emailForm.querySelector('input[name="email"]')?.focus();
+      });
+    }
+  }
+
   if (client && accountEl) {
     const form = accountEl.querySelector('[data-auth-form]');
     const status = accountEl.querySelector('[data-auth-status]');
