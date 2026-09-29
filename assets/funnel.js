@@ -324,9 +324,11 @@
       }
     }
 
-    if (['hook', 'insight', 'note', 'plan'].includes(step.kind)) {
-      const cta = el.querySelector('[data-next]');
-      if (cta) cta.addEventListener('click', next);
+    if (['hook', 'insight', 'note', 'plan', 'pledge'].includes(step.kind)) {
+      /* A pledge has two buttons and both go forward. */
+      for (const cta of el.querySelectorAll('[data-next]')) {
+        cta.addEventListener('click', next);
+      }
     }
   }
 
