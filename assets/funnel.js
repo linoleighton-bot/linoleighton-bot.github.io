@@ -697,17 +697,27 @@
 
         /*
          * The App User ID is the Supabase user id, which is what ties a payment
-         * taken in a browser to the account the app signs into. Sending anything
-         * else here produces a subscription nobody can find.
+         * taken in a browser to the account the app signs into. Sending
+         * anything else here produces a subscription nobody can find.
+         *
+         * The path token is the purchase link's own, generated per link in the
+         * RevenueCat dashboard — not the public API key. `package_id` is the
+         * documented way to land on the chosen plan's checkout rather than the
+         * picker, and `email` prefills the payment page. There is no documented
+         * redirect parameter: where the checkout returns to is set against the
+         * link in the dashboard.
          */
-        const url = boot.checkout.url
-          .replace('{key}', encodeURIComponent(boot.checkout.key))
+        const base = boot.checkout.url
+          .replace('{token}', encodeURIComponent(boot.checkout.token))
           .replace('{user}', encodeURIComponent(user.id));
 
-        const separator = url.includes('?') ? '&' : '?';
-        window.location.href =
-          `${url}${separator}plan=${encodeURIComponent(plan || '')}` +
-          `&redirect_url=${encodeURIComponent(boot.checkout.returnUrl || '')}`;
+        const params = new URLSearchParams();
+        const chosen = boot.plans.find((p) => p.id === plan);
+        if (chosen?.packageId) params.set('package_id', chosen.packageId);
+        if (user.email) params.set('email', user.email);
+
+        const query = params.toString();
+        window.location.href = query ? `${base}?${query}` : base;
       });
     }
   }
