@@ -768,7 +768,21 @@
   const offerEl = stepEls.get('offer');
   if (offerEl) {
     const planButtons = [...offerEl.querySelectorAll('[data-plan-id]')];
-    let plan = boot.plans.find((p) => p.recommended)?.id || boot.plans[0]?.id || null;
+    /*
+     * The recommended plan, unless the reader has already picked one.
+     *
+     * The pricing on the marketing page links here with `?plan=`, so somebody
+     * who clicked "Annual" over there arrives with Annual selected rather than
+     * having to choose it a second time. An unknown value falls back rather
+     * than selecting nothing, because a paywall with no plan chosen has a
+     * button that cannot be pressed.
+     */
+    const asked = new URLSearchParams(location.search).get('plan');
+    let plan =
+      boot.plans.find((p) => p.id === asked)?.id ||
+      boot.plans.find((p) => p.recommended)?.id ||
+      boot.plans[0]?.id ||
+      null;
 
     const smallprint = offerEl.querySelector('[data-plan-smallprint]');
 
@@ -787,10 +801,26 @@
        * reader's account is written somewhere they cannot miss, for the plan
        * they have chosen rather than the one they have not.
        */
-      if (!smallprint) return;
       const chosen = boot.plans.find((p) => p.id === plan);
       if (!chosen) return;
 
+      /*
+       * The button promises what the *selected* plan actually gives.
+       *
+       * It was built once from the longest trial on offer, so choosing the
+       * weekly plan — which has no trial — left a button reading "Start my 3
+       * days free" above small print saying £19.99 would be taken today. That
+       * is a misleading price claim, not a typo: it is the kind of thing the
+       * CMA acts on, and the reader finds out at the card form.
+       */
+      const button = offerEl.querySelector('[data-checkout]');
+      if (button) {
+        button.textContent = chosen.trialDays
+          ? `Start my ${chosen.trialDays} days free`
+          : 'Subscribe';
+      }
+
+      if (!smallprint) return;
       const every = chosen.period === 'year' ? 'year' : 'week';
       smallprint.textContent = chosen.trialDays
         ? `${chosen.trialDays} days free, then ${chosen.amount} every ${every}. Cancel any time before it ends and you are not charged.`
@@ -806,37 +836,150 @@
     paint();
 
     const checkout = offerEl.querySelector('[data-checkout]');
+    const till = offerEl.querySelector('[data-till]');
+
+    /*
+     * The SDK, fetched the first time somebody actually means to buy.
+     *
+     * It is most of a megabyte, and thirty screens come before this one. Asked
+     * for at the top of the funnel it would be a megabyte spent on the large
+     * majority who never reach the offer; asked for here it downloads while
+     * the reader is reading two prices. Cached after the first call, so a
+     * second attempt after a declined card is instant.
+     */
+    let sdk = null;
+    const loadSdk = () => {
+      if (sdk) return sdk;
+      sdk = new Promise((resolve, reject) => {
+        if (window.Purchases?.Purchases) return resolve(window.Purchases.Purchases);
+        const tag = document.createElement('script');
+        tag.src = '/assets/vendor/purchases.js';
+        tag.async = true;
+        tag.onload = () =>
+          window.Purchases?.Purchases
+            ? resolve(window.Purchases.Purchases)
+            : reject(new Error('The checkout loaded but did not start.'));
+        tag.onerror = () => {
+          /* Let a later attempt try again rather than caching the failure. */
+          sdk = null;
+          reject(new Error('We could not load the checkout. Check your connection.'));
+        };
+        document.head.appendChild(tag);
+      });
+      return sdk;
+    };
+
+    /*
+     * One configured instance per reader.
+     *
+     * `appUserId` is the Supabase user id — the same value the app hands
+     * RevenueCat at sign-in, which is the whole reason a subscription bought
+     * in a browser is already there when the app opens. Anything else here
+     * buys a subscription nobody can find.
+     */
+    let configured = null;
+    const instance = async (Purchases) => {
+      if (configured) return configured;
+      configured = Purchases.configure({ apiKey: boot.checkout.key, appUserId: user.id });
+      return configured;
+    };
+
+    const say = (message, kind = 'error') => {
+      const node = offerEl.querySelector('[data-checkout-status]');
+      if (!node) return;
+      node.textContent = message || '';
+      node.dataset.kind = kind;
+      node.hidden = !message;
+    };
+
     if (checkout && boot.checkout) {
-      checkout.addEventListener('click', () => {
+      checkout.addEventListener('click', async () => {
+        /* No account, no identity to attach a subscription to. */
         if (!user) {
           index = order.indexOf('account');
           render();
           return;
         }
 
-        /*
-         * The App User ID is the Supabase user id, which is what ties a payment
-         * taken in a browser to the account the app signs into. Sending
-         * anything else here produces a subscription nobody can find.
-         *
-         * The path token is the purchase link's own, generated per link in the
-         * RevenueCat dashboard — not the public API key. `package_id` is the
-         * documented way to land on the chosen plan's checkout rather than the
-         * picker, and `email` prefills the payment page. There is no documented
-         * redirect parameter: where the checkout returns to is set against the
-         * link in the dashboard.
-         */
-        const base = boot.checkout.url
-          .replace('{token}', encodeURIComponent(boot.checkout.token))
-          .replace('{user}', encodeURIComponent(user.id));
-
-        const params = new URLSearchParams();
         const chosen = boot.plans.find((p) => p.id === plan);
-        if (chosen?.packageId) params.set('package_id', chosen.packageId);
-        if (user.email) params.set('email', user.email);
+        checkout.disabled = true;
+        say('Opening the checkout…', 'busy');
 
-        const query = params.toString();
-        window.location.href = query ? `${base}?${query}` : base;
+        try {
+          const Purchases = await loadSdk();
+          const purchases = await instance(Purchases);
+
+          const offerings = await purchases.getOfferings();
+          const current = offerings?.current;
+          if (!current) throw new Error('No plans are available right now.');
+
+          /*
+           * Matched on RevenueCat's own package identifier rather than on
+           * position. `$rc_annual` and `$rc_weekly` are what the dashboard
+           * calls them, and the prices printed above came from the same two
+           * ids — so if a package is renamed this fails loudly here instead of
+           * quietly selling the wrong one.
+           */
+          const pkg =
+            current.availablePackages.find((c) => c.identifier === chosen?.packageId) ||
+            current.availablePackages.find((c) => c.webBillingProduct);
+          if (!pkg) throw new Error('That plan is not available right now.');
+
+          say('');
+          if (till) till.hidden = false;
+
+          const result = await purchases.purchase({
+            rcPackage: pkg,
+            /* Drawn into the page. Without a target the SDK opens its own
+               overlay, which is still ours but reads as a different place. */
+            htmlTarget: till || undefined,
+            customerEmail: user.email || undefined,
+          });
+
+          /*
+           * A subscription exists. `result` carries the customer info, which
+           * is worth reading only to be sure the purchase completed rather
+           * than merely returned — an empty entitlement set here means
+           * something went through that did not grant anything.
+           */
+          const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
+          if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
+          if (till) till.hidden = true;
+          next();
+        } catch (error) {
+          if (till) till.hidden = true;
+          checkout.disabled = false;
+
+          /*
+           * Backing out is not a failure and must not be dressed as one. The
+           * SDK raises the same typed error for it as for a declined card, so
+           * the code is what separates them.
+           */
+          const code = error?.errorCode ?? error?.code;
+          const cancelled =
+            code === window.Purchases?.ErrorCode?.UserCancelledError ||
+            /cancel/i.test(String(error?.message || ''));
+          if (cancelled) {
+            say('');
+            return;
+          }
+
+          /*
+           * The SDK's messages are written for whoever wired it up, not for
+           * whoever is trying to pay: "There was a credentials issue. Check
+           * the underlying error for more details." is true and useless at a
+           * till. A reader gets a sentence they can act on and the real text
+           * goes to the console, where the person who can fix it will look.
+           */
+          console.error('[checkout]', error);
+          const wording = /card|declin|insufficient|expired|cvc|postal|billing/i.test(
+            String(error?.message || ''),
+          )
+            ? error.message
+            : 'We could not open the checkout just now. Nothing has been charged — ' +
+              'please try again, or email ' + boot.support + ' and we will sort it out.';
+          say(wording);
+        }
       });
     }
   }
@@ -889,8 +1032,19 @@
    * it asks for a sign-in, and `render` sends a reader who already has one
    * straight on to the offer.
    */
-  const requested = order.indexOf(new URLSearchParams(location.search).get('q') ?? '');
-  if (requested !== -1 && (requested <= index || order[requested] === 'account')) {
+  const params = new URLSearchParams(location.search);
+  const requested = order.indexOf(params.get('q') ?? '');
+
+  /*
+   * Two steps may be jumped forward to; everything else may only be gone back
+   * to. `account` is where a provider returns a reader. `offer` is where the
+   * pricing on the marketing page sends somebody who has already decided to
+   * buy — they do not need to be walked through fifteen questions first, and
+   * the offer stands on its own: it lists what Pro is and what it costs, and
+   * asks for an account before it will take any money.
+   */
+  const jumpable = new Set(['account', 'offer']);
+  if (requested !== -1 && (requested <= index || jumpable.has(order[requested]))) {
     index = requested;
   }
 

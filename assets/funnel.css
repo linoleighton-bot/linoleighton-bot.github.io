@@ -1652,3 +1652,42 @@ body.page-funnel .funnel__body {
     transform: none;
   }
 }
+
+
+/* ------------------------------------------------------------------- till */
+
+/*
+ * Where the checkout is drawn.
+ *
+ * The SDK mounts its own card fields into this element, so almost nothing here
+ * is about their appearance — it is about giving them somewhere that belongs
+ * to the page. A checkout that arrives inside the same card as the two prices,
+ * on the same paper, is the whole point of not sending the reader to a hosted
+ * page: nothing about paying should feel like arriving somewhere new.
+ *
+ * `--rc-*` are the SDK's own variables. Setting the few that carry brand
+ * colour is enough to stop the default blue appearing in the middle of a warm
+ * cream page; the rest of its layout is left alone, because a payment form is
+ * one of the few places where familiar beats bespoke.
+ */
+.pw__till {
+  margin-top: 1rem;
+  min-height: 3rem;
+
+  --rc-color-primary: var(--clay);
+  --rc-color-accent: var(--clay);
+  --rc-color-focus: var(--clay);
+  --rc-color-error: #b4352c;
+}
+
+/* The SDK measures its target, so a `hidden` that only paints transparent
+   would give it a box with no height to lay out inside. */
+.pw__till[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pw__till:not([hidden]) {
+    animation: fopt-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
