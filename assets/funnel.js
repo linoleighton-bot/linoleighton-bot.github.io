@@ -884,6 +884,69 @@
       return configured;
     };
 
+    /**
+     * Give the checkout somewhere with a height to be drawn in.
+     *
+     * The SDK styles its own root as `height: 100%`, which means it inherits
+     * whatever the target element is — and an empty `<div>` is nothing. The
+     * form rendered at its full 559px and was then clipped to 26px by a parent
+     * that had no reason to be any taller, so the reader saw a Stripe badge
+     * and no card fields.
+     *
+     * Matched to the form rather than given a fixed height, because the form
+     * is not one height: a wallet button, a declined card, a 3-D Secure step
+     * and a billing address field each change it, and a checkout that clips
+     * the Pay button at the moment a bank asks for confirmation is worse than
+     * one that never opened.
+     *
+     * Returns the function that stops watching and puts the element back.
+     */
+    const fitTill = (node) => {
+      if (!node) return () => {};
+
+      const inner = () => node.querySelector('.rc-checkout-form-container') || node.firstElementChild;
+
+      /* No ResizeObserver: one generous height, which is the old behaviour of
+         every checkout that ever shipped in an iframe. */
+      if (typeof ResizeObserver === 'undefined') {
+        node.style.height = '36rem';
+        return () => {
+          node.style.height = '';
+        };
+      }
+
+      const observer = new ResizeObserver(() => {
+        const box = inner();
+        if (!box) return;
+        const height = Math.ceil(box.getBoundingClientRect().height);
+        /* A one-pixel difference is rounding, not a resize; reacting to it
+           would have the observer feeding itself for ever. */
+        if (height > 0 && Math.abs(height - node.offsetHeight) > 2) {
+          node.style.height = `${height}px`;
+        }
+      });
+
+      /* The SDK mounts asynchronously, so watch the target until the form
+         appears, then watch the form. */
+      observer.observe(node);
+      const start = Date.now();
+      const wait = window.setInterval(() => {
+        const box = inner();
+        if (box) {
+          observer.observe(box);
+          window.clearInterval(wait);
+        } else if (Date.now() - start > 15000) {
+          window.clearInterval(wait);
+        }
+      }, 120);
+
+      return () => {
+        window.clearInterval(wait);
+        observer.disconnect();
+        node.style.height = '';
+      };
+    };
+
     const say = (message, kind = 'error') => {
       const node = offerEl.querySelector('[data-checkout-status]');
       if (!node) return;
@@ -904,6 +967,7 @@
         const chosen = boot.plans.find((p) => p.id === plan);
         checkout.disabled = true;
         say('Opening the checkout…', 'busy');
+        let unfit = null;
 
         try {
           const Purchases = await loadSdk();
@@ -927,6 +991,7 @@
 
           say('');
           if (till) till.hidden = false;
+          unfit = fitTill(till);
 
           const result = await purchases.purchase({
             rcPackage: pkg,
@@ -944,9 +1009,11 @@
            */
           const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
           if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
+          unfit();
           if (till) till.hidden = true;
           next();
         } catch (error) {
+          unfit?.();
           if (till) till.hidden = true;
           checkout.disabled = false;
 

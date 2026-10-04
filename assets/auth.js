@@ -125,6 +125,20 @@
     const detail = el('plan-detail');
     const manage = el('plan-manage');
 
+    /*
+     * The next step, which is not the same for everybody.
+     *
+     * Somebody paying gets a way into the app. Somebody on the free plan gets
+     * the offer — the paywall on its own, not the thirty-one question funnel
+     * that used to sit behind the only button on this page.
+     */
+    const openApp = el('open-app');
+    const seePlans = el('see-plans');
+    const buildPlan = el('build-plan');
+    const show = (node, on) => {
+      if (node) node.hidden = !on;
+    };
+
     /* No row at all is the commonest case: an account that has never paid. */
     if (!row || row.plan !== 'pro') {
       if (name) name.textContent = 'Free';
@@ -134,8 +148,15 @@
           'You can read the whole catalogue on the free plan. Pro adds audio, downloads and unlimited saves.';
       }
       if (manage) manage.hidden = true;
+      show(seePlans, true);
+      show(openApp, false);
+      show(buildPlan, true);
       return;
     }
+
+    show(openApp, true);
+    show(seePlans, false);
+    show(buildPlan, false);
 
     if (name) name.textContent = 'Mindroll Pro';
     if (badge) {

@@ -1691,3 +1691,77 @@ body.page-funnel .funnel__body {
     animation: fopt-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
+
+
+/* ---------------------------------------------------------- interstitials */
+
+/*
+ * The screens between questions sit in the middle, not at the top.
+ *
+ * A note is three lines and a button. Pinned to the top of a phone it leaves
+ * two-thirds of the screen as empty cream, which does not read as restraint —
+ * it reads as a page that failed to finish loading. Seven of the thirty-one
+ * screens are these, so it was most of the funnel.
+ *
+ * Only the short kinds. A question centres badly: its options should start
+ * high and run down the screen, and a six-option list centred in the viewport
+ * pushes the first choice below where the thumb expects it.
+ */
+.funnel[data-live] .fstep[data-kind='note'],
+.funnel[data-live] .fstep[data-kind='insight'],
+.funnel[data-live] .fstep[data-kind='pledge'],
+.funnel[data-live] .fstep[data-kind='build'],
+.funnel[data-live] .fstep[data-kind='done'] {
+  justify-content: center;
+  /* Lifted slightly above true centre: optical centre sits a little high, and
+     the sticky dock already weights the bottom of the screen. */
+  padding-bottom: clamp(2rem, 9vh, 5rem);
+}
+
+
+/* ---------------------------------------------------------------- curve */
+
+/*
+ * The forgetting curve on the first insight screen.
+ *
+ * Sized to the text column rather than the viewport: it is a figure inside an
+ * argument, not a hero, and a chart that outgrows the sentence explaining it
+ * reads as a dashboard somebody pasted in.
+ */
+.fcurve {
+  margin: 1.5rem 0 0;
+}
+
+.fcurve svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fcurve__key {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* The key is read off the lines themselves, so each label carries the mark it
+   names rather than relying on the reader matching colours across the page. */
+.fcurve__key span::before {
+  content: '';
+  display: inline-block;
+  width: 1.1rem;
+  height: 0;
+  margin-right: 0.4rem;
+  vertical-align: 0.22em;
+}
+
+.fcurve__alone::before {
+  border-top: 2px dashed var(--line-strong);
+}
+
+.fcurve__kept::before {
+  border-top: 2.5px solid var(--clay);
+}

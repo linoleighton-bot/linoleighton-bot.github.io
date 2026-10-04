@@ -861,12 +861,59 @@ section {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  display: none;
+  /*
+   * Visible from tablet up, not only on a wide desktop.
+   *
+   * This used to start at 78rem, which meant the shelf — the one thing on
+   * this page that proves there is a catalogue behind it — appeared for
+   * desktop visitors and for nobody else. Most arrivals are on a phone, and
+   * what they got was a headline, a button and a lot of cream.
+   */
+  display: block;
 }
 
-@media (min-width: 78rem) {
-  .hero__art {
-    display: block;
+/*
+ * Narrow screens keep the outer four and lose the middle pair.
+ *
+ * Six covers at phone width is a collage the headline has to fight through.
+ * Four, pushed past the edges so they crop, read as a shelf continuing off
+ * both sides — which is the impression wanted, and it costs the text nothing
+ * because none of it is over the column any more.
+ */
+@media (max-width: 48rem) {
+  .hero__art .float:nth-child(2),
+  .hero__art .float:nth-child(5) {
+    display: none;
+  }
+
+  .hero__art .float {
+    width: 5.5rem;
+  }
+
+  .hero__art .float:nth-child(1),
+  .hero__art .float:nth-child(3) {
+    left: -1.5rem;
+  }
+
+  .hero__art .float:nth-child(4),
+  .hero__art .float:nth-child(6) {
+    left: calc(100% + 1.5rem);
+  }
+}
+
+/* Between the two, everything shows but pulled tighter to the edges so the
+   headline keeps its measure. */
+@media (min-width: 48.0625rem) and (max-width: 78rem) {
+  .hero__art .float {
+    width: 6.5rem;
+  }
+
+  .hero__art .float:nth-child(-n + 3) {
+    left: 2%;
+  }
+
+  .hero__art .float:nth-child(n + 4) {
+    left: 98%;
   }
 }
 
