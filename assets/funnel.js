@@ -188,6 +188,13 @@
     const heading = stepEls.get(id).querySelector('h1, h2');
     if (heading) {
       heading.setAttribute('tabindex', '-1');
+      /*
+       * Focused so a screen reader announces the new step rather than leaving
+       * the reader where the last one was. Safari paints `:focus-visible` on a
+       * programmatic focus where Chrome does not, which drew a clay box around
+       * every title — the stylesheet turns the ring off for these two headings
+       * only. They are not controls; every real control keeps its own.
+       */
       heading.focus({ preventScroll: true });
     }
   }

@@ -267,10 +267,23 @@ body.page-funnel .site-footer {
   text-wrap: balance;
 }
 
-.fs__title:focus-visible {
-  outline: 2.5px solid var(--clay);
-  outline-offset: 6px;
-  border-radius: 4px;
+/*
+ * No ring on the heading, even though it is focused on every step.
+ *
+ * `render` moves focus to the new step's heading so a screen reader announces
+ * it instead of leaving the reader where the last screen was. Chrome treats
+ * that programmatic focus as not-visible and paints nothing. Safari paints the
+ * ring — so every step opened with a clay box drawn around the title, which
+ * reads as an error state rather than as a focus indicator.
+ *
+ * A heading is not a control. The focus is for announcement, so it gets no
+ * ring in either browser; every actual control keeps its own.
+ */
+.fs__title:focus,
+.fs__title:focus-visible,
+.fhook__head:focus,
+.fhook__head:focus-visible {
+  outline: none;
 }
 
 .fs__body {
@@ -1740,11 +1753,24 @@ body.page-funnel .funnel__body {
 
 .fcurve__key {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 1.25rem;
   margin-top: 0.35rem;
   font-size: 0.8125rem;
   color: var(--muted);
+}
+
+/*
+ * The spacing is on the items as well as on the container.
+ *
+ * `gap` in flexbox is unsupported in Safari before 14.1, and where it is
+ * missing the two labels run together as one word — "Met onceBrought back" —
+ * which is worse than no legend at all. A margin costs nothing where `gap`
+ * works, because the items are centred and the extra sits on the outside.
+ */
+.fcurve__key span + span {
+  margin-left: 0.5rem;
 }
 
 /* The key is read off the lines themselves, so each label carries the mark it
@@ -1764,4 +1790,175 @@ body.page-funnel .funnel__body {
 
 .fcurve__kept::before {
   border-top: 2.5px solid var(--clay);
+}
+
+
+/* ---------------------------------------------------------------- phones */
+
+/*
+ * The app, in a phone that is drawn rather than photographed.
+ *
+ * A bezel in CSS around a real screenshot stays sharp at any size, weighs
+ * nothing, and — the part that matters over a year — does not go stale the
+ * first time the app changes. A mockup baked into a PNG is a megabyte that
+ * quietly stops being true.
+ */
+.phones {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin: 1.5rem 0 0;
+}
+
+.phone {
+  position: relative;
+  margin: 0;
+  flex: 0 1 auto;
+  width: 32%;
+  max-width: 7.5rem;
+  padding: 0.28rem;
+  background: var(--ink);
+  border-radius: 1.1rem;
+  box-shadow: 0 10px 24px rgba(23, 26, 31, 0.14);
+}
+
+/*
+ * The middle one stands slightly proud.
+ *
+ * Three phones in a line is a product shot; three with the centre lifted is a
+ * set, and the eye lands on the middle screen first — which is the daily five,
+ * the thing being sold.
+ */
+.phone:nth-child(2) {
+  transform: translateY(-0.9rem) scale(1.06);
+  z-index: 1;
+}
+
+.phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.85rem;
+  /* The crop ends partway down a scrolling screen, so the bottom is faded
+     rather than cut — a hard edge reads as a broken image. */
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+}
+
+/* One phone on its own gets the room the set does not have. */
+.phones--one .phone {
+  width: 62%;
+  max-width: 13rem;
+  padding: 0.38rem;
+  border-radius: 1.6rem;
+}
+
+.phones--one .phone img {
+  border-radius: 1.3rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .funnel[data-live] .fstep:not([hidden]) .phone {
+    animation: fopt-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(120ms + var(--i, 0) * 70ms);
+  }
+
+  /* The lift is part of the composition, so it has to survive the entrance —
+     an animation that ends on `transform: none` would flatten the set. */
+  .funnel[data-live] .fstep:not([hidden]) .phone:nth-child(2) {
+    animation-name: fphone-mid;
+  }
+}
+
+@keyframes fphone-mid {
+  from { opacity: 0; transform: translateY(9px) scale(1.06); }
+  to { opacity: 1; transform: translateY(-0.9rem) scale(1.06); }
+}
+
+
+/* ------------------------------------------------------- building, again */
+
+/*
+ * The wait screen was four grey rings, grey text and a hairline.
+ *
+ * It is the one screen where nothing is being asked of the reader, which
+ * makes it the one screen that has to earn its seconds — it is standing in
+ * for work being done on their behalf, and it looked like a page that had
+ * stalled. Same structure, given weight: a tick that is actually drawn, a
+ * line that lands when it completes, and a bar you can see move.
+ */
+.fbuild {
+  gap: 1.05rem;
+}
+
+.fbuild__line {
+  font-size: 1.0625rem;
+}
+
+.fbuild__line::before {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+/* The done state gets a drawn check rather than a filled dot: a circle that
+   merely changes colour reads as a radio button, not as a task finishing. */
+.fbuild__line[data-done] {
+  color: var(--ink);
+  font-weight: 550;
+}
+
+.fbuild__line[data-done]::after {
+  content: '';
+  position: absolute;
+  left: 0.48rem;
+  width: 0.32rem;
+  height: 0.62rem;
+  border: solid var(--on-moss, #fff);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-0.06rem);
+}
+
+.fbuild__line {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The line that has just landed gets a single nudge, so completion is
+     something you see happen rather than something you notice has happened. */
+  .fbuild__line[data-done] {
+    animation: fbuild-land 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* The one still being worked on breathes, which is the only honest way to
+     say "this is the current step" without a spinner. */
+  .fbuild__line:not([data-done]) + .fbuild__line:not([data-done]) {
+    animation: none;
+  }
+
+  .fbuild__line:not([data-done]):first-of-type,
+  .fbuild__line[data-done] + .fbuild__line:not([data-done]) {
+    animation: fbuild-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes fbuild-land {
+  from { transform: translateX(-4px); }
+  to { transform: none; }
+}
+
+@keyframes fbuild-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* A bar you can see. 4px on cream against a 1px border is a hairline that
+   reads as a divider; this reads as progress. */
+.fbuild__bar {
+  height: 8px;
+  margin-top: 2.25rem;
+  background: var(--tint);
+}
+
+.fbuild__bar span {
+  background: linear-gradient(to right, var(--moss), var(--clay));
 }
