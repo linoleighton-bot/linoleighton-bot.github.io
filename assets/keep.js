@@ -562,6 +562,53 @@
        * survives, and then both doors. Staying is the loud one. Leaving is a
        * line of text that works on the first press.
        */
+      /**
+       * Today, and the day after they cancel, side by side.
+       *
+       * This replaced a list of neutral facts, and the difference is the
+       * framing rather than the information — every row below is the same
+       * thing the old list said, put as a change instead of as a statement.
+       * "Pro runs until 1 November" is a date. "Day 23 becomes Day 0" is a
+       * loss, and a loss is what people act on.
+       *
+       * Every row is true of this account and of this product's real free
+       * tier: fifty saves, three collections, thirty days of history, no
+       * audio, no downloads, sponsored cards on. Rows that need a figure are
+       * left out when we do not have it, rather than filled with a guess.
+       */
+      function swapTable(stats) {
+        const rows = [
+          stats.streak >= 2
+            ? { now: `Day ${stats.streak}`, after: 'Day 0' }
+            : null,
+          stats.dueSoon > 0
+            ? { now: plural(stats.dueSoon, 'review scheduled', 'reviews scheduled'), after: 'None' }
+            : null,
+          /* The free tier caps saving at fifty. Somebody well past that does
+             not lose what they have — they simply cannot add to it again,
+             which is the more useful thing to say and the true one. */
+          stats.saved > 50
+            ? { now: 'Save anything you like', after: `Capped at 50 — you are at ${stats.saved.toLocaleString()}` }
+            : { now: 'Unlimited saves and collections', after: '50 saves, 3 collections' },
+          { now: 'Audio and offline downloads', after: 'Reading only' },
+          { now: 'No sponsored cards', after: 'Sponsored cards' },
+        ].filter(Boolean);
+
+        return h('div', { class: 'keep__swap' }, [
+          h('p', { class: 'keep__swaptitle', text: 'What changes the moment you cancel' }),
+          h('div', { class: 'keep__swaphead' }, [
+            h('span', { text: 'Today' }),
+            h('span', { text: 'After' }),
+          ]),
+          ...rows.map((row) =>
+            h('div', { class: 'keep__swaprow' }, [
+              h('span', { class: 'keep__from', text: row.now }),
+              h('span', { class: 'keep__to', text: row.after }),
+            ]),
+          ),
+        ]);
+      }
+
       async function stepDecide() {
         paint(4, [
           h('h2', { class: 'keep__title', id: 'keep-title', text: 'One moment…' }),
@@ -637,24 +684,27 @@
               )
             : null,
           curve,
-          stats.streak >= 3
-            ? h('p', {
-                class: 'keep__loseline',
-                html: `Your library stays either way. <strong>The streak is the part you cannot get back</strong> — day ${stats.streak} took ${plural(stats.streak, 'day', 'days')} to reach, and it restarts at one.`,
-              })
-            : null,
-          h('ul', { class: 'keep__facts' }, [
-            h('li', {
-              html: endsOn
-                ? `Pro runs until <strong>${endsOn}</strong>, and you are not charged again.`
-                : 'Pro runs to the end of the period you have already paid for, and you are not charged again.',
-            }),
-            h('li', { text: 'Your saves, collections and notes stay on your account. Nothing is deleted.' }),
-            h('li', { text: 'Turning Pro back on later costs whatever it costs then.' }),
-          ]),
+          swapTable(stats),
+          /*
+           * One line of reassurance, and it is not softness.
+           *
+           * Somebody who believes cancelling wipes their library reaches the
+           * same conclusion either way and stops reading the rest — "it is
+           * all going anyway" is a reason to press on, not a reason to stay.
+           * Saying plainly that nothing is deleted is what makes everything
+           * above it land as a loss they can still avoid.
+           */
+          h('p', {
+            class: 'keep__reassure',
+            html:
+              (stats.saved > 1
+                ? `Nothing is deleted. All ${stats.saved.toLocaleString()} of your saved ideas stay on your account — they just stop going anywhere.`
+                : 'Nothing is deleted. Your library stays on your account — it just stops going anywhere.') +
+              (endsOn ? ` Pro runs to <strong>${endsOn}</strong> either way.` : ''),
+          }),
           isApple
             ? h('p', {
-                class: 'keep__lead keep__lead--tight',
+                class: 'keep__reassure',
                 text: 'Apple took the payment, so Apple is the only place it can be cancelled.',
               })
             : null,

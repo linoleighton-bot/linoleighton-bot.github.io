@@ -3182,7 +3182,8 @@ section {
   .keep__scrim,
   .keep__panel,
   .keep__stat,
-  .keep__option {
+  .keep__option,
+  .keep__stay {
     animation: none;
   }
 }
@@ -3403,31 +3404,80 @@ section {
 
 /* ------------------------------------------------------------ the facts */
 
-.keep__facts {
-  margin: 1.3rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.6rem;
+/*
+ * Today against the day after, in two columns.
+ *
+ * The left column is what they have and the right is what is left, and the
+ * right one is the only red on the screen apart from the button that stops it
+ * happening. Set in the UI face rather than the serif: this is a readout, and
+ * it should read as a statement of fact rather than as more argument.
+ */
+.keep__swap {
+  margin-top: 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
 }
 
-.keep__facts li {
-  position: relative;
-  padding-left: 1.25rem;
-  font-size: 0.9375rem;
-  line-height: 1.5;
+.keep__swaptitle {
+  margin: 0;
+  padding: 0.75rem 0.95rem;
+  background: var(--sunk);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.keep__swaphead,
+.keep__swaprow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 0.6rem 0.95rem;
+  align-items: start;
+}
+
+.keep__swaphead {
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-ui);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.keep__swaprow + .keep__swaprow {
+  border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.keep__from,
+.keep__to {
+  font-family: var(--font-ui);
+  font-size: 0.8438rem;
+  line-height: 1.4;
+  /* Long labels wrap inside their own column instead of widening the grid. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.keep__from {
   color: var(--ink-soft);
 }
 
-.keep__facts li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55em;
-  width: 5px;
-  height: 5px;
-  border-radius: var(--r-pill);
-  background: var(--line-strong);
+.keep__to {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--danger) 78%, var(--ink));
+}
+
+.keep__reassure {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--muted);
 }
 
 /* ---------------------------------------------------------- the buttons */
@@ -3515,26 +3565,49 @@ section {
  */
 .keep__stay {
   display: block;
+  position: relative;
   width: 100%;
   margin-top: 1.6rem;
-  padding: 0.95rem 1.4rem;
+  padding: 1rem 1.4rem;
   border: 0;
   border-radius: var(--r-pill);
   background: var(--danger);
   font: inherit;
   font-family: var(--font-ui);
-  font-size: 1.0313rem;
-  font-weight: 650;
+  font-size: 1.0625rem;
+  font-weight: 700;
   letter-spacing: -0.005em;
   color: #fff;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--danger) 60%, transparent);
+  /*
+   * The glow: a halo that breathes, and a ring that expands out of the edge
+   * and fades. Two shadows on one animation rather than a filter, because a
+   * `filter: drop-shadow` on a pill repaints the whole subtree every frame
+   * and a box-shadow does not.
+   */
+  animation: keep-glow 2.6s ease-in-out infinite;
   transition: background 0.15s ease, transform 0.12s ease;
 }
 
+@keyframes keep-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 24px -10px color-mix(in srgb, var(--danger) 55%, transparent),
+      0 0 18px -2px color-mix(in srgb, var(--danger) 30%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--danger) 40%, transparent);
+  }
+  55% {
+    box-shadow:
+      0 12px 34px -10px color-mix(in srgb, var(--danger) 78%, transparent),
+      0 0 30px 2px color-mix(in srgb, var(--danger) 52%, transparent),
+      0 0 0 12px color-mix(in srgb, var(--danger) 0%, transparent);
+  }
+}
+
 .keep__stay:hover {
-  background: color-mix(in srgb, var(--danger) 86%, var(--ink));
+  background: color-mix(in srgb, var(--danger) 88%, #ff5a4a);
 }
 
 .keep__stay:active {
