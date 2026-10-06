@@ -3855,7 +3855,10 @@ body.is-keeping {
 
 .pro-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  /* `min(…, 100%)` rather than a bare minimum: a bare `minmax(15rem, …)` makes
+     the track 15rem wide even when the page is narrower, which pushes the
+     whole document sideways on a very small screen. */
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   gap: 0.9rem;
   margin-top: 1.75rem;
   padding: 0;
@@ -3903,7 +3906,7 @@ body.is-keeping {
 
 .pro-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
   gap: 1rem;
   margin-top: 1.75rem;
   align-items: start;
@@ -3989,7 +3992,7 @@ body.is-keeping {
 
 .pro-trust__list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   gap: 1.5rem;
   padding: 0;
   list-style: none;
