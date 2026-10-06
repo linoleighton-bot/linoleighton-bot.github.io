@@ -3250,8 +3250,11 @@ section {
   letter-spacing: -0.021em;
 }
 
-/* See the funnel headings: Safari paints a focus ring on a programmatic focus
-   and Chrome does not, which is how an orange box ended up around a title. */
+/* The panel takes focus when a step is painted, so the dialog is announced
+   and the keyboard lands inside it. It is a container, not a control, and a
+   ring around the whole card reads as an error state. */
+.keep__panel:focus,
+.keep__panel:focus-visible,
 .keep__title:focus,
 .keep__title:focus-visible {
   outline: none;
@@ -3433,6 +3436,16 @@ section {
   width: 100%;
   margin-top: 1.5rem;
   justify-content: center;
+  /*
+   * `.btn` sets `white-space: nowrap`, which is right for a marketing button
+   * with two words in it and wrong here: these labels carry a price, and at
+   * phone width "Yes — move me to annual, £89.99" ran straight out of the
+   * panel and put a horizontal scrollbar on the dialog.
+   */
+  white-space: normal;
+  line-height: 1.25;
+  padding-block: 0.8rem;
+  text-wrap: balance;
 }
 
 .keep__secondary {
@@ -3458,51 +3471,78 @@ section {
 /*
  * Cancelling, on every screen.
  *
- * Understated rather than hidden, and never disabled, never behind a delay,
- * never more than one press away. On the final screen it becomes
- * `.keep__exitbtn`, which is a plain bordered button — because by then it is
- * the thing they came for and pretending otherwise is the point at which a
- * retention flow turns into a trap.
+ * Plain underlined text rather than a button, small, centred, below whatever
+ * the screen is asking. Understated, never hidden: no delay, no disabled
+ * state, no second confirmation, and it works on the first press.
+ *
+ * The line this must not cross is set by more than taste. A UK trader selling
+ * a subscription direct has to leave the exit usable, and an exit the reader
+ * cannot find is also the one that comes back as a chargeback. Emphasis is
+ * ours to choose; availability is not.
  */
-.keep__exit {
+.keep__exit,
+.keep__leave {
   display: block;
   width: 100%;
-  margin-top: 0.9rem;
-  padding: 0.4rem;
+  margin-top: 0.85rem;
+  padding: 0.3rem;
   background: none;
   border: 0;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
   color: var(--muted);
+  text-align: center;
   text-decoration: underline;
+  text-decoration-color: var(--line-strong);
   text-underline-offset: 0.18em;
   cursor: pointer;
 }
 
-.keep__exit:hover {
+.keep__exit:hover,
+.keep__leave:hover {
   color: var(--ink-soft);
+  text-decoration-color: currentColor;
 }
 
-.keep__exitbtn {
+/*
+ * The decision screen's primary.
+ *
+ * Red, because that is the one control on the screen that should stop the
+ * eye. It is the brand's own red rather than a stock one, so it reads as
+ * deliberate next to the clay rather than as a system warning dropped into
+ * the page.
+ */
+.keep__stay {
   display: block;
   width: 100%;
-  margin-top: 0.6rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--line-strong);
+  margin-top: 1.6rem;
+  padding: 0.95rem 1.4rem;
+  border: 0;
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--danger);
   font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 550;
-  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-size: 1.0313rem;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: #fff;
   text-align: center;
-  text-decoration: none;
   cursor: pointer;
+  box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--danger) 60%, transparent);
+  transition: background 0.15s ease, transform 0.12s ease;
 }
 
-.keep__exitbtn:hover {
-  border-color: var(--ink-soft);
-  color: var(--ink);
+.keep__stay:hover {
+  background: color-mix(in srgb, var(--danger) 86%, var(--ink));
+}
+
+.keep__stay:active {
+  transform: translateY(1px);
+}
+
+.keep__leave {
+  margin-top: 0.75rem;
 }
 
 .keep__status {
