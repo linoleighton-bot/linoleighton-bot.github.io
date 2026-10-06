@@ -3091,3 +3091,452 @@ section {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
+
+
+/* ------------------------------------------------- cancelling, and not */
+
+/*
+ * The way out of a subscription, placed where a way out belongs.
+ *
+ * Quiet, at the foot of the panel, under the help line — not a button beside
+ * "Open Mindroll" competing with it. That is the whole of the de-emphasis and
+ * it is as far as this goes: it is still a labelled control, in the flow of
+ * the page, reachable by keyboard and findable by anyone looking for it.
+ *
+ * Making it genuinely hard to find is a different thing from making it quiet,
+ * and it is the thing that loses chargebacks and breaks the UK rules on
+ * getting out of a subscription. One of those is allowed. The other is not.
+ */
+.account__quiet {
+  margin-top: 1.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.account__quietlink {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--line-strong);
+  cursor: pointer;
+}
+
+.account__quietlink:hover {
+  color: var(--ink-soft);
+  text-decoration-color: currentColor;
+}
+
+/* --------------------------------------------------------- the flow */
+
+.keep {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+/* `[hidden]` on its own loses to the `display` above — this is the second time
+   that has bitten this stylesheet, so it is stated rather than assumed. */
+.keep[hidden] {
+  display: none;
+}
+
+.keep__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 46%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: keep-fade 0.2s ease both;
+}
+
+.keep__panel {
+  position: relative;
+  width: min(30rem, 100%);
+  max-height: min(42rem, 92vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2.4rem clamp(1.4rem, 5vw, 2.2rem) 1.8rem;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: keep-rise 0.26s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes keep-fade {
+  from { opacity: 0; }
+}
+
+@keyframes keep-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keep__scrim,
+  .keep__panel,
+  .keep__stat,
+  .keep__option {
+    animation: none;
+  }
+}
+
+/* Four steps, shown as four steps. Progress that is visible is progress that
+   feels finite, and a flow that feels finite is one people finish. */
+.keep__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--line);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  overflow: hidden;
+}
+
+.keep__fill {
+  display: block;
+  height: 100%;
+  width: 25%;
+  background: var(--clay);
+  transition: width 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.keep__close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.keep__close:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.keep__step {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+.keep__title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 4.4vw, 1.8rem);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.021em;
+}
+
+/* See the funnel headings: Safari paints a focus ring on a programmatic focus
+   and Chrome does not, which is how an orange box ended up around a title. */
+.keep__title:focus,
+.keep__title:focus-visible {
+  outline: none;
+}
+
+.keep__lead {
+  margin: 0.8rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9688rem;
+  line-height: 1.55;
+}
+
+.keep__lead--tight {
+  margin-top: 0.6rem;
+  font-size: 0.9063rem;
+}
+
+/* ------------------------------------------------------- the reasons */
+
+.keep__options {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+}
+
+.keep__option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.keep__option:hover {
+  border-color: var(--ink-soft);
+  background: var(--sunk);
+}
+
+.keep__option.is-on {
+  border-color: var(--clay);
+  background: var(--clay-wash);
+  box-shadow: inset 0 0 0 1px var(--clay);
+}
+
+.keep__detail {
+  display: block;
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  resize: vertical;
+}
+
+.keep__detail:focus-visible {
+  border-color: var(--clay);
+}
+
+/* ------------------------------------------------------ their numbers */
+
+/*
+ * Grid, not flex, and the gap is a grid gap.
+ *
+ * Flex `gap` is unsupported in Safari before 14.1, where it collapses to zero
+ * and runs the tiles together — the same bug that ran the forgetting-curve
+ * legend into one word. Grid gap has worked since 10.1.
+ */
+.keep__stats {
+  display: grid;
+  /* Two columns, fixed. `auto-fit` gave three across and left the fourth tile
+     stranded on a row of its own, which reads as a layout accident rather than
+     as four facts about somebody's account. */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.keep__stat {
+  padding: 0.9rem 0.8rem;
+  border-radius: var(--r-md);
+  background: var(--clay-wash);
+  text-align: center;
+  animation: keep-rise 0.3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.keep__stat:nth-child(2) { animation-delay: 0.05s; }
+.keep__stat:nth-child(3) { animation-delay: 0.1s; }
+.keep__stat:nth-child(4) { animation-delay: 0.15s; }
+
+.keep__statn {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--clay);
+}
+
+.keep__statl {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 550;
+  color: var(--ink-soft);
+}
+
+.keep__curve {
+  margin-top: 1.3rem;
+  padding: 1rem 1.1rem;
+  border-left: 3px solid var(--clay);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--sunk);
+}
+
+.keep__curvehead {
+  margin: 0;
+  font-size: 0.9688rem;
+  color: var(--ink);
+}
+
+.keep__curvebody {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.keep__loseline {
+  margin: 1.1rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------ the facts */
+
+.keep__facts {
+  margin: 1.3rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.keep__facts li {
+  position: relative;
+  padding-left: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.keep__facts li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+}
+
+/* ---------------------------------------------------------- the buttons */
+
+.keep__go {
+  width: 100%;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.keep__secondary {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.keep__secondary:hover {
+  border-color: var(--ink-soft);
+  background: var(--sunk);
+}
+
+/*
+ * Cancelling, on every screen.
+ *
+ * Understated rather than hidden, and never disabled, never behind a delay,
+ * never more than one press away. On the final screen it becomes
+ * `.keep__exitbtn`, which is a plain bordered button — because by then it is
+ * the thing they came for and pretending otherwise is the point at which a
+ * retention flow turns into a trap.
+ */
+.keep__exit {
+  display: block;
+  width: 100%;
+  margin-top: 0.9rem;
+  padding: 0.4rem;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.keep__exit:hover {
+  color: var(--ink-soft);
+}
+
+.keep__exitbtn {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  color: var(--ink-soft);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.keep__exitbtn:hover {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.keep__status {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-md);
+  border: 1px solid;
+  font-size: 0.9063rem;
+  line-height: 1.5;
+}
+
+.keep__status[hidden] {
+  display: none;
+}
+
+.keep__status[data-kind='busy'] {
+  background: var(--sunk);
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+.keep__status[data-kind='ok'] {
+  background: color-mix(in srgb, var(--moss) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--moss) 32%, transparent);
+  color: color-mix(in srgb, var(--moss) 62%, var(--ink));
+}
+
+.keep__status[data-kind='error'] {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: color-mix(in srgb, var(--danger) 62%, var(--ink));
+}
+
+/* The page behind must not scroll while the panel is up. */
+body.is-keeping {
+  overflow: hidden;
+}

@@ -112,7 +112,10 @@
     const row = await read(() =>
       client
         .from('subscription_entitlements')
-        .select('plan,state,expires_at,will_renew,is_trial,store')
+        /* `product_id` as well, so the flow can tell a weekly subscriber from
+           an annual one — the offer it makes is different, and offering a
+           saving to somebody already on the cheaper plan is a lie. */
+        .select('plan,state,expires_at,will_renew,is_trial,store,product_id')
         .eq('user_id', user.id)
         .maybeSingle(),
     );
@@ -123,7 +126,7 @@
     const name = el('plan-name');
     const badge = el('plan-badge');
     const detail = el('plan-detail');
-    const manage = el('plan-manage');
+    const manageRow = el('manage-row');
 
     /*
      * The next step, which is not the same for everybody.
@@ -147,7 +150,7 @@
         detail.textContent =
           'You can read the whole catalogue on the free plan. Pro adds audio, downloads and unlimited saves.';
       }
-      if (manage) manage.hidden = true;
+      if (manageRow) manageRow.hidden = true;
       show(seePlans, true);
       show(openApp, false);
       show(buildPlan, true);
@@ -173,18 +176,46 @@
     }
 
     /*
-     * Send them to the right place to cancel.
+     * The way out, and what stands in front of it.
      *
-     * A subscription bought through the App Store can only be managed in the
-     * App Store — pointing an Apple subscriber at a web billing portal is a
-     * support email, and pointing a web subscriber at Apple is worse, because
-     * Apple will tell them they have no subscription at all.
+     * One quiet line at the foot of the panel. Pressing it opens the flow in
+     * `keep.js`, which asks four questions, shows them what they have built
+     * and makes the one offer that fits the reason they gave — and then, on
+     * its last screen, sends them to the only place their subscription can
+     * actually be cancelled. Which place that is depends entirely on who took
+     * the money: Apple's own settings for an App Store purchase, RevenueCat's
+     * billing portal for a card paid here. Sending either to the other is a
+     * dead end, and the second direction is worse, because Apple will tell
+     * them they have no subscription at all.
+     *
+     * With the flow script missing the link still works — it falls back to
+     * the plain handoff rather than becoming a button that does nothing.
      */
-    if (manage) {
-      manage.hidden = false;
-      if (row.store === 'app_store') manage.href = root.dataset.manageIos || manage.href;
-      else if (row.store === 'play_store') manage.href = root.dataset.managePlay || manage.href;
-      else manage.href = `mailto:${root.dataset.support}?subject=Manage%20my%20subscription`;
+    if (manageRow) {
+      manageRow.hidden = false;
+      const trigger = manageRow.querySelector('[data-keep-open]');
+      if (trigger && !trigger.dataset.wired) {
+        trigger.dataset.wired = '1';
+        trigger.addEventListener('click', () => {
+          if (window.mindrollKeep) {
+            window.mindrollKeep.open({
+              client,
+              user,
+              row,
+              root,
+              name: profile?.display_name?.trim() || null,
+            });
+            return;
+          }
+          const fallback =
+            row.store === 'app_store'
+              ? root.dataset.manageIos
+              : row.store === 'play_store'
+                ? root.dataset.managePlay
+                : `mailto:${root.dataset.support}?subject=Manage%20my%20subscription`;
+          if (fallback) window.location.href = fallback;
+        });
+      }
     }
   }
 
