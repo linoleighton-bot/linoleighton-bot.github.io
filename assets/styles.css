@@ -307,6 +307,23 @@ section {
   }
 }
 
+/*
+ * Below the nav breakpoint the row is brand, "Sign in", "Get the app" and the
+ * burger, and on a phone that does not fit. `.header-cta` is `flex: none`, so
+ * instead of wrapping it overflowed the header pill and scrolled the whole
+ * document sideways by about twenty pixels — on every page, at every phone
+ * width, including the paywall.
+ *
+ * "Sign in" goes, because it is already the last item inside the menu the
+ * burger opens. The button stays: it is the only thing in that row anybody
+ * came to press.
+ */
+@media (max-width: 55.9375rem) {
+  .header-signin {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------- menu (small) */
 
 /*
