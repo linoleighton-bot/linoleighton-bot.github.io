@@ -472,9 +472,11 @@
             type: 'button',
             onclick: () => {
               void recordOutcome('switched');
-              /* The funnel's offer step is where the embedded checkout lives,
-                 and it takes the plan to open on in the query string. */
-              window.location.href = '/start?q=offer&plan=annual';
+              /* The website's own paywall, which opens the till on the plan
+                 named in the query string. Not `/start` — that is thirty-three
+                 questions built for somebody who has not decided, and this
+                 reader has just been offered a specific plan and said yes. */
+              window.location.href = '/pro?plan=annual';
             },
           }, [`Yes — move me to annual, ${annual.amount}`]);
         } else if (wantsCheaper) {

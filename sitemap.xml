@@ -4,5 +4,6 @@
   <url><loc>https://getmindroll.com/terms</loc><priority>0.4</priority></url>
   <url><loc>https://getmindroll.com/privacy</loc><priority>0.4</priority></url>
   <url><loc>https://getmindroll.com/support</loc><priority>0.6</priority></url>
+  <url><loc>https://getmindroll.com/pro</loc><priority>0.8</priority></url>
   <url><loc>https://getmindroll.com/account</loc><priority>0.3</priority></url>
 </urlset>

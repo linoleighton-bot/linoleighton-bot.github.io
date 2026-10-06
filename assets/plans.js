@@ -258,8 +258,14 @@
     button.addEventListener('click', async () => {
       const provider = button.dataset.oauth;
       const name = oauth ? oauth.label(provider) : provider;
-      /* Back to the pricing, not to the top of the page. */
-      const returnTo = `${location.origin}/#plans`;
+      /*
+       * Back to the pricing they were reading, not to the top of the site.
+       *
+       * Which page that is now depends on where this block was rendered —
+       * `/#plans` on the home page, `/pro` on the website's own paywall — so
+       * the page says, rather than this file assuming.
+       */
+      const returnTo = `${location.origin}${root.dataset.return || '/#plans'}`;
 
       /*
        * Remembered here and nowhere else.
@@ -270,7 +276,13 @@
        * visit to `/#plans` opened a checkout nobody had asked for.
        */
       try {
-        window.sessionStorage.setItem(REMEMBER, chosenPlan || '');
+        /* The page is stored with the plan. Two pages carry this block now,
+           and a plan remembered on one must not re-open a checkout on the
+           other. */
+        window.sessionStorage.setItem(
+          REMEMBER,
+          JSON.stringify({ plan: chosenPlan || '', at: location.pathname }),
+        );
       } catch {
         /* Private window: they land back on the pricing and press again. */
       }
@@ -312,28 +324,58 @@
     show(signin, true);
     say(failure.message);
     oauth.clean();
-  } else if (location.hash === '#plans') {
-    let remembered = null;
-    try {
-      remembered = window.sessionStorage.getItem(REMEMBER);
-    } catch {
-      /* Nothing remembered; the reader picks again. */
+  } else {
+    resume();
+  }
+
+  /**
+   * Opening a checkout the reader has already asked for.
+   *
+   * Two things ask: coming back from a provider with a plan remembered, and
+   * arriving with `?plan=` in the address — which is how every "buy this one"
+   * link on the site reaches this page, from the account panel to the offer
+   * at the end of the cancellation flow.
+   *
+   * Both are consumed on sight. A reload should never re-open a checkout
+   * nobody pressed, and a `?plan=` left in the address bar would do exactly
+   * that on every visit back.
+   */
+  /* `/pro` and `/pro/` are the same page. A static host redirects one to the
+     other, so the path written before leaving and the path returned to can
+     differ by a slash and nothing else. */
+  const samePage = (a, b) => String(a).replace(/\/+$/, '') === String(b).replace(/\/+$/, '');
+
+  function resume() {
+    let wanted = null;
+
+    const asked = new URLSearchParams(location.search).get('plan');
+    if (asked && packages[asked]) {
+      wanted = asked;
+      /* Out of the address bar, and the rest of the query string kept. */
+      const url = new URL(location.href);
+      url.searchParams.delete('plan');
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
     }
-    if (remembered) {
-      /* Consumed on sight: a reload should not re-open a checkout. */
+
+    if (!wanted) {
       try {
-        window.sessionStorage.removeItem(REMEMBER);
+        const raw = window.sessionStorage.getItem(REMEMBER);
+        if (raw) {
+          window.sessionStorage.removeItem(REMEMBER);
+          const saved = JSON.parse(raw);
+          if (saved?.plan && samePage(saved.at, location.pathname)) wanted = saved.plan;
+        }
       } catch {
-        /* Nothing to clear. */
+        /* Nothing remembered, or storage is blocked. The buttons still work. */
       }
-      supabaseClient()
-        .then((client) => client.auth.getSession())
-        .then(({ data }) => {
-          if (data.session?.user) start(remembered);
-        })
-        .catch(() => {
-          /* Offline or blocked. The buttons still work. */
-        });
     }
+
+    if (!wanted) return;
+
+    /* Signed in, it opens the till. Signed out, it opens the sign-in that has
+       to happen first — which is the whole reason `start()` is the entry
+       point rather than `buy()`. */
+    show(panel, true);
+    start(wanted);
   }
 })();

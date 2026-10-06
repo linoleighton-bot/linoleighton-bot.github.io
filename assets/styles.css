@@ -3777,3 +3777,240 @@ section {
 body.is-keeping {
   overflow: hidden;
 }
+
+
+/* --------------------------------------------------------- the paywall */
+
+/*
+ * `/pro`, which is the website's own paywall and not the funnel's.
+ *
+ * The reader arriving here has already decided — they pressed a price, or
+ * "See Pro plans" on their account, or thought better of a cancellation. So
+ * the till is the first thing on the page and everything under it answers a
+ * hesitation rather than building desire. That is the whole difference in
+ * layout between this page and the home page's pricing section, which has to
+ * earn the attention it is borrowing.
+ *
+ * The offer block itself is shared, so nothing below restyles it. What is
+ * here is the frame around it.
+ */
+.pro-top {
+  padding-block: clamp(2.5rem, 6vw, 4rem) clamp(2.5rem, 6vw, 3.5rem);
+  background: var(--tint);
+  border-bottom: 1px solid var(--line);
+}
+
+.pro-top__in {
+  max-width: 34rem;
+}
+
+.pro-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+.pro-head {
+  margin-top: 0.6rem;
+  font-size: var(--step-2);
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.pro-lead {
+  margin-top: 0.9rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* On the home page the offer block sits inside a card and borrows its top
+   rule. Here it stands on its own, so it brings its own surface. */
+.pro-top .offers {
+  margin-top: 1.75rem;
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.pro-fine {
+  margin-top: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------- what it adds */
+
+.pro-adds {
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+}
+
+.pro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * A tile derives its wash, border and ink from `--hue`, which the markup
+ * sets per card. Declared here rather than on `:root`: a custom property
+ * holding a `var()` is substituted where it is declared, so deriving these
+ * on the root would freeze all six against the root's hue and every card
+ * would come out the same colour.
+ */
+.pro-card {
+  padding: 1.15rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--hue) var(--wash-line), transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--hue) var(--wash-amount), var(--wash-base));
+}
+
+.pro-card__n {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--hue) var(--wash-ink), var(--ink-base));
+  opacity: 0.65;
+}
+
+.pro-card p {
+  margin-top: 0.45rem;
+  font-size: 0.9688rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--hue) var(--wash-ink), var(--ink-base));
+}
+
+/* ------------------------------------------------------- side by side */
+
+.pro-compare {
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+  background: var(--tint);
+  border-block: 1px solid var(--line);
+}
+
+.pro-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.75rem;
+  align-items: start;
+}
+
+.pro-col {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.pro-col--pro {
+  border-color: color-mix(in srgb, var(--clay) 38%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.pro-col__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pro-col__price {
+  margin-top: 0.3rem;
+  font-size: 0.9063rem;
+  color: var(--muted);
+}
+
+.pro-col ul {
+  margin-top: 1.1rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pro-col li {
+  position: relative;
+  padding-left: 1.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.pro-col li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+}
+
+.pro-col--pro li::before {
+  background: var(--clay);
+}
+
+/* "Everything in Free, plus:" is a heading for the rest, not a feature. */
+.pro-col li.is-lead {
+  padding-left: 0;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.pro-col li.is-lead::before {
+  content: none;
+}
+
+.pro-col__cta {
+  margin-top: 1.35rem;
+  width: 100%;
+}
+
+/* ----------------------------------------------------- the hesitations */
+
+.pro-trust {
+  padding-block: clamp(2.5rem, 6vw, 3.5rem);
+}
+
+.pro-trust__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pro-trust__list h3 {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.pro-trust__list p {
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.pro-faq {
+  padding-block: clamp(2rem, 5vw, 3.5rem);
+  background: var(--tint);
+  border-top: 1px solid var(--line);
+}
