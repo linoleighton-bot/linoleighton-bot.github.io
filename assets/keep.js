@@ -283,6 +283,31 @@
         if (event.key === 'Escape') close(state.reason ? 'kept' : null);
       };
 
+      /*
+       * What is on the line, in view the whole way through.
+       *
+       * The loss used to arrive only on the last screen, which meant the first
+       * three were answered by somebody with nothing at stake in front of
+       * them. One quiet line under the progress bar fixes that: they are
+       * reading their own streak and their own review count while they pick
+       * an answer, and every screen after it is read in that light.
+       *
+       * Filled in when the counts land rather than rendered empty — a bar
+       * that says nothing is worse than no bar.
+       */
+      const stakes = h('p', { class: 'keep__stakes', hidden: true });
+
+      void statsPromise.then((s) => {
+        const bits = [
+          s.streak >= 2 ? `day ${s.streak} of your streak` : null,
+          s.dueSoon > 0 ? `${plural(s.dueSoon, 'review', 'reviews')} due this month` : null,
+          !s.streak && !s.dueSoon && s.saved ? plural(s.saved, 'saved idea', 'saved ideas') : null,
+        ].filter(Boolean);
+        if (!bits.length) return;
+        stakes.textContent = `On the line: ${bits.join(' · ')}`;
+        stakes.hidden = false;
+      });
+
       panel.append(
         h('div', { class: 'keep__bar' }, [fill]),
         h('button', {
@@ -291,6 +316,7 @@
           'aria-label': 'Close',
           onclick: () => close(state.reason ? 'kept' : null),
         }, ['×']),
+        stakes,
         body,
       );
 
@@ -563,45 +589,74 @@
        * line of text that works on the first press.
        */
       /**
-       * Today, and the day after they cancel, side by side.
+       * The next month, drawn as days.
        *
-       * This replaced a list of neutral facts, and the difference is the
-       * framing rather than the information — every row below is the same
-       * thing the old list said, put as a change instead of as a statement.
-       * "Pro runs until 1 November" is a date. "Day 23 becomes Day 0" is a
-       * loss, and a loss is what people act on.
+       * One dot per day: the solid ones behind them, the faint ones the month
+       * they are about to not have. It is the app's own streak calendar, which
+       * is deliberate — this is the picture they already recognise, and seeing
+       * the run they have built sitting next to the run they are giving up
+       * does more in one glance than any sentence on this screen.
        *
-       * Every row is true of this account and of this product's real free
-       * tier: fifty saves, three collections, thirty days of history, no
-       * audio, no downloads, sponsored cards on. Rows that need a figure are
-       * left out when we do not have it, rather than filled with a guess.
+       * Capped at thirty each side. A four-hundred-day streak would otherwise
+       * fill the dialog, and the point is the shape rather than the census.
+       */
+      function streakDots(streak) {
+        const past = Math.min(streak, 30);
+        const dots = [];
+        for (let i = 0; i < past; i += 1) dots.push(h('span', { class: 'keep__dot is-done' }));
+        for (let i = 0; i < 30; i += 1) {
+          dots.push(h('span', { class: 'keep__dot is-ghost', style: `--d:${i * 14}ms` }));
+        }
+        return h('div', { class: 'keep__dots' }, dots);
+      }
+
+      /**
+       * Staying against leaving, over the same thirty days.
+       *
+       * This used to be Today against After, which compared them with their
+       * own past. Comparing them with their own near future is the stronger
+       * frame and the more useful one: nobody cancels because of what they
+       * have already done, they cancel because they cannot see what it is
+       * building towards.
+       *
+       * Each row is arithmetic or a real setting, never a projection dressed
+       * up as a promise. Day 53 is day 23 plus thirty. The reviews are already
+       * scheduled in `idea_reviews` and dated. The limits are the free tier's
+       * actual numbers: fifty saves, three collections, no audio, no
+       * downloads, sponsored cards on.
        */
       function swapTable(stats) {
         const rows = [
           stats.streak >= 2
-            ? { now: `Day ${stats.streak}`, after: 'Day 0' }
+            ? { now: `Day ${stats.streak + 30}`, after: 'Day 0', lead: 'Your streak' }
             : null,
           stats.dueSoon > 0
-            ? { now: plural(stats.dueSoon, 'review scheduled', 'reviews scheduled'), after: 'None' }
+            ? {
+                now: plural(stats.dueSoon, 'review lands', 'reviews land'),
+                after: 'None of them',
+                lead: 'Scheduled reviews',
+              }
             : null,
-          /* The free tier caps saving at fifty. Somebody well past that does
-             not lose what they have — they simply cannot add to it again,
-             which is the more useful thing to say and the true one. */
           stats.saved > 50
-            ? { now: 'Save anything you like', after: `Capped at 50 — you are at ${stats.saved.toLocaleString()}` }
-            : { now: 'Unlimited saves and collections', after: '50 saves, 3 collections' },
-          { now: 'Audio and offline downloads', after: 'Reading only' },
-          { now: 'No sponsored cards', after: 'Sponsored cards' },
+            ? {
+                lead: 'Saving',
+                now: 'Anything you like',
+                after: `Capped at 50 — you are at ${stats.saved.toLocaleString()}`,
+              }
+            : { lead: 'Saving', now: 'Unlimited', after: '50 saves, 3 collections' },
+          { lead: 'Audio and downloads', now: 'Included', after: 'Reading only' },
+          { lead: 'Sponsored cards', now: 'None', after: 'Back on' },
         ].filter(Boolean);
 
         return h('div', { class: 'keep__swap' }, [
-          h('p', { class: 'keep__swaptitle', text: 'What changes the moment you cancel' }),
           h('div', { class: 'keep__swaphead' }, [
-            h('span', { text: 'Today' }),
-            h('span', { text: 'After' }),
+            h('span', { class: 'keep__swaphead--lead' }),
+            h('span', { class: 'is-stay', text: 'If you stay' }),
+            h('span', { class: 'is-go', text: 'If you cancel' }),
           ]),
           ...rows.map((row) =>
             h('div', { class: 'keep__swaprow' }, [
+              h('span', { class: 'keep__lead2', text: row.lead }),
               h('span', { class: 'keep__from', text: row.now }),
               h('span', { class: 'keep__to', text: row.after }),
             ]),
@@ -618,81 +673,73 @@
         const stats = await statsPromise;
         if (state.step !== 4) return;
 
-        const tiles = [
-          stats.saved ? { n: stats.saved, label: stats.saved === 1 ? 'idea saved' : 'ideas saved' } : null,
-          stats.streak ? { n: stats.streak, label: 'day streak' } : null,
-          stats.learned ? { n: stats.learned, label: stats.learned === 1 ? 'idea learned' : 'ideas learned' } : null,
-          stats.topics ? { n: stats.topics, label: stats.topics === 1 ? 'topic followed' : 'topics followed' } : null,
-        ].filter(Boolean);
-
-        const curve =
-          stats.dueSoon > 0
-            ? h('div', { class: 'keep__curve' }, [
-                h('p', {
-                  class: 'keep__curvehead',
-                  html: `<strong>${plural(stats.dueSoon, 'idea is', 'ideas are')}</strong> due for review in the next 30 days.`,
-                }),
-                h('p', {
-                  class: 'keep__curvebody',
-                  text:
-                    'Cancelling stops those reviews, and that matters more here than it would ' +
-                    'anywhere else — the whole app exists because of what happens when you stop. ' +
-                    'Most of what you have learned but not yet locked in goes within a week.',
-                }),
-              ])
-            : null;
-
         const where = isApple ? root.dataset.manageIos : isPlay ? root.dataset.managePlay : null;
 
         /*
          * Leaving: plain text, under the button that keeps them. Smaller and
          * quieter than everything above it, and still a labelled control that
-         * works on the first press — understated is a design choice, and the
-         * line past which it stops being one is an exit people cannot use.
+         * works on the first press. Understated is a design choice; the line
+         * past which it stops being one is an exit people cannot use.
          */
         const leaving = isWeb
           ? h('button', {
               class: 'keep__leave',
               type: 'button',
               onclick: (event) => void openPortal(event.currentTarget),
-            }, ['Take me to cancel'])
+            }, ['Cancel Subscription'])
           : h('a', {
               class: 'keep__leave',
               href: where,
               target: '_blank',
               rel: 'noopener',
               onclick: () => void recordOutcome('cancelled'),
-            }, ['Take me to cancel']);
+            }, ['Cancel Subscription']);
+
+        /*
+         * The headline is the arithmetic, because the arithmetic is the whole
+         * argument: thirty more days is day fifty-three, and cancelling is day
+         * zero. Nothing in that sentence is a claim — it is addition, and it
+         * is the number they are actually choosing between.
+         */
+        const headline =
+          stats.streak >= 2
+            ? `Thirty days from now you are on day ${stats.streak + 30}. Or day zero.`
+            : 'Thirty days from now, this is either a habit or it is nothing.';
 
         paint(4, [
           h('p', { class: 'keep__step', text: 'Before you go' }),
-          h('h2', {
-            class: 'keep__title',
-            id: 'keep-title',
-            text: tiles.length ? 'This is what you are giving up.' : 'This is what cancelling stops.',
-          }),
-          tiles.length
-            ? h(
-                'div',
-                { class: 'keep__stats' },
-                tiles.map((tile) =>
-                  h('div', { class: 'keep__stat' }, [
-                    h('span', { class: 'keep__statn', text: tile.n.toLocaleString() }),
-                    h('span', { class: 'keep__statl', text: tile.label }),
-                  ]),
-                ),
-              )
+          h('h2', { class: 'keep__title', id: 'keep-title', text: headline }),
+
+          stats.streak >= 2
+            ? h('div', { class: 'keep__run' }, [
+                streakDots(stats.streak),
+                h('p', {
+                  class: 'keep__runcap',
+                  html: `Each dot is a day. <strong>The solid ones you have already done.</strong> The faint ones are the month you are about to give up.`,
+                }),
+              ])
             : null,
-          curve,
+
+          stats.dueSoon > 0
+            ? h('p', {
+                class: 'keep__punch',
+                html:
+                  `<strong>${plural(stats.dueSoon, 'idea is', 'ideas are')} mid-ladder right now.</strong> ` +
+                  `Without the reviews, most of what you have half-learned is gone inside a week — ` +
+                  `which is the entire reason this app exists.`,
+              })
+            : null,
+
           swapTable(stats),
+
           /*
            * One line of reassurance, and it is not softness.
            *
            * Somebody who believes cancelling wipes their library reaches the
-           * same conclusion either way and stops reading the rest — "it is
-           * all going anyway" is a reason to press on, not a reason to stay.
-           * Saying plainly that nothing is deleted is what makes everything
-           * above it land as a loss they can still avoid.
+           * same conclusion either way and stops reading — "it is all going
+           * anyway" is a reason to press on, not a reason to stay. Saying
+           * plainly that nothing is deleted is what makes everything above it
+           * land as a loss they can still avoid.
            */
           h('p', {
             class: 'keep__reassure',

@@ -3183,7 +3183,8 @@ section {
   .keep__panel,
   .keep__stat,
   .keep__option,
-  .keep__stay {
+  .keep__stay,
+  .keep__dot {
     animation: none;
   }
 }
@@ -3405,12 +3406,99 @@ section {
 /* ------------------------------------------------------------ the facts */
 
 /*
- * Today against the day after, in two columns.
+ * What is at stake, pinned above every screen.
  *
- * The left column is what they have and the right is what is left, and the
- * right one is the only red on the screen apart from the button that stops it
- * happening. Set in the UI face rather than the serif: this is a readout, and
- * it should read as a statement of fact rather than as more argument.
+ * Their own streak and their own review count, so the three questions are
+ * answered by somebody who can see what the answer costs. One line, in the UI
+ * face, tinted rather than loud: it is context, not an argument, and an
+ * argument up here would be read as noise by screen two.
+ */
+.keep__stakes {
+  margin: 0;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--r-pill);
+  background: var(--clay-wash);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--clay) 72%, var(--ink));
+  text-align: center;
+}
+
+.keep__stakes[hidden] {
+  display: none;
+}
+
+/*
+ * The run, drawn as days.
+ *
+ * One dot per day — solid behind them, faint ahead. The ghosts fade in one
+ * after another so the month they are giving up assembles in front of them
+ * rather than simply being there, which is the difference between a chart and
+ * a thing you feel.
+ */
+.keep__run {
+  margin-top: 1.4rem;
+}
+
+.keep__dots {
+  display: flex;
+  flex-wrap: wrap;
+  /* Margins, not flex `gap`: Safari before 14.1 collapses flex gap to zero and
+     runs the dots into one solid bar. The same bug ate the funnel legend. */
+  margin: 0 -2px;
+}
+
+.keep__dot {
+  width: 10px;
+  height: 10px;
+  margin: 2px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.keep__dot.is-done {
+  background: var(--clay);
+}
+
+.keep__dot.is-ghost {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  animation: keep-ghost 0.5s ease both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes keep-ghost {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+.keep__runcap {
+  margin: 0.8rem 0 0;
+  font-size: 0.8438rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* The one sentence on this screen that is allowed to shout. */
+.keep__punch {
+  margin: 1.2rem 0 0;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--clay);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/*
+ * Staying against leaving, over the same thirty days.
+ *
+ * Three columns: what the row is about, what it looks like if they stay, what
+ * it looks like if they do not. The last column carries the only red on the
+ * screen besides the button that prevents it. Set in the UI face because this
+ * is a readout — the serif would make it read as more argument.
  */
 .keep__swap {
   margin-top: 1.4rem;
@@ -3419,58 +3507,93 @@ section {
   overflow: hidden;
 }
 
-.keep__swaptitle {
-  margin: 0;
-  padding: 0.75rem 0.95rem;
-  background: var(--sunk);
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-ui);
-  font-size: 0.8125rem;
-  font-weight: 650;
-  color: var(--ink);
-}
-
 .keep__swaphead,
 .keep__swaprow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  padding: 0.6rem 0.95rem;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
   align-items: start;
 }
 
 .keep__swaphead {
-  padding-block: 0.5rem;
+  padding-block: 0.55rem;
+  background: var(--sunk);
   border-bottom: 1px solid var(--line);
   font-family: var(--font-ui);
   font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--muted);
+}
+
+.keep__swaphead .is-stay {
+  color: var(--moss);
+}
+
+.keep__swaphead .is-go {
+  color: var(--danger);
 }
 
 .keep__swaprow + .keep__swaprow {
   border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
+.keep__lead2,
 .keep__from,
 .keep__to {
   font-family: var(--font-ui);
-  font-size: 0.8438rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
   /* Long labels wrap inside their own column instead of widening the grid. */
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
+.keep__lead2 {
+  color: var(--muted);
+}
+
 .keep__from {
-  color: var(--ink-soft);
+  font-weight: 600;
+  color: color-mix(in srgb, var(--moss) 72%, var(--ink));
 }
 
 .keep__to {
   font-weight: 600;
   color: color-mix(in srgb, var(--danger) 78%, var(--ink));
+}
+
+/*
+ * Three columns do not fit a phone, so the row becomes a small stack: what it
+ * is about on its own line, then the two outcomes side by side beneath it.
+ *
+ * The header stays, narrowed to the same two columns. Dropping it would leave
+ * the green and the red as the only thing saying which column is which, and
+ * colour on its own is not a label — a red/green pair is the exact case most
+ * colour blindness makes unreadable.
+ */
+@media (max-width: 24rem) {
+  .keep__swaphead {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+
+  .keep__swaphead--lead {
+    display: none;
+  }
+
+  .keep__swaprow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    row-gap: 0.3rem;
+  }
+
+  .keep__lead2 {
+    grid-column: 1 / -1;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 }
 
 .keep__reassure {
@@ -3539,7 +3662,8 @@ section {
   background: none;
   border: 0;
   font: inherit;
-  font-size: 0.8125rem;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
   font-weight: 400;
   color: var(--muted);
   text-align: center;
@@ -3567,14 +3691,14 @@ section {
   display: block;
   position: relative;
   width: 100%;
-  margin-top: 1.6rem;
-  padding: 1rem 1.4rem;
+  margin-top: 1.75rem;
+  padding: 1.15rem 1.4rem;
   border: 0;
   border-radius: var(--r-pill);
   background: var(--danger);
   font: inherit;
   font-family: var(--font-ui);
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.005em;
   color: #fff;
