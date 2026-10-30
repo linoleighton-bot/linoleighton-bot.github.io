@@ -216,7 +216,13 @@
       (entries) => {
         for (const entry of entries) {
           const links = navLinks.get(entry.target);
-          if (!links || !entry.isIntersecting) continue;
+          if (!links) continue;
+          // Leaving a section clears its link, so the bar does not keep
+          // naming a section the reader has scrolled past into one with no link.
+          if (!entry.isIntersecting) {
+            for (const link of links) link.removeAttribute('aria-current');
+            continue;
+          }
           for (const group of navLinks.values()) {
             for (const other of group) other.removeAttribute('aria-current');
           }

@@ -1,0 +1,3142 @@
+/*
+ * The home page's own look: heavy type, one warm coral, big soft cards.
+ *
+ * Loaded on the home page only, on top of `styles.css`, and scoped to
+ * `.home-bold` so nothing here can leak into the legal pages, `/pro` or the
+ * funnel. The palette in `tokens.css` is generated from `brand.json`, which the
+ * app reads too; this file adds to it rather than changing it, so restyling
+ * the website can never restyle the app.
+ *
+ * Scroll decides what `home.js` shows; this file decides how it looks. The
+ * hero's entrance is CSS so it runs before any script has loaded. Everything
+ * that moves is `transform` or `opacity`, so the browser can composite it
+ * without repainting.
+ */
+
+@font-face {
+  font-family: 'Lexend';
+  src: url('fonts/lexend-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+.home-bold {
+  --coral: #ee5b3c;
+  /* White on this passes AA at button size; `--coral` alone does not. */
+  --coral-strong: #c9401f;
+  --coral-press: #9a2f15;
+  /* For small coral text on white or paper. */
+  --coral-ink: #b03a1d;
+  --coral-wash: #fff2ea;
+  --bold-ink: #1a1a1a;
+  --bold-soft: #4a5565;
+  --bold-mute: #6a7282;
+  --bold-paper: #fafaf9;
+  --bold-line: rgb(0 0 0 / 0.1);
+  --bold-card: 0 20px 60px -15px rgb(0 0 0 / 0.1);
+  --r-card: 2rem;
+  --font-bold: 'Lexend', var(--font-body);
+  /* One face for the whole page. The serif in `tokens.css` showed up in the
+     prices, the questions and the stats, and read as a second design. */
+  --font-display: var(--font-bold);
+  /* Card tints, one per hue, from the brand's own families. */
+  --tint-0: #fff2ea;
+  --tint-1: #f4efff;
+  --tint-2: #fff7dc;
+  --tint-3: #ebf8ec;
+  --tint-4: #e8f6fb;
+  --tint-5: #fdeef3;
+
+  background: var(--bold-paper);
+  color: var(--bold-ink);
+  font-family: var(--font-bold);
+}
+
+.home-bold .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- type */
+
+.home-bold h1,
+.home-bold h2 {
+  font-family: var(--font-bold);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+
+.home-bold h3 {
+  font-family: var(--font-bold);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.home-bold section {
+  padding-block: clamp(5rem, 10vw, 8rem);
+}
+
+.home-bold .section-head h2,
+.home-bold .rail-head h2,
+.home-bold .shelf__head h2 {
+  font-size: clamp(2.75rem, 7vw, 5.5rem);
+  line-height: 0.88;
+}
+
+.home-bold .section-head p,
+.home-bold .rail-head p,
+.home-bold .shelf__head p {
+  margin-top: 1rem;
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  font-weight: 500;
+  color: var(--bold-soft);
+}
+
+.home-bold .eyebrow {
+  font-family: var(--font-bold);
+  color: var(--coral-ink);
+  letter-spacing: 0.14em;
+}
+
+.home-bold .brand {
+  font-family: var(--font-bold);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+/*
+ * Keycaps: a pill with a darker edge underneath, so it reads as something to
+ * press. The edge is an inset shadow rather than a border, so pressing it
+ * changes no box size and nothing around the button moves: the cap sinks two
+ * pixels and the edge gives up the same two.
+ */
+.home-bold .btn {
+  --cap: 4px;
+  --edge: rgb(0 0 0 / 0.12);
+  --glow: 0 0 0 0 transparent;
+  --pad-y: 0.9rem;
+  --pad-x: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  padding: var(--pad-y) var(--pad-x) calc(var(--pad-y) + var(--cap));
+  border: 0;
+  border-radius: var(--r-pill);
+  font-family: var(--font-bold);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  box-shadow: inset 0 calc(-1 * var(--cap)) 0 var(--edge), var(--glow);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.home-bold .btn:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 calc(2px - var(--cap)) 0 var(--edge);
+}
+
+.home-bold .btn--sm {
+  --cap: 3px;
+  --pad-y: 0.7rem;
+  --pad-x: 1.2rem;
+  font-size: 0.9375rem;
+}
+
+.home-bold .btn--primary {
+  --edge: var(--coral-press);
+  --glow: 0 14px 28px -10px rgb(201 64 31 / 0.35);
+  background: var(--coral-strong);
+  color: #fff;
+}
+
+.home-bold .btn--primary:hover {
+  background: #bd3c1d;
+  transform: none;
+}
+
+/* The shine: a pale bar that sweeps across while the pointer rests on the
+   button. It moves by transform, so it costs no repaint. */
+.home-bold .btn--primary::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.2), transparent);
+  transform: translateX(-150%) skewX(-20deg);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-bold .btn--primary:hover::after {
+    animation: btn-shine 2s linear infinite;
+  }
+}
+
+@keyframes btn-shine {
+  to {
+    transform: translateX(380%) skewX(-20deg);
+  }
+}
+
+.home-bold .btn--ghost {
+  --edge: rgb(0 0 0 / 0.1);
+  background: #fff;
+  color: var(--bold-ink);
+  box-shadow:
+    inset 0 calc(-1 * var(--cap)) 0 var(--edge),
+    inset 0 0 0 2px rgb(0 0 0 / 0.06);
+}
+
+.home-bold .btn--ghost:hover {
+  background: #f6f6f5;
+}
+
+.home-bold .btn--ghost:active {
+  box-shadow:
+    inset 0 calc(2px - var(--cap)) 0 var(--edge),
+    inset 0 0 0 2px rgb(0 0 0 / 0.06);
+}
+
+.home-bold .store-btn {
+  border-radius: var(--r-pill);
+}
+
+.home-bold :focus-visible {
+  outline-color: var(--coral-strong);
+}
+
+/* ----------------------------------------------------------------- header */
+
+/*
+ * A pill floating over the page, centred and fixed. No backdrop blur: the
+ * pill is all but opaque, and a blur repaints everything behind it on every
+ * scrolled frame. The strip either side of the pill lets clicks through to
+ * the covers underneath.
+ */
+.home-bold .site-header {
+  position: fixed;
+  top: 1rem;
+  left: 0;
+  right: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.home-bold .site-header > * {
+  pointer-events: auto;
+}
+
+.home-bold .site-header .wrap {
+  width: min(100% - 2rem, 48rem);
+  height: 3.75rem;
+  min-height: 0;
+  gap: 0.5rem;
+  padding: 0.625rem 0.625rem 0.625rem 1rem;
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid rgb(0 0 0 / 0.05);
+  box-shadow: var(--bold-card);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.home-bold .site-header[data-scrolled='true'] .wrap {
+  border-color: rgb(0 0 0 / 0.05);
+  box-shadow: var(--bold-card);
+}
+
+@media (min-width: 48rem) {
+  .home-bold .site-header {
+    top: 1.5rem;
+  }
+}
+
+/*
+ * Once the links show, the pill holds the logo, four links and up to two
+ * buttons. Deepstash's 48rem fits its own two items; with Sign in on as well
+ * ours wrapped "How it works" onto two lines, so it gets a little more room.
+ */
+@media (min-width: 56rem) {
+  .home-bold .site-header .wrap {
+    width: min(100% - 2rem, 54rem);
+  }
+}
+
+/* The bar steps aside while the phone has the screen. */
+.story-on .home-bold .site-header .wrap {
+  transform: translateY(-140%);
+  opacity: 0;
+}
+
+.home-bold .site-header .brand {
+  transition: transform 0.2s ease;
+}
+
+.home-bold .site-header .brand:hover {
+  transform: scale(1.05);
+}
+
+.home-bold .site-nav {
+  gap: 0;
+}
+
+.home-bold .site-nav a {
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-bold);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.home-bold .site-nav a:hover {
+  background: #f3f4f6;
+}
+
+/* The secondary pill, when accounts are on. */
+.home-bold .header-signin {
+  padding: 0.6rem 1.1rem 0.75rem;
+  border-radius: var(--r-pill);
+  background: #fff;
+  box-shadow:
+    inset 0 -3px 0 rgb(0 0 0 / 0.1),
+    inset 0 0 0 2px rgb(0 0 0 / 0.06);
+  color: var(--bold-ink);
+  font-family: var(--font-bold);
+  font-weight: 800;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.home-bold .nav-toggle {
+  border: 0;
+  background: #f3f4f6;
+}
+
+/* The phone menu opens under the pill, in the pill's own material. */
+.home-bold .site-menu {
+  width: min(100% - 2rem, 48rem);
+  background: #fff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-bold .site-header {
+    animation: header-drop 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+}
+
+@keyframes header-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-150%);
+  }
+}
+
+/* ------------------------------------------------------------------- hero */
+
+/*
+ * The first screen: notices, headline, buttons, and five real books floating
+ * behind them. It fills the screen and centres its copy under the fixed
+ * header, and everything still fits, buttons included, on a 1280x720 laptop
+ * as much as on a phone. Spacing scales with the screen's height, because
+ * height is what runs out first on a laptop.
+ *
+ * `overflow: clip` rather than `hidden`: a hidden box can still be scrolled
+ * sideways by the browser when a cover at the edge takes keyboard focus.
+ */
+.home-bold .hero {
+  /* The headline's size, which the covers beside it are placed from.
+     "microlearning" is the longest word and sets the floor: it must fit a
+     320px phone in one line at this weight. */
+  --h1: clamp(2rem, 10.75vw, 3.5rem);
+  isolation: isolate;
+  overflow: hidden;
+  overflow: clip;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: calc(4.75rem + clamp(0.75rem, 2.5svh, 1.5rem)) clamp(2rem, 6svh, 3.5rem);
+}
+
+@media (min-width: 48rem) {
+  .home-bold .hero {
+    /* Two lines, one per half of the sentence, sized to whichever of the
+       width and the height runs out first. */
+    --h1: clamp(3rem, min(6.4vw, 11.5svh), 6rem);
+    padding-block: calc(5.25rem + clamp(0.5rem, 2svh, 1.5rem)) clamp(4.5rem, 11svh, 6.5rem);
+  }
+}
+
+.home-bold .hero .wrap {
+  /* Over the covers; a cover that is pointed at comes over it in turn. */
+  z-index: 3;
+  width: min(100% - 2.5rem, 70rem);
+  /* The copy is laid over the covers; only the copy itself takes the pointer,
+     so the books in the margins can still be reached. */
+  pointer-events: none;
+}
+
+.home-bold .hero__copy > *,
+.home-bold .hero .cta-row > * {
+  pointer-events: auto;
+}
+
+.home-bold .hero .cta-row {
+  pointer-events: none;
+}
+
+/* Scrolled away, the copy is all but invisible; it stops taking clicks so
+   nothing can be pressed by accident through what looks like empty space. */
+.home-bold .hero[data-faded] .hero__copy * {
+  pointer-events: none;
+}
+
+.home-bold .hero::before {
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, color-mix(in srgb, var(--coral) 16%, transparent), transparent 70%);
+}
+
+/* The notices: one card in front, the next peeking out behind it. The cards
+   share one grid cell, so the stack is as tall as its tallest card and never
+   changes height as they take turns. */
+.home-bold .toasts {
+  display: grid;
+  width: min(100%, 31rem);
+  margin: 0 auto clamp(1.75rem, 5.5svh, 3.5rem);
+  padding-bottom: 0.75rem;
+}
+
+/*
+ * Handing over: the front card fades fast and shrinks away on top, the card
+ * behind comes forward and turns solid, and only then does the next one fade
+ * in behind it, so two cards' words never show through each other for more
+ * than a moment. Each position carries the timing for arriving in it.
+ */
+.home-bold .toast {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 1.15rem 0.75rem 0.75rem;
+  border: 1px solid rgb(0 0 0 / 0.04);
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: var(--bold-card);
+  text-align: left;
+  transition:
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s,
+    opacity 0.25s ease 0.08s;
+}
+
+.home-bold .toast[data-pos='front'] {
+  z-index: 3;
+}
+
+.home-bold .toast[data-pos='back'] {
+  z-index: 2;
+  opacity: 0.6;
+  transform: translateY(0.75rem) rotate(-2deg) scale(0.96);
+  transition:
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease 0.35s;
+}
+
+.home-bold .toast[data-pos='out'] {
+  z-index: 4;
+  opacity: 0;
+  transform: translateY(-0.5rem) scale(0.9);
+  pointer-events: none;
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease;
+}
+
+.home-bold .toast__face {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--coral-wash);
+}
+
+/* The mascot is drawn whole on a square; the avatar shows its face. */
+.home-bold .toast__face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translateY(14%) scale(1.6);
+}
+
+.home-bold .toast__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+  line-height: 1.3;
+}
+
+.home-bold .toast__text b {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--bold-ink);
+}
+
+.home-bold .toast__text span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--bold-mute);
+}
+
+.home-bold .toast__meta {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--bold-mute);
+}
+
+.home-bold .hero h1 {
+  /* The box hugs the words, so the covers beside it can still be pointed
+     at. */
+  width: fit-content;
+  margin-inline: auto;
+  font-size: var(--h1);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.home-bold .hero h1 em {
+  font-style: normal;
+  color: var(--coral);
+}
+
+.home-bold .hero h1 s {
+  color: var(--bold-ink);
+  text-decoration-color: var(--coral);
+  text-decoration-thickness: 0.1em;
+}
+
+.home-bold .hero__lead {
+  max-width: 44rem;
+  margin-top: clamp(1rem, 2.5svh, 1.5rem);
+  font-weight: 500;
+  color: var(--bold-soft);
+  text-wrap: balance;
+}
+
+.home-bold .hero .cta-row {
+  margin-top: clamp(1.75rem, 4.5svh, 2.75rem);
+}
+
+.home-bold .hero .cta-row .btn {
+  --cap: 6px;
+  --pad-y: 1.1rem;
+  --pad-x: 1.9rem;
+  font-size: 1.0625rem;
+}
+
+.home-bold .hero .store-btn--soon {
+  min-height: 3.25rem;
+}
+
+.home-bold .hero__note {
+  margin-top: 0.85rem;
+  color: var(--bold-mute);
+}
+
+/*
+ * On a phone the primary button takes the whole width and the other two
+ * share the row under it, which keeps all three above the fold. The notice
+ * gets a little tighter for the same reason.
+ */
+@media (max-width: 47.99rem) {
+  .home-bold .hero .cta-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.625rem;
+  }
+
+  .home-bold .hero .cta-row > * {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .home-bold .hero .cta-row > .notify {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .home-bold .hero .cta-row .notify > .btn {
+    width: 100%;
+  }
+
+  .home-bold .hero .cta-row .store-btn {
+    justify-content: center;
+    padding-inline: 1rem;
+  }
+
+  .home-bold .hero .cta-row > .btn--ghost {
+    --pad-x: 1.1rem;
+  }
+
+  .home-bold .toasts {
+    margin-bottom: 1.5rem;
+  }
+
+  .home-bold .toast {
+    gap: 0.7rem;
+    padding: 0.65rem 0.95rem 0.65rem 0.65rem;
+  }
+
+  .home-bold .toast__face {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .home-bold .toast__text b {
+    font-size: 0.875rem;
+  }
+
+  .home-bold .toast__text span {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .home-bold .hero__copy {
+    max-width: 70rem;
+  }
+
+  /* One line per half of the sentence, always: the size is capped so the
+     longer half fits, and the covers are placed from that width. */
+  .home-bold .hero h1 {
+    white-space: nowrap;
+  }
+
+  .home-bold .hero .cta-row .btn {
+    --pad-y: 1.25rem;
+    --pad-x: 2.1rem;
+    font-size: 1.125rem;
+  }
+
+  .home-bold .hero .store-btn--soon {
+    min-height: 3.75rem;
+  }
+}
+
+/*
+ * The books.
+ *
+ * Each cover is five boxes deep, and each box owns exactly one transform, so
+ * nothing ever fights: the outer box places it, then come the entrance, the
+ * drift as the page scrolls, the drift with the mouse, and the lift when it
+ * is pointed at. The turn-over is a sixth, inside the button.
+ */
+.home-bold .hero-books {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.home-bold .hb {
+  position: absolute;
+  left: calc(50% + var(--x));
+  top: var(--y);
+  width: var(--w);
+  translate: -50% -50%;
+  z-index: 1;
+  /* Back behind the headline only once the cover has settled, so it never
+     snaps behind the words mid-way. */
+  transition: z-index 0s 0.5s;
+}
+
+/* The sharp covers are the near ones, over the blurred far ones. */
+.home-bold .hb:not([data-blur]) {
+  z-index: 2;
+}
+
+.home-bold .hb__btn {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-bold .hb__btn:focus-visible {
+  outline: none;
+}
+
+/* The pointer's target, grown towards wherever the cover slides, so a cover
+   that moves out from under the pointer does not drop its own hover. */
+.home-bold .hb__btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.home-bold .hb__lift,
+.home-bold .hb__flip,
+.home-bold .hb__face {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.home-bold .hb__lift {
+  transform: translate(0px, 0px) rotate(var(--r)) scale(1);
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-bold .hb[data-blur] .hb__lift {
+  filter: blur(var(--blur));
+}
+
+.home-bold .hb__flip {
+  transform: perspective(1000px) rotateY(0deg);
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-bold .hb__btn[aria-pressed='true'] .hb__flip {
+  transform: perspective(1000px) rotateY(180deg);
+}
+
+.home-bold .hb__face {
+  overflow: hidden;
+  border-radius: 0.4rem 0.9rem 0.9rem 0.4rem;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  box-shadow: 2px 8px 20px rgb(0 0 0 / 0.15);
+  transition: box-shadow 0.5s ease;
+}
+
+.home-bold .hb__face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The back: what the app has from this book. */
+.home-bold .hb__face--back {
+  /* Sized from the cover's own width, so the back reads the same on a small
+     cover as on a large one. (Padding in % for the same reason: `cqi` on the
+     container itself would measure the screen.) */
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  padding: 13% 11% 12%;
+  border: 3px solid rgb(0 0 0 / 0.08);
+  background: #fff;
+  color: var(--bold-ink);
+  transform: rotateY(180deg);
+}
+
+.home-bold .hb__title {
+  font-size: max(0.8rem, 11cqi);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.home-bold .hb__author {
+  margin-top: 0.4em;
+  font-size: max(0.65rem, 6.5cqi);
+  font-weight: 600;
+  color: var(--bold-mute);
+}
+
+.home-bold .hb__count {
+  margin-top: auto;
+  font-size: max(0.65rem, 6.5cqi);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--bold-soft);
+}
+
+.home-bold .hb__count b {
+  display: block;
+  font-size: 3.4em;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: var(--coral-strong);
+}
+
+/*
+ * Pointed at, or reached by keyboard: the cover straightens, comes to the
+ * front, sharpens, and slides in until none of it is off screen. `--hx` and
+ * `--hy` are worked out by `home.js` from where the cover is; without it the
+ * cover still straightens and lifts where it is.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .home-bold .hb:hover {
+    z-index: 4;
+    transition-delay: 0s;
+  }
+
+  .home-bold .hb__btn:hover::before {
+    inset: min(0px, var(--hy, 0px)) min(0px, calc(-1 * var(--hx, 0px))) min(0px, calc(-1 * var(--hy, 0px)))
+      min(0px, var(--hx, 0px));
+    margin: -1rem;
+  }
+
+  .home-bold .hb__btn:hover .hb__lift {
+    transform: translate(var(--hx, 0px), calc(var(--hy, 0px) - 0.75rem)) rotate(0deg) scale(1.08);
+    filter: blur(0px);
+  }
+
+  .home-bold .hb__btn:hover .hb__face {
+    box-shadow: 10px 20px 40px rgb(0 0 0 / 0.25);
+  }
+}
+
+.home-bold .hb:has(.hb__btn:focus-visible) {
+  z-index: 4;
+  transition-delay: 0s;
+}
+
+.home-bold .hb__btn:focus-visible .hb__lift {
+  transform: translate(var(--hx, 0px), calc(var(--hy, 0px) - 0.75rem)) rotate(0deg) scale(1.08);
+  filter: blur(0px);
+}
+
+.home-bold .hb__btn:focus-visible .hb__face {
+  outline: 3px solid var(--coral-strong);
+  outline-offset: 3px;
+}
+
+/* On a touch screen there is no pointing, so turning a cover over is what
+   brings it in. Pressing it again sends it back. */
+@media (hover: none) {
+  .home-bold .hb:has(.hb__btn[aria-pressed='true']) {
+    z-index: 4;
+    transition-delay: 0s;
+  }
+
+  .home-bold .hb__btn[aria-pressed='true'] .hb__lift {
+    transform: translate(var(--hx, 0px), calc(var(--hy, 0px) - 0.75rem)) rotate(0deg) scale(1.08);
+    filter: blur(0px);
+  }
+}
+
+/* On a phone: smaller, past both edges, and only four of them. */
+@media (max-width: 47.99rem) {
+  .home-bold .hb {
+    left: calc(50% + var(--mx));
+    top: var(--my);
+    width: var(--mw);
+  }
+}
+
+@media (max-width: 61.99rem) {
+  .home-bold .hb--wide {
+    display: none;
+  }
+}
+
+/* The mouse at the foot of the screen. */
+.home-bold .hero__scroll {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(1rem, 3svh, 2rem);
+  z-index: 1;
+  display: none;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+@media (min-width: 48rem) {
+  .home-bold .hero__scroll {
+    display: block;
+  }
+}
+
+.home-bold .hero__scroll-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home-bold .hero__mouse {
+  display: flex;
+  justify-content: center;
+  width: 1.5rem;
+  height: 2.4rem;
+  padding-top: 0.45rem;
+  border: 2px solid rgb(0 0 0 / 0.16);
+  border-radius: 1rem;
+}
+
+.home-bold .hero__mouse i {
+  width: 0.25rem;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgb(0 0 0 / 0.3);
+}
+
+/* On a short laptop screen the label would crowd the line above it; the
+   mouse alone says enough. */
+@media (max-height: 50rem) {
+  .home-bold .hero__scroll-label {
+    display: none;
+  }
+}
+
+.home-bold .hero__scroll-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bold-mute);
+}
+
+/*
+ * The entrance. CSS rather than script, so it starts with the first paint
+ * and runs off the main thread, and cannot leave the headline invisible if a
+ * script fails to load. Every animation fills backwards only: once it ends it
+ * lets go, and the scroll and mouse effects own the boxes from then on.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .home-bold .hb__in {
+    animation: hero-books-in 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+  }
+
+  .home-bold .toasts {
+    animation: hero-rise-20 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+  }
+
+  .home-bold .hero h1 {
+    animation: hero-rise-40 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+  }
+
+  .home-bold .hero__lead {
+    animation: hero-rise-20 0.8s cubic-bezier(0, 0, 0.58, 1) 0.3s backwards;
+  }
+
+  .home-bold .hero .cta-row {
+    animation: hero-rise-20 0.8s cubic-bezier(0, 0, 0.58, 1) 0.4s backwards;
+  }
+
+  .home-bold .hero__note {
+    animation: hero-rise-20 0.8s cubic-bezier(0, 0, 0.58, 1) 0.5s backwards;
+  }
+
+  .home-bold .hero__scroll-in {
+    animation: hero-drop-10 0.5s cubic-bezier(0, 0, 0.58, 1) 1s backwards;
+  }
+
+  .home-bold .hero__scroll-label {
+    animation: hero-fade 0.5s ease 1.2s backwards;
+  }
+
+  .home-bold .hero__mouse i {
+    animation: hero-mouse 1.5s ease-in-out infinite;
+  }
+
+  /* Nothing loops while the hero is off screen. */
+  .home-bold .hero[data-off] .hero__mouse i {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes hero-books-in {
+  from {
+    opacity: 0;
+    transform: translateY(100px) scale(0.8);
+  }
+}
+
+@keyframes hero-rise-40 {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes hero-rise-20 {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes hero-drop-10 {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes hero-mouse {
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+/* While the script drives the scroll-out and the mouse, these boxes move on
+   most frames, so they get layers of their own. */
+.home-bold .hero[data-live] .hero__copy,
+.home-bold .hero[data-live] .hb__drift {
+  will-change: transform;
+}
+
+.home-bold .hero[data-live] .hero__copy {
+  transform-origin: 50% 40%;
+}
+
+@media (pointer: fine) and (min-width: 48rem) {
+  .home-bold .hero[data-live] .hb__par {
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-bold .hb__lift,
+  .home-bold .hb__flip,
+  .home-bold .hb__face,
+  .home-bold .toast,
+  .home-bold .btn {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------- the phone story */
+
+/*
+ * Still, the section is one phone on the page, showing the book screen. With
+ * motion the section is tall and its stage sticks: `home.js` slides the line
+ * of covers, raises the phone and walks `data-stage` through the screens as
+ * the reader scrolls. Every screen change is a transition keyed on that
+ * attribute, so stopping anywhere leaves one whole screen. The loops (the
+ * laser, the island's dot, the burst) run only while their screen shows and
+ * the section is on screen, which `home.js` marks with `data-live`.
+ */
+.home-bold .story {
+  --story-green: #22c55e;
+  --story-peach: #fff2e5;
+  --story-peach-ink: #2b1709;
+  --story-peach-soft: #86644d;
+  --story-tile: #fdebd3;
+  --story-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  padding-block: clamp(2rem, 6vw, 4rem);
+}
+
+.story__stage {
+  /* The covers in the row, and the phone's width; everything inside the
+     phone is sized in ems of that width, so it scales as one piece. */
+  --row-w: 6.875rem;
+  --row-gap: 1.5rem;
+  --pw: min(85vw, 340px, 42.5svh);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+@media (min-width: 48rem) {
+  .story__stage {
+    --pw: min(380px, 42.5svh);
+  }
+}
+
+@media (min-width: 64rem) {
+  .story__stage {
+    --row-w: min(11.25rem, 22svh);
+    --row-gap: 3rem;
+  }
+}
+
+.has-motion .home-bold .story {
+  height: 750svh;
+  padding-block: 0;
+}
+
+.has-motion .story__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+
+@media (min-width: 48rem) {
+  .has-motion .home-bold .story {
+    height: 1050svh;
+  }
+}
+
+/* The big, thin "Keep scrolling" above the row, before the phone arrives. */
+.story__hint {
+  display: none;
+}
+
+.has-motion .story__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(50% + var(--row-w) * 0.75 + clamp(1.5rem, 6svh, 4rem));
+  display: block;
+  margin: 0;
+  font-family: var(--font-bold);
+  font-size: clamp(2.75rem, min(8vw, 11svh), 6.25rem);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-align: center;
+  color: rgb(0 0 0 / 0.22);
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+
+/* The line of covers. At rest, cover `--at` (the story's book) is centred. */
+.story__row {
+  display: none;
+}
+
+.has-motion .story__row {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  gap: var(--row-gap);
+  margin-top: calc(var(--row-w) * -0.75);
+  margin-left: calc((var(--row-w) + var(--row-gap)) * var(--at) * -1 - var(--row-w) / 2);
+  will-change: transform, opacity, filter;
+}
+
+.story__book {
+  flex: none;
+  width: var(--row-w);
+}
+
+.story__book img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 28px -12px rgb(0 0 0 / 0.3);
+}
+
+/* The phone, and the mascot that peeks over it. */
+.story__phone {
+  position: relative;
+  z-index: 2;
+}
+
+.has-motion .story__phone {
+  will-change: transform;
+}
+
+.phone {
+  position: relative;
+  z-index: 1;
+  width: var(--pw);
+  aspect-ratio: 1 / 2;
+  padding: calc(var(--pw) * 0.03);
+  border-radius: calc(var(--pw) * 0.16);
+  background: #1f1f21;
+  box-shadow:
+    0 40px 80px -24px rgb(0 0 0 / 0.38),
+    0 0 0 1px rgb(255 255 255 / 0.06) inset;
+  font-size: calc(var(--pw) / 24);
+}
+
+.phone__screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: calc(var(--pw) * 0.13);
+  background: var(--bold-paper);
+  color: var(--bold-ink);
+  font-family: var(--font-bold);
+  line-height: 1.3;
+}
+
+.phone__bar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.3em;
+  padding: 0.35em 1.7em 0;
+  color: var(--bold-ink);
+  transition: color 0.5s ease;
+}
+
+.phone__time {
+  width: 4.4em;
+  font-size: 0.95em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.phone__icons {
+  width: 4.2em;
+  height: auto;
+}
+
+[data-stage='scan'] .phone__bar,
+[data-stage='found'] .phone__bar {
+  color: #fff;
+}
+
+/* The island: a plain pill, which widens and talks while the camera is up. */
+.phone__island {
+  position: absolute;
+  top: 0.7em;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  width: 6.2em;
+  height: 1.85em;
+  border-radius: 1em;
+  background: #000;
+  color: #fff;
+  transform: translateX(-50%);
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.phone__island i,
+.phone__island > span {
+  display: none;
+}
+
+.phone__island i {
+  width: 0.42em;
+  height: 0.42em;
+  border-radius: 50%;
+  background: var(--coral);
+}
+
+.phone__island > span {
+  font-size: 0.72em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+[data-stage='scan'] .phone__island,
+[data-stage='found'] .phone__island {
+  width: 7.6em;
+}
+
+[data-stage='scan'] .phone__island i,
+[data-stage='found'] .phone__island i,
+[data-stage='scan'] .phone__island-scan,
+[data-stage='found'] .phone__island-found {
+  display: block;
+}
+
+[data-stage='found'] .phone__island i {
+  background: var(--story-green);
+}
+
+[data-live] [data-stage='scan'] .phone__island i {
+  animation: story-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes story-pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+}
+
+/* The slides' progress, a segment each, across the top of the screen. */
+.phone__steps {
+  position: absolute;
+  top: 3.3em;
+  left: 1.6em;
+  right: 1.6em;
+  z-index: 6;
+  display: flex;
+  gap: 0.3em;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.phone__steps i {
+  flex: 1;
+  height: 0.24em;
+  overflow: hidden;
+  border-radius: 1em;
+  background: rgb(0 0 0 / 0.09);
+}
+
+.phone__steps i::after {
+  content: '';
+  display: block;
+  height: 100%;
+  background: var(--coral);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.3s ease;
+}
+
+[data-stage^='slide'] .phone__steps,
+[data-stage='done'] .phone__steps {
+  opacity: 1;
+}
+
+[data-stage='slide-1'] .phone__steps i:nth-child(-n + 1)::after,
+[data-stage='slide-2'] .phone__steps i:nth-child(-n + 2)::after,
+[data-stage='slide-3'] .phone__steps i:nth-child(-n + 3)::after,
+[data-stage='done'] .phone__steps i::after {
+  transform: none;
+}
+
+/* The screens: one shows at a time, and the change is a crossfade. */
+.scr {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.5s ease,
+    visibility 0s linear 0.5s;
+}
+
+[data-stage='scan'] .scr--scan,
+[data-stage='found'] .scr--scan,
+[data-stage='book'] .scr--book,
+[data-stage='press'] .scr--book {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* 1: the camera. The cover appears in the frame once it is found. */
+.scr--scan {
+  display: grid;
+  place-items: center;
+  background: #0b0b0c;
+}
+
+.scan {
+  position: relative;
+  width: 62%;
+  aspect-ratio: 2 / 3;
+}
+
+.scan__cover {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0.55em;
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 0.25s ease,
+    transform 0.55s var(--story-spring),
+    box-shadow 0.4s ease;
+}
+
+.scan__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-stage='found'] .scan__cover {
+  opacity: 1;
+  transform: none;
+  box-shadow: 0 0 2.4em rgb(34 197 94 / 0.4);
+}
+
+.scan__confirmed {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  margin: 0;
+  padding: 0.95em 0;
+  background: rgb(18 18 20 / 0.86);
+  color: var(--story-green);
+  font-size: 0.74em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.scan__confirmed i {
+  width: 0.95em;
+  height: 0.95em;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.scan__corners {
+  position: absolute;
+  inset: -0.7em;
+  transition: transform 0.3s ease;
+}
+
+.scan__corners i {
+  position: absolute;
+  width: 20%;
+  aspect-ratio: 1;
+  border: 0 solid #fff;
+  transition: border-color 0.3s ease;
+}
+
+.scan__corners i:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-top-width: 0.22em;
+  border-left-width: 0.22em;
+  border-top-left-radius: 0.9em;
+}
+
+.scan__corners i:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-top-width: 0.22em;
+  border-right-width: 0.22em;
+  border-top-right-radius: 0.9em;
+}
+
+.scan__corners i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 0.22em;
+  border-left-width: 0.22em;
+  border-bottom-left-radius: 0.9em;
+}
+
+.scan__corners i:nth-child(4) {
+  bottom: 0;
+  right: 0;
+  border-bottom-width: 0.22em;
+  border-right-width: 0.22em;
+  border-bottom-right-radius: 0.9em;
+}
+
+[data-stage='found'] .scan__corners {
+  transform: scale(1.05);
+}
+
+[data-stage='found'] .scan__corners i {
+  border-color: var(--story-green);
+}
+
+/* The laser: a line with a glow trailing above it, swept down the frame. */
+.scan__sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.scan__laser {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(-10%);
+}
+
+.scan__laser::before,
+.scan__laser::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.scan__laser::before {
+  top: 0;
+  height: 0.14em;
+  background: var(--coral);
+  box-shadow: 0 0 0.9em 0.15em rgb(238 91 60 / 0.75);
+}
+
+.scan__laser::after {
+  bottom: 100%;
+  height: 28%;
+  background: linear-gradient(to bottom, rgb(238 91 60 / 0), rgb(238 91 60 / 0.28));
+}
+
+[data-stage='scan'] .scan__laser {
+  opacity: 1;
+}
+
+[data-live] [data-stage='scan'] .scan__laser {
+  animation: story-laser 2.4s linear infinite;
+}
+
+@keyframes story-laser {
+  to {
+    transform: translateY(110%);
+  }
+}
+
+.scan__pill {
+  position: absolute;
+  top: calc(100% + 2.3em);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.75em 1.4em;
+  border-radius: 2em;
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+  font-size: 0.95em;
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  transition: background-color 0.3s ease;
+}
+
+.scan__pill-found {
+  display: none;
+  align-items: center;
+  gap: 0.45em;
+}
+
+.scan__pill svg {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+[data-stage='found'] .scan__pill {
+  background: var(--story-green);
+}
+
+[data-stage='found'] .scan__pill-scan {
+  display: none;
+}
+
+[data-stage='found'] .scan__pill-found {
+  display: flex;
+}
+
+/* 2: the book, on warm paper, its content scrolling under a pinned button. */
+.scr--book {
+  overflow: hidden;
+  background: radial-gradient(120% 55% at 50% 22%, #fffaf3 0%, var(--story-peach) 70%);
+  color: var(--story-peach-ink);
+}
+
+/* Paper fades over the content at both ends, so it scrolls out of sight
+   under the status bar and under the button rather than behind them. */
+.scr--book::before,
+.scr--book::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+
+.scr--book::before {
+  top: 0;
+  height: 5em;
+  background: linear-gradient(to top, rgb(255 242 229 / 0), var(--story-peach) 45%);
+}
+
+.scr--book::after {
+  bottom: 0;
+  height: 7.5em;
+  background: linear-gradient(to bottom, rgb(255 242 229 / 0), var(--story-peach) 55%);
+}
+
+.bookpage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4.3em 1.35em 7.5em;
+  text-align: center;
+}
+
+.has-motion .bookpage {
+  will-change: transform;
+}
+
+.bookpage__cover {
+  width: 50%;
+  margin-bottom: 1.4em;
+}
+
+.bookpage__cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 0.6em;
+  box-shadow: 0 1.4em 2.6em -1em rgb(96 52 18 / 0.45);
+}
+
+.bookpage__title {
+  margin: 0;
+  font-size: 2.15em;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.bookpage__by {
+  margin: 0.4em 0 0;
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--story-peach-soft);
+}
+
+.bookpage__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em;
+  width: 100%;
+  margin-top: 1.5em;
+  padding: 0.85em;
+  border-radius: 1.2em;
+  background: #fff;
+  box-shadow: 0 0.8em 1.8em -1em rgb(96 52 18 / 0.3);
+}
+
+.bookpage__stats p {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  text-align: left;
+}
+
+.bookpage__tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.4em;
+  height: 2.4em;
+  border-radius: 0.75em;
+  background: var(--story-tile);
+  color: #e39a35;
+}
+
+.bookpage__tile svg {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+.bookpage__tile--time {
+  background: #fde3dd;
+  color: var(--coral);
+}
+
+.bookpage__stats small {
+  display: block;
+  font-size: 0.66em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: #9a8f86;
+}
+
+.bookpage__stats b {
+  display: block;
+  font-size: 1.2em;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--bold-ink);
+}
+
+.bookpage__about {
+  width: 100%;
+  margin-top: 0.75em;
+  padding: 1em 1.1em;
+  border-radius: 1.2em;
+  background: rgb(255 255 255 / 0.72);
+  text-align: left;
+}
+
+.bookpage__about p:last-child {
+  margin: 0;
+  font-size: 0.92em;
+  line-height: 1.5;
+  color: #5c4535;
+}
+
+.bookpage__label {
+  margin: 0 0 0.5em;
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a5806a;
+}
+
+.bookpage > .bookpage__label {
+  align-self: flex-start;
+  margin: 1.5em 0 0.7em 0.3em;
+}
+
+.bookpage__list {
+  display: grid;
+  gap: 0.5em;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: idea;
+  text-align: left;
+}
+
+.bookpage__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.75em 0.9em;
+  border-radius: 1em;
+  background: #fff;
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--bold-ink);
+  counter-increment: idea;
+}
+
+.bookpage__list li::before {
+  content: counter(idea);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  background: var(--story-tile);
+  color: #b4651c;
+  font-size: 0.85em;
+  font-weight: 800;
+}
+
+.phone__button {
+  position: absolute;
+  left: 1.25em;
+  right: 1.25em;
+  bottom: 1.35em;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  height: 3.2em;
+  border-radius: 2em;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 1.05em;
+  font-weight: 700;
+  box-shadow: 0 0.9em 1.8em -0.7em rgb(0 0 0 / 0.45);
+  transition:
+    transform 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.phone__button svg {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+/* The fake press just before the slides. */
+[data-stage='press'] .phone__button--next {
+  background: #333;
+  transform: scale(0.95);
+}
+
+/* 3 to 6: the slides. Each comes in from a little small and blurred, and
+   leaves a little large, the way Deepstash's do. */
+.scr--slide,
+.scr--done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4.6em 1.7em 2.6em;
+  text-align: center;
+  filter: blur(2px);
+  transform: scale(0.95);
+  transition:
+    opacity 0.35s ease-out,
+    transform 0.35s ease-out,
+    filter 0.35s ease-out,
+    visibility 0s linear 0.35s;
+}
+
+[data-stage='slide-1'] .scr--slide-1,
+[data-stage='slide-2'] .scr--slide-2,
+[data-stage='slide-3'] .scr--slide-3,
+[data-stage='done'] .scr--done {
+  opacity: 1;
+  visibility: visible;
+  filter: none;
+  transform: none;
+  transition-delay: 0s;
+}
+
+[data-stage='slide-2'] .scr--slide-1,
+[data-stage='slide-3'] .scr--slide-1,
+[data-stage='slide-3'] .scr--slide-2,
+[data-stage='done'] .scr--slide-1,
+[data-stage='done'] .scr--slide-2,
+[data-stage='done'] .scr--slide-3 {
+  transform: scale(1.05);
+}
+
+.slide__tile {
+  display: grid;
+  place-items: center;
+  width: 8em;
+  height: 8em;
+  margin-bottom: 1.9em;
+  border-radius: 50%;
+  background: #fbe8e2;
+  color: var(--coral);
+}
+
+.slide__tile .icon {
+  width: 3.1em;
+  height: 3.1em;
+}
+
+.slide__from {
+  margin: 0 0 0.7em;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--coral-ink);
+}
+
+.slide__title,
+.done__title {
+  margin: 0;
+  font-size: 1.85em;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.slide__body,
+.done__body {
+  margin: 0.85em 0 0;
+  font-size: 1.02em;
+  line-height: 1.55;
+  color: var(--bold-soft);
+  text-wrap: pretty;
+}
+
+.done__body b {
+  font-weight: 700;
+  color: var(--bold-ink);
+}
+
+/* The success screen: a check that springs in, and a small burst. */
+.done__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6.2em;
+  height: 6.2em;
+  margin-bottom: 2em;
+}
+
+.done__mark i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.7em;
+  height: 0.7em;
+  margin: -0.35em 0 0 -0.35em;
+  border-radius: 50%;
+  background: var(--story-green);
+  opacity: 0;
+}
+
+[data-live] [data-stage='done'] .done__mark i {
+  animation: story-burst 2s ease-out 0.25s infinite;
+}
+
+@keyframes story-burst {
+  0% {
+    opacity: 0;
+    transform: translate(calc(var(--x) * 0.7), calc(var(--y) * 0.7)) scale(0.5);
+  }
+
+  8%,
+  28% {
+    opacity: 1;
+  }
+
+  45%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), var(--y)) scale(1);
+  }
+}
+
+.done__check {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--story-green);
+  color: #fff;
+  box-shadow:
+    0 0 0 0.35em #fff,
+    0 1.2em 2.4em -0.8em rgb(34 197 94 / 0.6);
+  transform: scale(0);
+  transition: transform 0.5s var(--story-spring) 0.1s;
+}
+
+.done__check svg {
+  width: 50%;
+  height: 50%;
+}
+
+[data-stage='done'] .done__check {
+  transform: none;
+}
+
+.scr--done .phone__button {
+  position: static;
+  width: 100%;
+  margin-top: 1.9em;
+}
+
+/*
+ * The mascot, from the md breakpoint up, as Deepstash has it: once the phone
+ * has landed it rises from behind the frame to peek over the top edge, with a
+ * bubble beside it. It waves until the last screen, then cheers.
+ */
+.story__pal {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .has-motion .story__pal {
+    position: absolute;
+    right: calc(var(--pw) * 0.14);
+    bottom: calc(100% - var(--pw) * 0.15);
+    z-index: 0;
+    display: block;
+    width: calc(var(--pw) * 0.33);
+    aspect-ratio: 1;
+    opacity: 0;
+    transform: translateY(72%);
+    transition:
+      transform 0.7s var(--story-spring),
+      opacity 0.25s ease;
+  }
+
+  .has-motion [data-mascot] .story__pal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.story__pal img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease;
+}
+
+.story__pal-cheer,
+[data-mascot='cheer'] .story__pal-wave {
+  opacity: 0;
+}
+
+[data-mascot='cheer'] .story__pal-cheer {
+  opacity: 1;
+}
+
+.story__bubble {
+  position: absolute;
+  top: 10%;
+  right: 92%;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid rgb(0 0 0 / 0.08);
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 8px 18px -10px rgb(0 0 0 / 0.3);
+  color: var(--bold-ink);
+  font-family: var(--font-bold);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ the stats */
+
+.home-bold .statbar {
+  padding-block: clamp(3rem, 6vw, 5rem);
+}
+
+.statbar__card {
+  display: grid;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: clamp(1.75rem, 4vw, 3rem) 1.5rem;
+  border: 3px solid var(--bold-line);
+  border-radius: var(--r-card);
+  background: #fff;
+  box-shadow: var(--bold-card);
+  text-align: center;
+}
+
+.statbar__card > div {
+  padding: 1.25rem 0.5rem;
+}
+
+.statbar__card > div + div {
+  border-top: 3px solid var(--bold-line);
+}
+
+@media (min-width: 40rem) {
+  .statbar__card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .statbar__card > div + div {
+    border-top: 0;
+    border-left: 3px solid var(--bold-line);
+  }
+}
+
+.statbar__card dt {
+  font-size: clamp(3.5rem, 8vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.statbar__card div:nth-child(2) dt {
+  color: var(--coral);
+}
+
+.statbar__card dd {
+  margin-top: 0.6rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bold-mute);
+}
+
+/* A live dot beside the first count, as on the app's own status screens. */
+.statbar__card > div:first-child dd::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0 0.55rem 0.1rem 0;
+  border-radius: 50%;
+  background: var(--coral);
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .statbar__card > div:first-child dd::before {
+    animation: stat-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes stat-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+/* ------------------------------------------------------- the manifesto */
+
+/*
+ * The question, then the answer. Still, they stack. With motion the stage
+ * sticks for two screens of scrolling: the question sits in a target, the
+ * target opens out past the edges, and the answer arrives over a coral glow
+ * that grows until it fills the screen. Then it holds, so it can be read.
+ */
+.home-bold .manifesto {
+  padding-block: clamp(4rem, 9vw, 7rem);
+}
+
+.manifesto__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 3rem;
+  width: min(100% - 2.5rem, 64rem);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.has-motion .home-bold .manifesto {
+  height: 300svh;
+  padding-block: 0;
+}
+
+.has-motion .manifesto__stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.manifesto__ring,
+.manifesto__blob {
+  display: none;
+}
+
+.has-motion .manifesto__ring,
+.has-motion .manifesto__blob {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+/* The target: a dark outer ring, two faint ones inside it, and a cross. */
+.has-motion .manifesto__ring {
+  --d: min(88vw, 50rem, 78svh);
+  width: var(--d);
+  height: var(--d);
+  margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  border: 1.5px solid rgb(26 26 26 / 0.75);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.55);
+}
+
+.manifesto__ring i {
+  position: absolute;
+  border: 1px solid rgb(0 0 0 / 0.07);
+  border-radius: 50%;
+}
+
+.manifesto__ring i:nth-child(1) {
+  inset: 12.5%;
+}
+
+.manifesto__ring i:nth-child(2) {
+  inset: 25%;
+}
+
+.manifesto__ring i:nth-child(3) {
+  inset: 37.5%;
+  border-color: rgb(0 0 0 / 0.05);
+}
+
+.manifesto__ring::before,
+.manifesto__ring::after {
+  content: '';
+  position: absolute;
+  background: rgb(0 0 0 / 0.08);
+}
+
+.manifesto__ring::before {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.manifesto__ring::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+/*
+ * The glow. Five layers that never stop moving, each on its own clock: a warm
+ * light breathing, a coral one swaying, a dashed outline and a pink one
+ * turning opposite ways, and three dots in a slow orbit. All of it is
+ * transform; none of it runs while the section is off screen.
+ */
+.has-motion .manifesto__blob {
+  --d: min(80vw, 36rem);
+  width: var(--d);
+  height: var(--d);
+  margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.manifesto__blob > span {
+  position: absolute;
+  inset: 0;
+}
+
+.blob__glow {
+  background: radial-gradient(circle, rgb(255 200 110 / 0.9) 0%, rgb(255 200 110 / 0) 58%);
+  animation: blob-breathe 4s ease-in-out infinite;
+}
+
+.blob__warm {
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #e2553a 0%,
+    rgb(238 91 60 / 0.82) 24%,
+    rgb(242 128 104 / 0.5) 46%,
+    rgb(246 170 150 / 0.18) 62%,
+    rgb(246 170 150 / 0) 72%
+  );
+  animation: blob-sway 6s ease-in-out infinite;
+}
+
+.manifesto__blob .blob__dash {
+  inset: 14%;
+  border: 2px dashed rgb(238 91 60 / 0.55);
+  border-radius: 34%;
+  animation: blob-turn 24s linear infinite;
+}
+
+.manifesto__blob .blob__line {
+  inset: 6%;
+  border: 1.5px solid rgb(240 140 165 / 0.55);
+  border-radius: 40%;
+  animation: blob-turn 18s linear infinite reverse;
+}
+
+.blob__orbit {
+  animation: blob-turn 32s linear infinite;
+}
+
+.blob__orbit i {
+  position: absolute;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--coral);
+  opacity: 0.85;
+}
+
+.blob__orbit i:nth-child(1) {
+  top: 3%;
+  left: 50%;
+}
+
+.blob__orbit i:nth-child(2) {
+  top: 62%;
+  right: 4%;
+  width: 0.55rem;
+  height: 0.55rem;
+}
+
+.blob__orbit i:nth-child(3) {
+  bottom: 10%;
+  left: 14%;
+  width: 0.65rem;
+  height: 0.65rem;
+  background: #f2a0b4;
+}
+
+@keyframes blob-breathe {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes blob-sway {
+  0%,
+  100% {
+    transform: scale(0.92) rotate(0deg);
+  }
+  33% {
+    transform: scale(1.06) rotate(8deg);
+  }
+  66% {
+    transform: scale(1) rotate(-8deg);
+  }
+}
+
+@keyframes blob-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.manifesto:not([data-live]) .manifesto__blob *,
+.manifesto:not([data-live]) .manifesto__blob {
+  animation-play-state: paused;
+}
+
+/* The words. */
+.manifesto__quiet,
+.manifesto__loud {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2.5rem, 84rem);
+}
+
+/* The question wraps to fit inside the target. */
+.manifesto__quiet {
+  width: min(100% - 3rem, 36rem);
+}
+
+.has-motion .manifesto__quiet,
+.has-motion .manifesto__loud {
+  position: absolute;
+}
+
+.manifesto__quiet h2 {
+  display: inline;
+  padding: 0.1em 0.2em;
+  font-family: ui-serif, 'New York', Georgia, serif;
+  font-size: clamp(1.75rem, 3.6vw, 3.25rem);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: #8e97aa;
+  background: rgb(250 250 249 / 0.85);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.manifesto__quiet p {
+  margin-top: 1.5rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bold-mute);
+}
+
+.manifesto__punch {
+  font-size: clamp(2.1rem, 9.6vw, 8.5rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+  text-transform: uppercase;
+  color: var(--bold-ink);
+}
+
+.manifesto__punch span {
+  display: block;
+}
+
+/* The second line in white, lifted off the glow by a warm shadow. Still,
+   there is no glow behind it, so it stays dark. */
+.has-motion .manifesto__punch span + span {
+  color: #fff;
+  text-shadow: 0 0.06em 0.3em rgb(150 40 15 / 0.28);
+}
+
+.manifesto__kicker {
+  margin-top: clamp(1.5rem, 3vw, 2.5rem);
+  font-size: clamp(0.875rem, 1.7vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bold-ink);
+}
+
+.manifesto__body {
+  max-width: 34rem;
+  margin: 1.5rem auto 0;
+  font-size: clamp(1rem, 1.5vw, 1.1875rem);
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--bold-ink);
+}
+
+.has-motion .manifesto__loud {
+  opacity: 0;
+}
+
+/* ------------------------------------------------------ the card rails */
+
+/*
+ * A row you swipe, sideways, with the page's left edge as its start. Native
+ * scrolling with snap points: a trackpad, a finger and the arrow buttons all
+ * move the same row.
+ *
+ * On a wide screen with motion, `home.js` pins the section instead: the stage
+ * holds still for as long as the row takes to pass, and scrolling down moves
+ * the row left. The section's height is set by the script from the row's
+ * length, and `is-pinned` is only ever added by it.
+ */
+.home-bold .rail-section {
+  overflow: clip;
+}
+
+.home-bold [data-pin].is-pinned {
+  padding-block: 0;
+}
+
+.is-pinned .pin__stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100svh;
+  padding-top: 4.5rem;
+  overflow: clip;
+}
+
+.is-pinned .rail {
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+.rail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.rail-head > div:first-child {
+  max-width: 40rem;
+}
+
+.rail-nav {
+  display: none;
+  gap: 0.75rem;
+}
+
+@media (hover: hover) and (min-width: 48rem) {
+  .rail-nav {
+    display: flex;
+  }
+}
+
+.rail-nav__btn {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 3px solid var(--bold-line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--bold-ink);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.rail-nav__btn:active {
+  transform: scale(0.94);
+}
+
+.rail-nav__btn svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rail {
+  --edge: max(1rem, calc((100% - 70rem) / 2));
+  position: relative;
+  display: flex;
+  gap: clamp(1rem, 2vw, 2rem);
+  margin: 0;
+  padding: 1.5rem var(--edge) 2.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--edge);
+  scrollbar-width: none;
+  list-style: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail > li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+/*
+ * Feature cards. Tall and tinted, a title and its glyph on the front and what
+ * the thing does on the back. The whole card is a button that turns it over;
+ * the plus in the corner says so.
+ */
+.fcard {
+  position: relative;
+  width: min(78vw, 21rem);
+  height: min(62svh, 30rem);
+  min-height: 24rem;
+  perspective: 1400px;
+}
+
+.is-pinned .fcard {
+  height: min(54svh, 30rem);
+  min-height: 21rem;
+}
+
+.fcard--0 {
+  --tint: var(--tint-0);
+}
+
+.fcard--1 {
+  --tint: var(--tint-1);
+}
+
+.fcard--2 {
+  --tint: var(--tint-2);
+}
+
+.fcard--3 {
+  --tint: var(--tint-3);
+}
+
+.fcard--4 {
+  --tint: var(--tint-4);
+}
+
+.fcard--5 {
+  --tint: var(--tint-5);
+}
+
+.fcard__turn {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.fcard.is-turned .fcard__turn {
+  transform: rotateY(180deg);
+}
+
+.fcard__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  border: 3px solid var(--bold-line);
+  border-radius: var(--r-card);
+  background: var(--tint);
+  box-shadow: var(--bold-card);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.fcard__back {
+  justify-content: center;
+  transform: rotateY(180deg);
+  background: #fff;
+  border-color: color-mix(in srgb, var(--coral) 22%, transparent);
+}
+
+.fcard h3 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+
+.fcard__kicker {
+  margin-bottom: 1rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--coral-ink);
+}
+
+.fcard__back p:not(.fcard__kicker) {
+  font-size: clamp(1.125rem, 1.6vw, 1.3125rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  color: var(--bold-ink);
+}
+
+.fcard__icon {
+  display: grid;
+  place-items: center;
+  width: 6.5rem;
+  height: 6.5rem;
+  margin-top: auto;
+  padding: 1.6rem;
+  border-radius: 1.9rem;
+  background: rgb(255 255 255 / 0.8);
+  color: var(--coral-strong);
+  box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.15);
+}
+
+.fcard__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* The button covers the card; the plus sits in its corner. */
+.fcard__flip {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-card);
+  background: none;
+  cursor: pointer;
+}
+
+.fcard__flip:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 4px;
+}
+
+.fcard__flip span {
+  position: absolute;
+  right: clamp(1.25rem, 2.5vw, 1.75rem);
+  bottom: clamp(1.25rem, 2.5vw, 1.75rem);
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background-color: rgb(0 0 0 / 0.06);
+  background-image: linear-gradient(var(--bold-ink), var(--bold-ink)),
+    linear-gradient(var(--bold-ink), var(--bold-ink));
+  background-size: 1.1rem 2.5px, 2.5px 1.1rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.is-turned .fcard__flip span {
+  transform: rotate(45deg);
+  background-color: var(--coral-wash);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fcard {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* A little past half a turn and back, like a card that was flicked. */
+  .fcard__turn {
+    transition: transform 0.85s cubic-bezier(0.3, 1.3, 0.45, 1);
+  }
+
+  .fcard__flip span {
+    transition:
+      transform 0.45s cubic-bezier(0.3, 1.3, 0.45, 1),
+      background-color 0.2s ease;
+  }
+
+  .fcard__icon {
+    animation: fcard-float 5s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * -0.7s);
+  }
+
+  [data-pin]:not([data-live]) .fcard__icon {
+    animation-play-state: paused;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .fcard:hover {
+    transform: translateY(-15px);
+  }
+
+  .fcard__flip:hover span {
+    transform: scale(1.1);
+    background-color: rgb(0 0 0 / 0.1);
+  }
+
+  .is-turned .fcard__flip:hover span {
+    transform: rotate(45deg) scale(1.1);
+  }
+}
+
+@keyframes fcard-float {
+  50% {
+    transform: translateY(-0.6rem) rotate(-3deg);
+  }
+}
+
+/* --------------------------------------------------------------- the shelf */
+
+/* Clipped, not hidden: a hidden overflow would stop the pinned stage
+   sticking. */
+.home-bold .shelf {
+  overflow: clip;
+}
+
+.shelf__head {
+  max-width: 44rem;
+}
+
+/* Pinned, the topics sit beside the heading so the covers get the height. */
+.shelf.is-pinned .pin__stage > .wrap:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 2rem;
+}
+
+.is-pinned .shelf__topics {
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.shelf__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0 clamp(1rem, 3vw, 2rem);
+  padding: 0;
+  list-style: none;
+}
+
+.shelf__topics li {
+  padding: 0.55rem 0.95rem;
+  border: 2px solid var(--bold-line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.shelf__topics b {
+  margin-left: 0.2rem;
+  color: var(--coral-ink);
+  font-weight: 800;
+}
+
+/* On a phone the topics are one row you swipe, so the covers stay close. */
+@media (max-width: 47.99rem) {
+  .shelf__topics {
+    flex-wrap: nowrap;
+    margin-inline: -1.25rem;
+    padding-inline: 1.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .shelf__topics::-webkit-scrollbar {
+    display: none;
+  }
+
+  .shelf__topics li {
+    flex: none;
+  }
+}
+
+/* A cover as a book: a spine shadow down its left edge, a rounded fore-edge,
+   and a sheen that shows when it is picked up. */
+.bcard {
+  width: clamp(10rem, 26vw, 15rem);
+}
+
+.is-pinned .bcard {
+  width: calc(min(42svh, 26rem) * 2 / 3);
+}
+
+.bcard__book {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 0.4rem 1.25rem 1.25rem 0.4rem;
+  box-shadow: 2px 8px 20px rgb(0 0 0 / 0.15);
+}
+
+.bcard__book::before,
+.bcard__book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bcard__book::before {
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.28) 0,
+    rgb(255 255 255 / 0.2) 2.5%,
+    rgb(0 0 0 / 0.1) 5%,
+    rgb(0 0 0 / 0) 11%
+  );
+}
+
+.bcard__book::after {
+  background: linear-gradient(115deg, rgb(255 255 255 / 0) 35%, rgb(255 255 255 / 0.3) 50%, rgb(255 255 255 / 0) 65%);
+  opacity: 0;
+}
+
+.bcard img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
+
+/* Grey until pointed at, where a pointer can point. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .bcard img {
+    filter: grayscale(1);
+    transition: filter 0.5s ease;
+  }
+
+  .bcard__book {
+    transition:
+      transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.5s ease;
+  }
+
+  .bcard__book::after {
+    transition: opacity 0.5s ease;
+  }
+
+  .bcard:hover img {
+    filter: none;
+  }
+
+  .bcard:hover .bcard__book {
+    transform: translateY(-16px) rotate(1deg);
+    box-shadow: 10px 20px 40px rgb(0 0 0 / 0.25);
+  }
+
+  .bcard:hover .bcard__book::after {
+    opacity: 1;
+  }
+}
+
+.shelf__credit {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
+.shelf__credit a {
+  color: var(--bold-mute);
+}
+
+/* --------------------------------------------------------------- the plans */
+
+/*
+ * Two big cards. On a phone they stack. From the md breakpoint each card is
+ * sticky a little lower than the one before, so scrolling slides Pro up and
+ * over Free like the next card of a deck; inside each card, what it is sits
+ * on the left and what it includes on the right.
+ */
+.home-bold .plans {
+  max-width: 64rem;
+  margin-inline: auto;
+  gap: 1.5rem;
+}
+
+.home-bold .plan {
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border: 3px solid var(--bold-line);
+  border-radius: var(--r-card);
+  background: #fff;
+  box-shadow: var(--bold-card);
+}
+
+.home-bold .plan:first-child {
+  background: #f2f0e9;
+}
+
+.home-bold .plan--pro {
+  border-color: color-mix(in srgb, var(--coral) 45%, transparent);
+}
+
+@media (min-width: 48rem) {
+  .home-bold .plans {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2.5rem;
+  }
+
+  .home-bold .plan {
+    position: sticky;
+    top: 7rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: start;
+    column-gap: clamp(2rem, 5vw, 4rem);
+    padding: clamp(2rem, 5vw, 4rem);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.18);
+  }
+
+  .home-bold .plan:nth-child(2) {
+    top: 8.75rem;
+    z-index: 1;
+  }
+
+  .home-bold .plan > :not(ul) {
+    grid-column: 1;
+  }
+
+  .home-bold .plan > ul {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    align-self: start;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (min-width: 48rem) and (prefers-reduced-motion: no-preference) {
+  /* Specific enough to keep the reveal's own transitions alongside. */
+  .home-bold .plans > .plan.reveal {
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      scale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .home-bold .plan:hover {
+    scale: 1.01;
+  }
+}
+
+.home-bold .plan__name {
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.home-bold .badge {
+  font-family: var(--font-bold);
+  font-weight: 800;
+  background: var(--coral-wash);
+  color: var(--coral-ink);
+}
+
+.home-bold .plan__price b {
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.home-bold .plan li {
+  font-weight: 500;
+}
+
+.home-bold .plan li::before {
+  background: var(--coral-wash);
+  color: var(--coral-ink);
+}
+
+/* ------------------------------------------------------------------ the FAQ */
+
+/*
+ * White cards with a big round toggle that turns coral when open. The answer
+ * slides open where the browser can animate to an automatic height, and
+ * simply appears where it cannot.
+ */
+.home-bold .faq-list {
+  display: grid;
+  gap: 0.875rem;
+  max-width: 52rem;
+  border: 0;
+  interpolate-size: allow-keywords;
+}
+
+.home-bold .faq-item {
+  padding-inline: clamp(1.25rem, 3vw, 2.25rem);
+  border: 3px solid var(--bold-line);
+  border-radius: var(--r-card);
+  background: #fff;
+}
+
+.home-bold .faq-item[open] {
+  border-color: color-mix(in srgb, var(--coral) 35%, transparent);
+  box-shadow: var(--bold-card);
+}
+
+.home-bold .faq-item summary {
+  align-items: center;
+  padding-block: clamp(1.1rem, 2.2vw, 1.5rem);
+  font-family: var(--font-bold);
+  font-size: clamp(1.125rem, 2vw, 1.4375rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.home-bold .faq-item summary:hover {
+  color: var(--coral-ink);
+}
+
+.home-bold .faq-item summary::after {
+  width: clamp(2.75rem, 5vw, 3.5rem);
+  height: clamp(2.75rem, 5vw, 3.5rem);
+  margin-top: 0;
+  background-color: rgb(0 0 0 / 0.05);
+  background-image: linear-gradient(var(--bold-ink), var(--bold-ink)),
+    linear-gradient(var(--bold-ink), var(--bold-ink));
+  background-size: 1rem 2.5px, 2.5px 1rem;
+}
+
+.home-bold .faq-item[open] summary::after {
+  background-color: var(--coral-strong);
+  background-image: linear-gradient(#fff, #fff), linear-gradient(#fff, #fff);
+  background-size: 1rem 2.5px, 0 1rem;
+}
+
+.home-bold .faq-item__body p {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.65;
+  color: var(--bold-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-bold .faq-item::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 0.35s cubic-bezier(0.04, 0.62, 0.23, 0.98),
+      opacity 0.3s ease,
+      content-visibility 0.35s allow-discrete;
+  }
+
+  .home-bold .faq-item[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  .home-bold .faq-item summary::after {
+    transition:
+      transform 0.3s ease,
+      background-color 0.2s ease;
+  }
+}
+
+/* --------------------------------------------------------------- the closer */
+
+/*
+ * The last word on a dark panel, with the mascot rising from behind its top
+ * edge each time the panel comes into view. Without motion it simply sits
+ * there, already risen.
+ */
+.home-bold .closer {
+  padding-top: clamp(7rem, 12vw, 9rem);
+  padding-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.home-bold .closer .wrap {
+  position: relative;
+}
+
+.closer__pal {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 0;
+  width: clamp(7rem, 12vw, 9.5rem);
+  height: auto;
+  translate: -50% -74%;
+}
+
+.has-motion .closer__pal {
+  translate: -50% 0;
+  transition: translate 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.has-motion .closer.is-up .closer__pal {
+  translate: -50% -74%;
+  transition-delay: 0.15s;
+}
+
+.home-bold .closer__inner {
+  z-index: 1;
+  border-radius: var(--r-card);
+  background: var(--bold-ink);
+}
+
+.home-bold .closer__inner::before {
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--coral) 30%, transparent), transparent 68%);
+}
+
+.home-bold .closer h2 {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  line-height: 0.9;
+}
+
+/* ------------------------------------------------------------ the reveal */
+
+/*
+ * A longer rise than the other pages. No blur: on large cards it cost a
+ * repaint every frame. `main.js` sets `data-reveal` only when the reader has
+ * not asked for less motion. Items in a list carry `--i`, which staggers
+ * them a tenth of a second apart.
+ */
+[data-reveal='on'] .home-bold .reveal {
+  transform: translateY(1.5rem);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 0.1s);
+}
+
+[data-reveal='on'] .home-bold .reveal.is-in {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal='on'] .home-bold .reveal {
+    transform: none;
+  }
+}
