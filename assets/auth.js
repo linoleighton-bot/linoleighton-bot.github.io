@@ -235,7 +235,50 @@
   }
 
   client.auth.getSession().then(({ data }) => render(data.session));
-  client.auth.onAuthStateChange((_event, session) => render(session));
+  client.auth.onAuthStateChange((event, session) => {
+    render(session);
+    if (event === 'PASSWORD_RECOVERY') recovering();
+  });
+
+  /* ------------------------------------------------------ new password */
+
+  /**
+   * A reset link brings the reader here signed in, to set a new password.
+   *
+   * The app's "Forgot your password?" and the form above both send the reset
+   * email with this page as the destination, because the app has no screen
+   * for it and a password is set once, in one place. The form is hidden
+   * until Supabase says this session came from a recovery link, so nobody
+   * else sees a password field on their account page.
+   */
+  const newPassword = el('new-password');
+
+  function recovering() {
+    if (!newPassword) return;
+    newPassword.hidden = false;
+    say('Choose a new password to finish signing in.', 'ok');
+    newPassword.querySelector('input[name="password"]')?.focus();
+  }
+
+  if (newPassword) {
+    newPassword.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const password = newPassword.querySelector('input[name="password"]').value;
+      if (password.length < 8) return say('Use at least 8 characters.');
+
+      busy(true);
+      try {
+        const { error } = await client.auth.updateUser({ password });
+        if (error) throw error;
+        newPassword.hidden = true;
+        say('Password saved. Use it to sign in on the app.', 'ok');
+      } catch (error) {
+        say(error?.message || 'We could not save that password. Try again.');
+      } finally {
+        busy(false);
+      }
+    });
+  }
 
   /* -------------------------------------------------------- providers */
 

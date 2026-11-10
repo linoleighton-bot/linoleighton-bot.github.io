@@ -120,27 +120,47 @@
       };
     }
 
-    const observer = new ResizeObserver(() => {
+    const measure = () => {
       const box = inner();
       if (!box) return;
       const height = Math.ceil(box.getBoundingClientRect().height);
-      if (height > 0 && Math.abs(height - node.offsetHeight) > 2) node.style.height = `${height}px`;
-    });
+      /* A one-pixel difference is rounding, not a resize; reacting to it
+         would have the observer feeding itself for ever. */
+      if (height > 0 && Math.abs(height - node.offsetHeight) > 2) {
+        node.style.height = `${height}px`;
+      }
+    };
+
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
 
-    const start = Date.now();
-    const wait = window.setInterval(() => {
+    /*
+     * The SDK mounts asynchronously, and it re-renders its root as the form
+     * moves between steps — so the element found first can be thrown away and
+     * replaced by one the observer has never been told about. Observing only
+     * the first one left the till at 26px with a 477px form inside it, and
+     * the reader saw a Stripe badge and no card fields.
+     *
+     * Every change under the target re-finds the form and watches the current
+     * one. The slow tick is a backstop for a change nothing else reports.
+     */
+    let watched = null;
+    const rewatch = () => {
       const box = inner();
-      if (box) {
+      if (box && box !== watched) {
+        watched = box;
         observer.observe(box);
-        window.clearInterval(wait);
-      } else if (Date.now() - start > 15000) {
-        window.clearInterval(wait);
       }
-    }, 120);
+      measure();
+    };
+    const mutations = new MutationObserver(rewatch);
+    mutations.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    const tick = window.setInterval(rewatch, 500);
+    rewatch();
 
     return () => {
-      window.clearInterval(wait);
+      window.clearInterval(tick);
+      mutations.disconnect();
       observer.disconnect();
       node.style.height = '';
     };
