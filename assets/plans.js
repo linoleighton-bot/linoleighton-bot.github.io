@@ -244,10 +244,8 @@
         window.location.assign('/app/');
         return;
       }
-      say(
-        'You are in. Open Mindroll on your phone and sign in with the same account, or read in your browser at getmindroll.com/app.',
-        'ok',
-      );
+      say('You are in. Your subscription is active.', 'ok');
+      show(root.querySelector('[data-plans-done]'), true);
     } catch (error) {
       unfit();
       show(till, false);
