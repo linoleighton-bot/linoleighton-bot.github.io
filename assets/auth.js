@@ -64,8 +64,33 @@
    * email may still be pending, or the session may have failed to persist. The
    * only thing trusted here is what the client reports afterwards.
    */
+  /*
+   * A sign-in that started in the web app goes back to it.
+   *
+   * The web app at /app shares this origin and this session. Its Apple and
+   * Google buttons come through this page, because this is the return address
+   * the providers know, and leave a note saying where they came from. The note
+   * is honoured once and only while fresh, so a round trip abandoned last week
+   * cannot pull somebody off this page today.
+   */
+  const APP_RETURN = 'mindroll.app.return';
+  function returnToApp() {
+    let note = null;
+    try {
+      note = JSON.parse(localStorage.getItem(APP_RETURN) || 'null');
+      localStorage.removeItem(APP_RETURN);
+    } catch {
+      return false;
+    }
+    if (!note || typeof note.path !== 'string' || !note.path.startsWith('/app')) return false;
+    if (Date.now() - Number(note.at || 0) > 10 * 60 * 1000) return false;
+    window.location.replace(note.path);
+    return true;
+  }
+
   function render(session) {
     const user = session?.user ?? null;
+    if (user && returnToApp()) return;
     if (signedOut) signedOut.hidden = Boolean(user);
     if (signedIn) signedIn.hidden = !user;
     if (who && user) who.textContent = user.email || 'Signed in';

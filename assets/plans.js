@@ -168,6 +168,44 @@
 
   let configured = null;
 
+  /*
+   * A reader sent here by the web app's paywall goes back to it afterwards.
+   *
+   * The web app (/app, same origin) has no till of its own; its paywall leaves
+   * a note in this tab's session storage and sends the reader here to pay.
+   */
+  const FROM_APP = 'mindroll.app.buying';
+  function cameFromApp() {
+    try {
+      const yes = sessionStorage.getItem(FROM_APP) === '1';
+      sessionStorage.removeItem(FROM_APP);
+      return yes;
+    } catch {
+      return false;
+    }
+  }
+
+  /*
+   * Waits for the webhook to write the subscription, for up to fifteen seconds.
+   *
+   * The app decides who is Pro from `subscription_entitlements`, and that row
+   * is written by RevenueCat's webhook a moment after the payment. Returning
+   * before it lands would show a paying reader the paywall again.
+   */
+  async function entitlementWritten(user) {
+    const client = await supabaseClient();
+    for (let attempt = 0; attempt < 15; attempt += 1) {
+      const { data } = await client
+        .from('subscription_entitlements')
+        .select('plan')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.plan === 'pro') return true;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    return false;
+  }
+
   async function buy(user, planId) {
     const Purchases = await purchasesSdk();
     /* The App User ID is the Supabase user id, which is what ties a payment
@@ -199,8 +237,17 @@
       unfit();
       show(till, false);
       if (!active.length) throw new Error('The payment went through but the plan did not open. Email us and we will fix it.');
-      say('You are in. Open Mindroll on your phone and sign in with the same account.', 'ok');
       for (const button of buttons) button.disabled = true;
+      if (cameFromApp()) {
+        say('You are in. Taking you back to Mindroll…', 'ok');
+        await entitlementWritten(user);
+        window.location.assign('/app/');
+        return;
+      }
+      say(
+        'You are in. Open Mindroll on your phone and sign in with the same account, or read in your browser at getmindroll.com/app.',
+        'ok',
+      );
     } catch (error) {
       unfit();
       show(till, false);
