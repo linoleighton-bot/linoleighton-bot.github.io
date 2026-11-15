@@ -1100,7 +1100,17 @@
 
   if (lastAnswered.length) {
     const resumeAt = order.indexOf(lastAnswered[lastAnswered.length - 1]);
-    if (resumeAt > 0) index = Math.min(resumeAt + 1, order.indexOf('building'));
+    /*
+     * `indexOf` is -1 when this flow has no such step, and `Math.min` then
+     * happily returned -1 — `order[-1]` is undefined and the first paint threw,
+     * leaving a blank page for anyone with answers saved from a previous visit.
+     * A missing cap means "do not cap", and the result is clamped either way.
+     */
+    const cap = order.indexOf('building');
+    if (resumeAt > 0) {
+      const want = cap === -1 ? resumeAt + 1 : Math.min(resumeAt + 1, cap);
+      index = Math.max(0, Math.min(order.length - 1, want));
+    }
   }
 
   /*

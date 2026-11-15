@@ -1,27 +1,25 @@
 /*
- * Funnel 2 — the same funnel, in the category's house style.
+ * Funnel 2's clothes — the layout the category's quiz funnels use, in our
+ * colours.
  *
- * Loaded only on /start2, on top of funnel.css, and only ever presentation:
- * every step, every answer, the sign-in and the till come from the same
- * markup and the same funnel.js as /start, because that script is driven by
- * `data-` attributes and never reads a class name. So the two pages cannot
- * drift apart in behaviour or in price, and an A/B test between them changes
- * exactly one thing — the clothes — which is the only way the result means
- * anything.
+ * Loaded only on /start2, over funnel.css. Modelled directly on BeFreed's
+ * onboarding, walked screen by screen: a narrow centred column, a progress bar
+ * split into named phases that tick off behind you, white answer cards that
+ * advance on one tap, a 1–5 row with its ends labelled, yes/no taste cards
+ * with a cover above them, and a dark pill at the foot of every screen that
+ * needs a press.
  *
- * The look is the one every quiz funnel in this category has converged on: a
- * narrow centred column, a progress bar split into phases with the phase named
- * above it, white answer cards that advance themselves, and a dark pill for
- * the screens that need a press. The colours are Mindroll's own.
+ * It is presentation only. The steps, the script, the sign-in and the till are
+ * the same code funnel 1 runs, so the two pages differ in how they look and in
+ * what they ask, and never in what they charge.
  */
 
 body.page-funnel2 {
   --f2-bg: #FAF4EA;
   --f2-card: #ffffff;
-  --f2-edge: color-mix(in srgb, var(--ink) 9%, transparent);
-  --f2-edge-live: var(--clay);
-  --f2-dark: var(--ink);
-  --f2-col: 27rem;
+  --f2-edge: color-mix(in srgb, var(--ink) 10%, transparent);
+  --f2-dark: #2F3237;
+  --f2-col: 26.5rem;
 
   background: var(--f2-bg);
 }
@@ -40,7 +38,6 @@ body.page-funnel2 .funnel__body {
   padding-block: 0 2rem;
 }
 
-/* The mark sits in the bar on this variant, not loose above the questions. */
 body.page-funnel2 .funnel__mark {
   position: absolute;
   left: 50%;
@@ -56,9 +53,9 @@ body.page-funnel2 .funnel__bar {
   position: relative;
   width: min(var(--f2-col), 100% - 2.5rem);
   margin-inline: auto;
-  padding-block: 2.6rem 1.6rem;
+  padding-block: 2.7rem 1.5rem;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.7rem;
   background: none;
   border: 0;
 }
@@ -66,7 +63,7 @@ body.page-funnel2 .funnel__bar {
 body.page-funnel2 .funnel__back {
   justify-self: start;
   grid-row: 1;
-  padding: 0.4rem 0.85rem;
+  padding: 0.42rem 0.9rem;
   font-size: 0.8rem;
   font-weight: 600;
   border: 1px solid var(--f2-edge);
@@ -75,8 +72,8 @@ body.page-funnel2 .funnel__back {
   color: var(--ink);
 }
 
-/* The bar reserves the back button's row even on the steps that have none, so
-   the questions do not jump up and down as you move through the funnel. */
+/* The row is held even where there is no Back, so the question below does not
+   jump up and down from screen to screen. */
 body.page-funnel2 .funnel__back[hidden] {
   display: block;
   visibility: hidden;
@@ -85,18 +82,21 @@ body.page-funnel2 .funnel__back[hidden] {
 body.page-funnel2 .funnel__sections {
   grid-row: 2;
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.45rem;
   width: 100%;
 }
 
 body.page-funnel2 .funnel__section {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-/* The grey rail is `.funnel__track`; the part that fills is the span inside
-   it, which the script widens. Styling the section or the track as the fill
-   paints every phase complete. */
+/* The grey rail is the track; the span inside it is what the script widens. */
 body.page-funnel2 .funnel__track {
+  flex: 1;
   height: 3px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 12%, transparent);
@@ -105,16 +105,23 @@ body.page-funnel2 .funnel__track {
 body.page-funnel2 .funnel__track span,
 body.page-funnel2 .funnel__section[data-done] .funnel__track span {
   border-radius: 999px;
-  /* One colour for done and doing, as the funnels this copies use. */
   background: var(--clay);
+}
+
+/* A phase you have finished gets a tick after its bar, as theirs does. */
+body.page-funnel2 .funnel__section[data-done]::after {
+  content: '✓';
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--clay);
 }
 
 body.page-funnel2 .funnel__label {
   grid-row: 3;
   justify-self: center;
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--clay);
 }
@@ -125,24 +132,19 @@ body.page-funnel2 .funnel__count {
 
 /* -------------------------------------------------------------- the steps */
 
-/* `.fstep[hidden]` in funnel.css is one selector weaker than the rules below,
-   so without this the whole funnel renders at once, every docked CTA piling up
-   at the bottom of the page. */
+/* One selector stronger than funnel.css's `.fstep[hidden]`, which the rule
+   below would otherwise beat — rendering all thirty-five steps at once. */
 body.page-funnel2 .fstep[hidden] {
   display: none;
 }
 
 /*
- * Each step is its own column the height of the screen, so the press lands at
- * the bottom of the viewport on every step without being `fixed`.
- *
- * `fixed` is the obvious way to dock it and it does not work here: funnel.css
- * animates each step in with a transform, and `animation-fill-mode: both`
- * leaves the computed transform an identity matrix rather than `none`. Any
- * transform but `none` makes the element a containing block, so a `fixed`
- * child measures itself against the step instead of the window and lands
- * halfway up the page. `margin-top: auto` in a tall flex column has none of
- * that trouble, and it lets a long step scroll normally.
+ * Each step is a column the height of the screen, so the press sits at the
+ * bottom of the viewport everywhere without being `fixed`. `fixed` does not
+ * work here: funnel.css animates each step with a transform and
+ * `animation-fill-mode: both`, which leaves an identity matrix rather than
+ * `none`, and any transform but `none` makes the step the containing block for
+ * a fixed child. `margin-top: auto` has none of that trouble and still scrolls.
  */
 body.page-funnel2 .fstep {
   display: flex;
@@ -154,18 +156,18 @@ body.page-funnel2 .fstep {
 
 body.page-funnel2 .fs__title {
   font-family: inherit;
-  font-size: 1.32rem;
+  font-size: 1.3rem;
   font-weight: 700;
   line-height: 1.32;
   letter-spacing: -0.01em;
   text-wrap: balance;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
 }
 
 body.page-funnel2 .fs__eyebrow {
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--clay);
   margin-bottom: 0.5rem;
@@ -173,27 +175,28 @@ body.page-funnel2 .fs__eyebrow {
 
 body.page-funnel2 .fs__body,
 body.page-funnel2 .fs__why {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.6;
   color: var(--muted);
-  max-width: 24rem;
+  max-width: 23rem;
   margin-inline: auto;
 }
 
 /*
- * The answers are pushed down the screen and the question stays at the top,
- * which is what makes these funnels feel quick: the eye lands on the question,
- * and the thumb never leaves the bottom third of the phone.
+ * The answers sit low and the question stays at the top. That gap is what
+ * makes these funnels feel quick: the eye lands on the question, and the thumb
+ * never leaves the bottom third of a phone.
  */
 body.page-funnel2 .fq,
-body.page-funnel2 .fbooks,
-body.page-funnel2 .fgrid {
-  margin-top: 2.25rem;
+body.page-funnel2 .fscale,
+body.page-funnel2 .ftaste {
+  margin-top: auto;
 }
 
 body.page-funnel2 .fq {
   display: grid;
   gap: 0.6rem;
+  margin-bottom: auto;
 }
 
 body.page-funnel2 .fq__option {
@@ -201,24 +204,24 @@ body.page-funnel2 .fq__option {
   align-items: center;
   gap: 0.7rem;
   width: 100%;
-  min-height: 3.1rem;
+  min-height: 3.15rem;
   padding: 0.75rem 0.95rem;
   text-align: left;
   background: var(--f2-card);
   border: 1px solid var(--f2-edge);
   border-radius: 0.8rem;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
-  transition: border-color 0.12s, box-shadow 0.12s, translate 0.12s;
+  transition: border-color 0.12s, translate 0.12s;
 }
 
 body.page-funnel2 .fq__option:hover {
-  border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+  border-color: color-mix(in srgb, var(--ink) 20%, transparent);
   translate: 0 -1px;
 }
 
 body.page-funnel2 .fq__option[aria-checked='true'] {
-  border-color: var(--f2-edge-live);
-  box-shadow: 0 0 0 1px var(--f2-edge-live);
+  border-color: var(--clay);
+  box-shadow: 0 0 0 1px var(--clay);
 }
 
 body.page-funnel2 .fq__label {
@@ -226,17 +229,118 @@ body.page-funnel2 .fq__label {
   font-weight: 600;
 }
 
+/* Label left, "5 min a day" hard right, on one line. */
+body.page-funnel2 .fq__text {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 body.page-funnel2 .fq__detail {
   font-size: 0.8rem;
   color: var(--muted);
+  text-align: right;
 }
 
-/* Single-answer steps advance themselves, so a tick would flash and vanish.
-   The multi-answer steps keep theirs, because there it is the only way to see
-   what you have already chosen. */
+/* The end labels line up with the outer edges of the 1 and the 5. */
+body.page-funnel2 .fscale__ends {
+  width: calc(5 * 3.2rem + 4 * 0.55rem);
+}
+
+/* A single-answer step advances itself, so its tick would flash and vanish.
+   Multi-answer steps keep theirs — there it is the only record of the choice. */
 body.page-funnel2 .fstep[data-kind='single'] .fq__tick,
 body.page-funnel2 .fstep[data-kind='scale'] .fq__tick {
   display: none;
+}
+
+/* ------------------------------------------------------- the taste cards */
+
+body.page-funnel2 .ftaste {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  margin: auto auto 1.4rem;
+}
+
+body.page-funnel2 .ftaste__cover {
+  width: 9.4rem;
+  height: auto;
+  border-radius: 0.3rem;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--ink) 16%, transparent);
+  margin-bottom: 1rem;
+}
+
+/* The writer cards have no cover, so they get a monogram the same size. */
+body.page-funnel2 .ftaste__face {
+  display: grid;
+  place-items: center;
+  width: 7rem;
+  height: 7rem;
+  margin-bottom: 1rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--clay) 14%, var(--f2-card));
+  color: var(--clay);
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+body.page-funnel2 .ftaste__text {
+  display: grid;
+  gap: 0.22rem;
+}
+
+body.page-funnel2 .ftaste__title {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+body.page-funnel2 .ftaste__by {
+  font-size: 0.84rem;
+  color: var(--clay);
+}
+
+body.page-funnel2 .ftaste__blurb {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 21rem;
+  margin-inline: auto;
+}
+
+/* No and Yes, side by side: white with a cross, dark with a tick. */
+body.page-funnel2 .fq--pair {
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-top: 0;
+}
+
+body.page-funnel2 .fq--pair .fq__option {
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+body.page-funnel2 .fq--pair .fq__option::before {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+body.page-funnel2 .fq--pair .fq__option:first-child::before {
+  content: '✕';
+  color: var(--muted);
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child {
+  background: var(--f2-dark);
+  border-color: var(--f2-dark);
+  color: #fff;
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child::before {
+  content: '✓';
 }
 
 /* ------------------------------------------------------------- the scales */
@@ -245,12 +349,11 @@ body.page-funnel2 .fscale {
   display: flex;
   justify-content: center;
   gap: 0.55rem;
-  margin-top: 2.25rem;
 }
 
 body.page-funnel2 .fscale__step {
-  width: 3.1rem;
-  height: 3.1rem;
+  width: 3.2rem;
+  height: 3.2rem;
   font-size: 0.95rem;
   font-weight: 600;
   background: var(--f2-card);
@@ -260,76 +363,114 @@ body.page-funnel2 .fscale__step {
 }
 
 body.page-funnel2 .fscale__step[aria-checked='true'] {
-  border-color: var(--f2-edge-live);
-  box-shadow: 0 0 0 1px var(--f2-edge-live);
+  border-color: var(--clay);
+  box-shadow: 0 0 0 1px var(--clay);
 }
 
 body.page-funnel2 .fscale__ends {
   display: flex;
   justify-content: space-between;
+  width: min(18.6rem, 100%);
   margin: 0.55rem auto 0;
-  max-width: 18rem;
+  margin-bottom: auto;
   font-size: 0.72rem;
   color: var(--muted);
 }
 
+/* -------------------------------------------------------- the build screen */
+
+body.page-funnel2 .fstep[data-kind='build'] .fbuild {
+  margin: auto 0;
+  display: grid;
+  gap: 0;
+}
+
+body.page-funnel2 .fbuild__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--f2-edge);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* funnel.css draws the tick as a ::before, so `space-between` alone puts the
+   label on the right. Ordering the tick last gives their arrangement: the work
+   named on the left, its state on the right. */
+body.page-funnel2 .fbuild__line::before {
+  order: 2;
+  color: var(--clay);
+}
+
+body.page-funnel2 .fbuild__bar {
+  margin-top: 1.4rem;
+  font-size: 0.8rem;
+  color: var(--clay);
+}
+
+/* The screens that show rather than ask start below the bar, not against it. */
+body.page-funnel2 .fstep[data-kind='account'] > :first-child,
+body.page-funnel2 .fstep[data-kind='offer'] > :first-child,
+body.page-funnel2 .fstep[data-kind='done'] > :first-child,
+body.page-funnel2 .fstep[data-kind='build'] > :first-child {
+  margin-top: 1.1rem;
+}
+
 /* ---------------------------------------------------------------- the CTA */
 
-/* Pushed to the foot of the step's column: same place on every screen, and
-   reachable with the thumb that is already down there. */
 body.page-funnel2 .fs__cta {
   margin-top: auto;
   width: 100%;
-  min-height: 3.1rem;
+  min-height: 3.2rem;
   padding-inline: 1rem;
   font-size: 0.97rem;
   font-weight: 600;
+  white-space: normal;
   background: var(--f2-dark);
   color: #fff;
   border: 0;
   border-radius: 0.7rem;
-  box-shadow: 0 6px 22px color-mix(in srgb, var(--ink) 16%, transparent);
 }
 
 body.page-funnel2 .fs__cta:disabled {
-  background: color-mix(in srgb, var(--ink) 22%, var(--f2-bg));
-  box-shadow: none;
+  background: color-mix(in srgb, var(--ink) 20%, var(--f2-bg));
+  color: color-mix(in srgb, #fff 70%, transparent);
 }
 
 body.page-funnel2 .fs__skip {
-  margin-top: 0.75rem;
+  margin-top: 0.8rem;
   font-size: 0.78rem;
   color: var(--muted);
 }
 
-/* A skip takes the slack instead, so the pair stays together at the foot. */
 body.page-funnel2 .fstep:has(.fs__skip) .fs__cta {
   margin-top: auto;
 }
 
 /* ------------------------------------------- the screens that keep shape */
 
-/*
- * The hook, the plan, the books and the till are doing a different job from a
- * question — they are showing something rather than asking — so they keep the
- * layout funnel.css gives them, and only pick up this variant's column, type
- * and press.
- */
+/* The hook, the sign-in, the till and the closer are showing rather than
+   asking, so they keep the layout funnel.css gives them and take only this
+   variant's column, type and press. */
+body.page-funnel2 .fstep[data-kind='hook'],
+body.page-funnel2 .fstep[data-kind='offer'],
+body.page-funnel2 .fstep[data-kind='account'],
+body.page-funnel2 .fstep[data-kind='done'] {
+  text-align: initial;
+}
+
 body.page-funnel2 .fstep[data-kind='hook'] .fs__cta,
 body.page-funnel2 .fstep[data-kind='offer'] .fs__cta,
 body.page-funnel2 .fstep[data-kind='account'] .fs__cta,
 body.page-funnel2 .fstep[data-kind='done'] .fs__cta {
   margin-top: 1.25rem;
-  box-shadow: none;
-}
-
-body.page-funnel2 .fstep[data-kind='offer'],
-body.page-funnel2 .fstep[data-kind='plan'],
-body.page-funnel2 .fstep[data-kind='hook'] {
-  text-align: initial;
 }
 
 @media (max-width: 30rem) {
-  body.page-funnel2 .fs__title { font-size: 1.22rem; }
-  body.page-funnel2 .fscale__step { width: 2.8rem; height: 2.8rem; }
+  body.page-funnel2 .fs__title { font-size: 1.2rem; }
+  body.page-funnel2 .fscale__step { width: 2.85rem; height: 2.85rem; }
+  body.page-funnel2 .ftaste__cover { width: 8.2rem; }
 }
