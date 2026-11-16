@@ -169,16 +169,35 @@
 
     /* No row at all is the commonest case: an account that has never paid. */
     if (!row || row.plan !== 'pro') {
+      /*
+       * Somebody who used to pay is not somebody who never did.
+       *
+       * A row in `expired` means this account subscribed, and the price it
+       * lapsed at is the one price we already know they walked away from.
+       * `/renew` asks RevenueCat for the welcome-back offering and shows the
+       * discount if there is a web product in it - and falls through to these
+       * same plans if there is not, so the worst case is the old behaviour.
+       * The app does exactly this on launch (`app/index.tsx`).
+       */
+      const lapsed = Boolean(row) && row.state === 'expired';
+
       if (name) name.textContent = 'Free';
       if (badge) badge.hidden = true;
       if (detail) {
-        detail.textContent =
-          'You can read the whole catalogue on the free plan. Pro adds audio, downloads and unlimited saves.';
+        detail.textContent = lapsed
+          ? 'Your subscription has ended. Everything you saved is still here, waiting for you.'
+          : 'You can read the whole catalogue on the free plan. Pro adds audio, downloads and unlimited saves.';
       }
       if (manageRow) manageRow.hidden = true;
+      if (seePlans && lapsed) {
+        seePlans.setAttribute('href', '/renew');
+        seePlans.textContent = 'See your welcome back offer';
+      }
       show(seePlans, true);
       show(openApp, false);
-      show(buildPlan, true);
+      /* "Build your plan" is the new reader's path through the funnel. Somebody
+         coming back has already been through it once. */
+      show(buildPlan, !lapsed);
       return;
     }
 
