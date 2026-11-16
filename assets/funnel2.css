@@ -73,10 +73,22 @@ body.page-funnel2 .funnel__back {
 }
 
 /* The row is held even where there is no Back, so the question below does not
-   jump up and down from screen to screen. */
+   jump up and down from screen to screen. It fades in on the second screen
+   rather than appearing, which is the difference between a control arriving
+   and a control blinking into existence. */
 body.page-funnel2 .funnel__back[hidden] {
   display: block;
   visibility: hidden;
+  opacity: 0;
+}
+
+body.page-funnel2 .funnel__back {
+  opacity: 1;
+  transition:
+    opacity 0.3s var(--f2-ease),
+    border-color 0.18s var(--f2-ease),
+    background-color 0.22s var(--f2-ease),
+    transform 0.12s var(--f2-ease);
 }
 
 body.page-funnel2 .funnel__sections {
@@ -108,11 +120,24 @@ body.page-funnel2 .funnel__section[data-done] .funnel__track span {
   background: var(--clay);
 }
 
-/* A phase you have finished gets a tick after its bar, as theirs does. */
-body.page-funnel2 .funnel__section[data-done]::after {
+/*
+ * A phase you have finished gets a tick after its bar, as theirs does.
+ *
+ * The tick is drawn on every phase from the start and merely coloured in when
+ * the phase completes. Adding the glyph on completion instead gave the row a
+ * new element to make space for, so all four rails jumped a few pixels
+ * narrower at the exact moment the reader was being congratulated.
+ */
+body.page-funnel2 .funnel__section::after {
   content: '✓';
+  width: 0.5rem;
   font-size: 0.6rem;
   font-weight: 700;
+  color: transparent;
+  transition: color 0.35s var(--f2-ease);
+}
+
+body.page-funnel2 .funnel__section[data-done]::after {
   color: var(--clay);
 }
 
@@ -140,11 +165,13 @@ body.page-funnel2 .fstep[hidden] {
 
 /*
  * Each step is a column the height of the screen, so the press sits at the
- * bottom of the viewport everywhere without being `fixed`. `fixed` does not
- * work here: funnel.css animates each step with a transform and
- * `animation-fill-mode: both`, which leaves an identity matrix rather than
- * `none`, and any transform but `none` makes the step the containing block for
- * a fixed child. `margin-top: auto` has none of that trouble and still scrolls.
+ * bottom of the viewport everywhere without being `fixed`.
+ *
+ * `margin-top: auto` rather than `position: fixed` on purpose: a fixed press
+ * would have to be lifted out of the step and kept in sync with it, and it
+ * would sit over the last line of a long screen instead of after it. This
+ * scrolls, which is what a paywall and a sign-in both need. See Movement at
+ * the foot of this file for why the step itself no longer animates.
  */
 body.page-funnel2 .fstep {
   display: flex;
@@ -211,17 +238,37 @@ body.page-funnel2 .fq__option {
   border: 1px solid var(--f2-edge);
   border-radius: 0.8rem;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
-  transition: border-color 0.12s, translate 0.12s;
 }
 
+/*
+ * The hover is the border, not a lift.
+ *
+ * This rule used to be `transition: border-color, translate` and a `translate:
+ * 0 -1px` on hover, which did two bad things at once. It replaced funnel.css's
+ * transition outright — so the press scale and the shadow both snapped instead
+ * of easing, which is most of why the cards felt cheap — and a 1px hop under
+ * the cursor on a list of five reads as the page being nervous. The card now
+ * keeps the shared transition and answers the cursor by firming its edge.
+ */
 body.page-funnel2 .fq__option:hover {
-  border-color: color-mix(in srgb, var(--ink) 20%, transparent);
-  translate: 0 -1px;
+  border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
 }
 
+/*
+ * Chosen, unmistakably.
+ *
+ * Funnel 2 hides the tick on one-tap steps, so the border was carrying the
+ * entire answer — a 1px line, shown for a fraction of a second before the
+ * screen changes. The ring is drawn inset so it can be two pixels without
+ * moving anything, and the fill is what actually reads at a glance.
+ */
 body.page-funnel2 .fq__option[aria-checked='true'] {
-  border-color: var(--clay);
-  box-shadow: 0 0 0 1px var(--clay);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--clay) 8%, var(--f2-card));
+  box-shadow:
+    inset 0 0 0 2px var(--clay),
+    0 3px 12px color-mix(in srgb, var(--clay) 18%, transparent);
 }
 
 body.page-funnel2 .fq__label {
@@ -362,9 +409,25 @@ body.page-funnel2 .fscale__step {
   box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
+/* Filled, not outlined. A 1–5 row is read at a glance from across the thumb,
+   and an outline on a 3.2rem square is not a glance. */
 body.page-funnel2 .fscale__step[aria-checked='true'] {
   border-color: var(--clay);
-  box-shadow: 0 0 0 1px var(--clay);
+  background: var(--clay);
+  color: var(--on-clay, #fff);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--clay) 28%, transparent);
+}
+
+body.page-funnel2 .fscale__step:hover:not([aria-checked='true']) {
+  border-color: color-mix(in srgb, var(--ink) 24%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+/* The dark Yes card is already filled, so it confirms with the clay ring and
+   its own press rather than by changing colour. */
+body.page-funnel2 .fq--pair .fq__option:last-child[aria-checked='true'] {
+  background: var(--f2-dark);
+  color: #fff;
 }
 
 body.page-funnel2 .fscale__ends {
@@ -403,6 +466,38 @@ body.page-funnel2 .fbuild__line {
 body.page-funnel2 .fbuild__line::before {
   order: 2;
   color: var(--clay);
+  transition:
+    border-color 0.32s var(--f2-ease),
+    background-color 0.32s var(--f2-ease),
+    box-shadow 0.32s var(--f2-ease);
+}
+
+/*
+ * Clay, not moss.
+ *
+ * funnel 1 marks this screen's work done in green and runs a green-to-clay
+ * gradient under it. That is its language, and it is a good one. Funnel 2's
+ * is two neutrals and exactly one accent — a green tick here is the single
+ * off-palette thing in thirty-five screens, and off-palette is what "looks
+ * like it was assembled" means.
+ */
+body.page-funnel2 .fbuild__line[data-done]::before {
+  border-color: var(--clay);
+  background: var(--clay);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--clay) 14%, transparent);
+}
+
+body.page-funnel2 .fbuild__line[data-done] {
+  color: var(--ink);
+}
+
+body.page-funnel2 .fbuild__bar {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+body.page-funnel2 .fbuild__bar span {
+  background: var(--clay);
+  transition: width 0.55s var(--f2-ease);
 }
 
 body.page-funnel2 .fbuild__bar {
@@ -473,4 +568,482 @@ body.page-funnel2 .fstep[data-kind='done'] .fs__cta {
   body.page-funnel2 .fs__title { font-size: 1.2rem; }
   body.page-funnel2 .fscale__step { width: 2.85rem; height: 2.85rem; }
   body.page-funnel2 .ftaste__cover { width: 8.2rem; }
+}
+
+
+/* --------------------------------------------- the pictures between asks */
+
+/*
+ * A picture on every screen that sits between two questions.
+ *
+ * This is most of the difference between a quiz that reads as a product being
+ * built and one that reads as a form being filled in: the reader answers, and
+ * something appears. They are SVG, drawn by `scripts/funnel2-art.mjs` on this
+ * variant's own paper, so the plate behind the drawing is already `--f2-bg`
+ * and the picture sits on the screen rather than on a lighter rectangle.
+ */
+/* Each picture is cropped to what was drawn, so no two are the same shape.
+   Both axes are capped and neither is set, which keeps a wide one from filling
+   the column and a tall one from pushing the question off the screen. */
+body.page-funnel2 .fnote__art {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(16rem, 72%);
+  max-height: 11.5rem;
+  margin: 0.4rem auto 1.35rem;
+}
+
+/* An empty eyebrow is still a paragraph, and above a picture its margin reads
+   as the picture hanging low. */
+body.page-funnel2 .fstep[data-kind='note'] .fs__eyebrow:empty {
+  display: none;
+}
+
+/* ==========================================================================
+   Movement
+   ========================================================================== */
+
+/*
+ * What moves between screens, and what does not.
+ *
+ * funnel.css slides the whole step 14px sideways. That works there, where a
+ * step is a block of content in the middle of a page. It does not work here,
+ * because funnel 2's step is a column the full height of the viewport with
+ * the press pinned to the bottom of it — so the slide takes the question, the
+ * answers and the button as one slab, and a button that slides under the
+ * thumb on every screen is the single loudest tell that this is a document
+ * pretending to be an app.
+ *
+ * So the step itself stops moving. The chrome — the mark, the phase bar, Back
+ * and the press — holds still, and only the content inside changes, rising a
+ * few pixels in a short stagger. The effect is one surface with new content
+ * settling onto it rather than fifteen pages being dealt out.
+ *
+ * The curve is an expo-out: almost all of the distance is covered in the
+ * first third, so it reads as quick while still landing softly. The same one
+ * is used by everything that moves on this page, which is most of what makes
+ * a set of animations feel designed rather than assembled.
+ */
+body.page-funnel2 {
+  --f2-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --f2-from: 14px;
+}
+
+/* Back arrives from above, so the two directions are not the same gesture. */
+body.page-funnel2 .funnel[data-back] {
+  --f2-from: -14px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * The step holds still.
+   *
+   * This also un-does something funnel.css costs us here: an animation filled
+   * `both` that ends on `transform: none` leaves an identity matrix, and any
+   * transform but `none` makes the step a containing block for `position:
+   * fixed` descendants. The checkout the SDK mounts into is one of those.
+   */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) {
+    animation: none;
+  }
+
+  /*
+   * Content rises; the press and the till do not.
+   *
+   * The press is excluded because it is chrome, not content. The till is
+   * excluded because the checkout SDK measures and positions inside it, and
+   * handing it a parent that is mid-transform is how a card form ends up
+   * 26 pixels tall.
+   */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden])
+    > *:not(.fq):not(.fscale):not(.fgrid):not(.fs__cta):not(.fdock):not([data-till]):not([data-checkout-status]) {
+    animation: f2-in 0.42s var(--f2-ease) both;
+    animation-delay: var(--f2-d, 0ms);
+  }
+
+  /*
+   * The stagger, four deep then flat.
+   *
+   * Eyebrow, picture, question, line — that is the order the eye wants them
+   * in, and it is the order they are written in. Past the fourth the delay
+   * stops growing: a sixth element arriving 300ms in is not a flourish, it is
+   * a wait.
+   */
+  body.page-funnel2 .fstep > *:nth-child(1) { --f2-d: 0ms; }
+  body.page-funnel2 .fstep > *:nth-child(2) { --f2-d: 50ms; }
+  body.page-funnel2 .fstep > *:nth-child(3) { --f2-d: 92ms; }
+  body.page-funnel2 .fstep > *:nth-child(4) { --f2-d: 126ms; }
+  body.page-funnel2 .fstep > *:nth-child(n + 5) { --f2-d: 152ms; }
+
+  /* The picture gets a hair of scale with its rise, and a little longer to
+     land, because it is the largest thing on the screen and the one the eye
+     goes to first. */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) > .fnote__art {
+    animation-name: f2-art-in;
+    animation-duration: 0.58s;
+  }
+
+  /*
+   * The answers come in behind the question, each a beat after the last.
+   *
+   * funnel.css already does this; it is restated on the same curve and a
+   * slightly wider beat so the answer list reads as part of the same motion
+   * rather than a second, faster one layered over it.
+   */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fq__option,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fscale__step,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fgrid__cell {
+    animation: f2-in 0.4s var(--f2-ease) both;
+    animation-delay: calc(104ms + var(--i, 0) * 38ms);
+  }
+
+  /* A chosen card answers in its own right, before the screen moves. */
+  body.page-funnel2 .fq__option[data-chosen],
+  body.page-funnel2 .fscale__step[data-chosen] {
+    animation: f2-confirm 0.26s var(--f2-ease);
+  }
+}
+
+@keyframes f2-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--f2-from, 14px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes f2-art-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--f2-from, 14px)) scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Barely a pop. It is there to be felt under a thumb, not watched. */
+@keyframes f2-confirm {
+  0% { transform: scale(0.985); }
+  45% { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+
+/* ------------------------------------------------------ press and answer */
+
+/*
+ * Everything that can be pressed, on one curve and one timing.
+ *
+ * These are short on purpose: 120ms in, 220ms out for the colour. A press
+ * that eases in slowly feels like lag, and a colour that snaps feels like a
+ * screenshot changing.
+ */
+body.page-funnel2 .fq__option,
+body.page-funnel2 .fscale__step,
+body.page-funnel2 .funnel__back {
+  transition:
+    border-color 0.18s var(--f2-ease),
+    background-color 0.22s var(--f2-ease),
+    color 0.18s var(--f2-ease),
+    box-shadow 0.24s var(--f2-ease),
+    transform 0.12s var(--f2-ease);
+}
+
+body.page-funnel2 .fscale__step:active,
+body.page-funnel2 .funnel__back:active {
+  transform: scale(0.96);
+}
+
+body.page-funnel2 .funnel__back:hover {
+  border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+  background: var(--f2-card);
+}
+
+/* The dark press deepens rather than lifting — a pill that jumps on hover is
+   the other half of why these pages read as cheap. */
+body.page-funnel2 .fs__cta:not(:disabled) {
+  transition:
+    background-color 0.2s var(--f2-ease),
+    box-shadow 0.26s var(--f2-ease),
+    transform 0.12s var(--f2-ease);
+}
+
+body.page-funnel2 .fs__cta:not(:disabled):hover {
+  background: color-mix(in srgb, var(--f2-dark) 86%, #000);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
+body.page-funnel2 .fs__cta:not(:disabled):active {
+  transform: scale(0.985);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+/* The bar fills on the same curve as everything else, and takes long enough
+   to be seen doing it — it is the only feedback that an answer counted. */
+body.page-funnel2 .funnel__track span {
+  transition: width 0.55s var(--f2-ease);
+}
+
+
+/* -------------------------------------------------------- the second till */
+
+/*
+ * Funnel 2's paywall.
+ *
+ * A different argument, not a different product: the plans below are the same
+ * `web.plans` funnel 1 sells, through the same checkout, at the same price.
+ * What changes is the order of the argument — what happens today, what happens
+ * before the money moves, then the two plans side by side so the annual card
+ * is read against the weekly one rather than after it.
+ */
+
+body.page-funnel2 .fstep[data-kind='offer'] .fs__eyebrow {
+  color: var(--clay);
+  font-weight: 700;
+}
+
+/* ---- the three days */
+
+body.page-funnel2 .pw2__when {
+  display: none;
+  list-style: none;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  text-align: initial;
+}
+
+/*
+ * Shown only while the chosen plan actually has free days.
+ *
+ * Written as "hidden, then shown on a match" rather than the other way round
+ * on purpose: a browser that cannot match this shows no timeline, which is
+ * merely a plainer paywall. The inverse would show three free days to someone
+ * about to be charged today.
+ */
+body.page-funnel2 .fstep[data-kind='offer']:has(.pw2__plan[data-trial][data-chosen]) .pw2__when {
+  display: grid;
+}
+
+body.page-funnel2 .pw2__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  column-gap: 0.85rem;
+  padding-bottom: 1.15rem;
+}
+
+body.page-funnel2 .pw2__step:last-child {
+  padding-bottom: 0;
+}
+
+/* The rail, drawn between one dot and the next rather than down the whole
+   list, so it stops at the last day instead of running off it. */
+body.page-funnel2 .pw2__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.94rem;
+  top: 2.2rem;
+  bottom: 0.2rem;
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--clay) 30%, transparent);
+}
+
+body.page-funnel2 .pw2__dot {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 13%, var(--f2-card));
+}
+
+body.page-funnel2 .pw2__dot svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+body.page-funnel2 .pw2__day {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 2rem;
+}
+
+body.page-funnel2 .pw2__what {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ---- what is included */
+
+body.page-funnel2 .pw2__included {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.9rem;
+  list-style: none;
+  margin: 1.35rem 0 0;
+  padding: 0.95rem 1rem;
+  text-align: initial;
+  background: var(--f2-card);
+  border: 1px solid var(--f2-edge);
+  border-radius: 0.9rem;
+}
+
+body.page-funnel2 .pw2__included li {
+  position: relative;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+body.page-funnel2 .pw2__included li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--clay);
+}
+
+/* ---- the two plans, side by side */
+
+body.page-funnel2 .pw2__plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-top: 1.6rem;
+}
+
+body.page-funnel2 .pw2__plan {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.1rem;
+  padding: 1.35rem 0.6rem 1.05rem;
+  font: inherit;
+  text-align: center;
+  color: inherit;
+  background: var(--f2-card);
+  border: 2px solid var(--f2-edge);
+  border-radius: 1rem;
+  cursor: pointer;
+}
+
+body.page-funnel2 .pw2__plan[data-chosen] {
+  border-color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 6%, var(--f2-card));
+}
+
+body.page-funnel2 .pw2__flag {
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  translate: -50% 0;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--clay);
+  border-radius: 999px;
+}
+
+body.page-funnel2 .pw2__name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body.page-funnel2 .pw2__lead {
+  display: grid;
+  margin-top: 0.3rem;
+}
+
+body.page-funnel2 .pw2__lead b {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+body.page-funnel2 .pw2__lead small {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+body.page-funnel2 .pw2__billed {
+  margin-top: 0.4rem;
+  font-size: 0.73rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* The chosen card is already bordered and tinted; the tick is for the reader
+   who cannot tell those apart, and for the one who is colour-blind. */
+body.page-funnel2 .pw2__tick {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  border: 2px solid var(--f2-edge);
+}
+
+body.page-funnel2 .pw2__plan[data-chosen] .pw2__tick {
+  display: grid;
+  place-items: center;
+  border-color: var(--clay);
+  background: var(--clay);
+}
+
+body.page-funnel2 .pw2__plan[data-chosen] .pw2__tick::before {
+  content: '✓';
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+body.page-funnel2 .fstep[data-kind='offer'] .pw__smallprint {
+  text-align: initial;
+}
+
+@media (max-width: 23rem) {
+  body.page-funnel2 .pw2__included { grid-template-columns: 1fr; }
+  body.page-funnel2 .pw2__lead b { font-size: 1.3rem; }
+}
+
+/*
+ * Reduced motion.
+ *
+ * funnel.css names the handful of transitions it introduced; these are the
+ * ones this file adds. The states still change — a chosen card still fills,
+ * the bar still fills, the tick still appears — they simply arrive rather than
+ * ease. Listing them is the cost of adding a transition, and skipping it is
+ * how an accessibility setting quietly stops meaning anything.
+ */
+@media (prefers-reduced-motion: reduce) {
+  body.page-funnel2 .fq__option,
+  body.page-funnel2 .fscale__step,
+  body.page-funnel2 .funnel__back,
+  body.page-funnel2 .funnel__section::after,
+  body.page-funnel2 .funnel__track span,
+  body.page-funnel2 .fbuild__line::before,
+  body.page-funnel2 .fbuild__bar span,
+  body.page-funnel2 .fs__cta:not(:disabled) {
+    transition-duration: 0.01ms;
+  }
 }

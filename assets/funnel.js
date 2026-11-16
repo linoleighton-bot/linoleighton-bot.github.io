@@ -261,9 +261,18 @@
           save();
           paint();
 
-          /* A single-answer step advances itself: a tap is the answer, and a
-             Continue button underneath it is one more thing to find. */
-          if (step.kind === 'single' || step.kind === 'scale') window.setTimeout(next, 180);
+          /*
+           * A single-answer step advances itself: a tap is the answer, and a
+           * Continue button underneath it is one more thing to find.
+           *
+           * The pause before it moves is the whole of whether the tap felt
+           * answered. Too short and the chosen state never renders — the
+           * reader presses and the screen is simply gone, which reads as the
+           * page jumping rather than as an answer being taken. A variant may
+           * set its own in `data-confirm`; 180ms is funnel 1's.
+           */
+          const confirm = Number(root.dataset.confirm) || 180;
+          if (step.kind === 'single' || step.kind === 'scale') window.setTimeout(next, confirm);
         });
       }
 
@@ -799,7 +808,6 @@
         button.setAttribute('aria-checked', String(on));
         button.toggleAttribute('data-chosen', on);
       }
-
       /*
        * State the charge for the plan actually selected.
        *
