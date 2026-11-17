@@ -320,21 +320,6 @@ body.page-funnel2 .ftaste__cover {
   margin-bottom: 1rem;
 }
 
-/* The writer cards have no cover, so they get a monogram the same size. */
-body.page-funnel2 .ftaste__face {
-  display: grid;
-  place-items: center;
-  width: 7rem;
-  height: 7rem;
-  margin-bottom: 1rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--clay) 14%, var(--f2-card));
-  color: var(--clay);
-  font-size: 1.9rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
 body.page-funnel2 .ftaste__text {
   display: grid;
   gap: 0.22rem;
@@ -501,9 +486,34 @@ body.page-funnel2 .fbuild__bar span {
 }
 
 body.page-funnel2 .fbuild__bar {
-  margin-top: 1.4rem;
+  margin-top: 1rem;
   font-size: 0.8rem;
   color: var(--clay);
+}
+
+/*
+ * The figure, in this flow's proportions.
+ *
+ * Funnel 1 sets it large and centred; this flow runs its screens left-aligned
+ * with one accent, so the figure is aligned with everything above it rather
+ * than floated into the middle of the column, and it is set a little tighter —
+ * next to a 0.95rem checklist, funnel 1's size reads as a different page.
+ */
+body.page-funnel2 .fbuild__pct {
+  justify-content: flex-start;
+  margin-top: 1.5rem;
+  font-size: 1rem;
+}
+
+body.page-funnel2 .fbuild__pct b {
+  font-size: clamp(2.9rem, 14vw, 3.7rem);
+}
+
+/* The checklist carried `margin: auto 0` to centre itself in the screen. With
+   a headline, a figure and a bar above it that pushed the whole group apart;
+   the group is the composition now, so it sits under the bar. */
+body.page-funnel2 .fstep[data-kind='build'] .fbuild {
+  margin: 1.25rem 0 auto;
 }
 
 /* The screens that show rather than ask start below the bar, not against it. */
@@ -1046,4 +1056,48 @@ body.page-funnel2 .fstep[data-kind='offer'] .pw__smallprint {
   body.page-funnel2 .fs__cta:not(:disabled) {
     transition-duration: 0.01ms;
   }
+}
+
+/* ------------------------------------------------------------- the mascot */
+
+/*
+ * Rollo, in this flow's alignment.
+ *
+ * Funnel 1 centres him over a centred column. This flow runs left-aligned, so
+ * a centred mascot would be the only centred thing on the screen. Smaller too:
+ * ten of these screens already carry an illustration, and he appears on three
+ * that do not — he is a marker here, not the picture.
+ */
+body.page-funnel2 .fmascot {
+  margin: 0 0 0.75rem;
+  width: 4.4rem;
+}
+
+/* Never both. A pose over an illustration is two drawings competing for the
+   same screen, and the illustration is the one written for that sentence. */
+body.page-funnel2 .fstep:has(.fnote__art) > .fmascot {
+  display: none;
+}
+
+/*
+ * The tick, with its circle.
+ *
+ * `funnel.css` draws the done-state as two pieces: a circle on `::before` at
+ * the start of the line, and the check itself on `::after`, positioned
+ * absolutely at `left: 0.48rem` so it lands inside that circle. This flow
+ * reorders the circle to the end of the line — the work named on the left,
+ * its state on the right — and the check did not come with it: it stayed at
+ * 0.48rem from the left edge, drawn in white over the first letter of every
+ * label, while the circle on the right stayed a plain filled dot.
+ *
+ * Mirroring it to the right-hand edge puts the two back together. The offset
+ * is the circle's own half-width less half the check, and the vertical centre
+ * is stated rather than inherited, because an absolutely positioned pseudo
+ * element in a flex row takes its static position from the line box.
+ */
+body.page-funnel2 .fbuild__line[data-done]::after {
+  left: auto;
+  right: 0.6rem;
+  top: 50%;
+  margin-top: -0.42rem;
 }

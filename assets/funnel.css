@@ -661,9 +661,44 @@ body.page-funnel .site-footer {
 
 /* ---------------------------------------------------------------- build */
 
+/*
+ * The share, as the thing the eye lands on.
+ *
+ * This screen is the payoff for a dozen questions and it used to be four grey
+ * lines under a label. The figure is the one element on it worth making large:
+ * it is the only part that moves, it answers the only question the reader has
+ * here ("how much longer"), and tabular digits keep it from jittering as it
+ * climbs. Hidden from screen readers, which are given the checklist instead —
+ * a number ticking up twenty times a second is noise, not information.
+ */
+.fbuild__pct {
+  margin: 1.75rem 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.1em;
+  font-family: var(--font-ui);
+  line-height: 1;
+  color: var(--clay);
+}
+
+.fbuild__pct b {
+  font-size: clamp(3.4rem, 17vw, 4.6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.fbuild__pct i {
+  margin-top: 0.35em;
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
+  font-style: normal;
+  font-weight: 700;
+}
+
 .fbuild {
   list-style: none;
-  margin: 2rem 0 0;
+  margin: 1.5rem 0 0;
   padding: 0;
   display: grid;
   gap: 0.9rem;
@@ -697,9 +732,11 @@ body.page-funnel .site-footer {
   background: var(--moss);
 }
 
+/* Directly under the figure now rather than at the foot of the screen: the
+   two say the same thing and belong to each other. */
 .fbuild__bar {
   height: 4px;
-  margin-top: 2rem;
+  margin-top: 1.1rem;
   border-radius: 999px;
   background: var(--line);
   overflow: hidden;
@@ -1224,28 +1261,150 @@ body.page-funnel .funnel__body {
    The paywall
    ========================================================================== */
 
-.pw__benefits {
+/*
+ * What the catalogue holds, as three figures.
+ *
+ * Counted from the seed at build time, so they cannot drift from the product.
+ * They sit directly under the headline because they are the only numbers on
+ * this screen the reader can verify, and a paywall that opens with a checkable
+ * claim is read differently from one that opens with a price.
+ */
+.pw__scale {
   display: grid;
-  gap: 0.85rem;
-  margin: 1.5rem 0 0;
-  padding: 0;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 1.4rem 0 0;
+  padding: 0.9rem 0;
   list-style: none;
+  border-block: 1px solid var(--line);
+  text-align: center;
 }
 
-.pw__benefits li {
+.pw__scale li {
   display: grid;
-  grid-template-columns: auto 1fr;
+  gap: 0.1rem;
+}
+
+/* Divided rather than spaced: three bare columns read as a broken table. */
+.pw__scale li + li {
+  border-left: 1px solid var(--line);
+}
+
+.pw__scale b {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.pw__scale span {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/*
+ * Free against Pro.
+ *
+ * Three columns on a phone, which is why the feature column takes the slack
+ * and the two value columns are fixed: the widest thing either of them ever
+ * holds is "No cut-off", and letting them size to content made every row
+ * start in a different place.
+ *
+ * The Pro column is tinted down its whole height rather than per cell, so it
+ * reads as one column being chosen instead of eight separate highlights.
+ */
+.pw__compare {
+  margin-top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.pw__crow {
+  display: grid;
+  grid-template-columns: 1fr 4.1rem 4.6rem;
   align-items: center;
-  gap: 0.8rem;
-  font-size: 0.9688rem;
-  line-height: 1.35;
+  gap: 0.4rem;
+  padding: 0.62rem 0.8rem;
+}
+
+.pw__crow + .pw__crow {
+  border-top: 1px solid var(--line);
+}
+
+.pw__crow--head {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.pw__chead {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+}
+
+.pw__chead--pro {
+  color: var(--clay);
+}
+
+.pw__cwhat {
+  line-height: 1.3;
   color: var(--ink);
 }
 
-.pw__benefits .ic {
-  width: 1.25rem;
-  height: 1.25rem;
+.pw__cell {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* The Pro column, down the whole table. */
+.pw__crow > .pw__cell:last-child,
+.pw__crow > .pw__chead:last-child {
+  background: color-mix(in srgb, var(--clay) 7%, transparent);
+  margin: -0.62rem -0.8rem -0.62rem 0;
+  padding: 0.62rem 0.8rem 0.62rem 0;
+  align-content: center;
+  color: var(--ink);
+}
+
+.pw__crow--head > .pw__chead:last-child {
+  margin-block: -0.62rem;
+}
+
+.pw__cell.is-yes svg {
+  width: 1rem;
+  height: 1rem;
   color: var(--clay);
+}
+
+/* A dash, not an empty cell: a blank reads as a rendering fault. */
+.pw__cell.is-no i {
+  display: block;
+  width: 0.7rem;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--line-strong);
+}
+
+/* The way out, next to the way in. */
+.pw__calm {
+  margin-top: 0.7rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--muted);
 }
 
 .pw__plans {
@@ -1276,8 +1435,24 @@ body.page-funnel .funnel__body {
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
+/*
+ * The recommended card, actually recommended.
+ *
+ * It used to be the other card with a label on it and half a centimetre of
+ * air above, which is a paywall telling the reader what to pick and then
+ * giving them no reason to look at it. A visible outline and a lift is the
+ * whole difference between a labelled option and a chosen one.
+ */
 .pw__plan.is-recommended {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
+  border-color: color-mix(in srgb, var(--clay) 40%, var(--line));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--clay) 12%, transparent);
+}
+
+.pw__plan.is-recommended[data-chosen] {
+  box-shadow:
+    inset 0 0 0 1.5px var(--clay),
+    0 8px 22px color-mix(in srgb, var(--clay) 18%, transparent);
 }
 
 .pw__plan[data-chosen] {
@@ -1961,4 +2136,52 @@ body.page-funnel .funnel__body {
 
 .fbuild__bar span {
   background: linear-gradient(to right, var(--moss), var(--clay));
+}
+
+/* --------------------------------------------------------------- mascot */
+
+/*
+ * Rollo, turning up a few times across the flow.
+ *
+ * Deepstash's onboarding does this and it is the reason theirs reads as a
+ * character walking you through something rather than a form: the mascot is
+ * punctuation, not decoration, so he marks the screens that belong to the
+ * reader — the first time we answer them back, the shelf, the halfway point,
+ * the moment they commit — and stays off the other twenty-nine.
+ *
+ * He sits above the heading rather than beside it, which is the one position
+ * that works on a 360px phone and on a desktop column without a second
+ * layout: anything floated into a corner either overlaps the copy or leaves a
+ * hole where the copy is short.
+ */
+.fmascot {
+  display: block;
+  width: 5.4rem;
+  height: auto;
+  margin: 0 auto 0.9rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * He arrives rather than appearing.
+   *
+   * A small rise with a slight overshoot, which is what makes it read as
+   * somebody popping up instead of an image loading. Keyed off the step
+   * becoming visible, so it plays once per arrival and not on a reload of a
+   * step already on screen.
+   */
+  .fstep:not([hidden]) > .fmascot {
+    animation: fmascot-in 0.52s cubic-bezier(0.34, 1.46, 0.64, 1) both;
+  }
+}
+
+@keyframes fmascot-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

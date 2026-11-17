@@ -424,10 +424,59 @@
 
   let built = false;
 
+  /**
+   * What to call the reader, or nothing.
+   *
+   * The name they typed, else the local part of an email we already have —
+   * either one they entered, or the one on a session they are already signed
+   * into. Returns null rather than a guess, because every caller has a
+   * complete sentence to fall back on and "Hi , it's time to…" is worse than
+   * no name at all.
+   *
+   * An email is a weak source and is treated as one: `ana.k+books@x.com`
+   * gives "Ana", and anything that is not a plausible name — digits, a single
+   * letter, `info`, `hello` — gives nothing. A funnel that greets somebody as
+   * "Admin23" has not personalised anything.
+   */
+  const NOT_NAMES = new Set(['info', 'hello', 'hi', 'admin', 'contact', 'me', 'mail', 'email', 'test', 'support', 'no-reply', 'noreply']);
+
+  function readerName() {
+    const typed = String(answers.name || '').trim();
+    if (typed) return typed.split(/\s+/)[0];
+
+    const email = String(answers.email || user?.email || '').trim();
+    const local = email.split('@')[0] || '';
+    /* `+tag` and anything after the first separator are not the name. */
+    const head = local.split(/[+._-]/)[0].toLowerCase();
+    if (head.length < 2 || /\d/.test(head) || NOT_NAMES.has(head)) return null;
+    return head[0].toUpperCase() + head.slice(1);
+  }
+
+  /**
+   * The build screen: their name on it, a figure counting up, work ticking off.
+   *
+   * The percentage is derived from the same line index that marks the work
+   * done, so the figure and the ticks can never disagree — it is one state
+   * read two ways rather than two timers that drift.
+   */
   function runBuild() {
     const el = stepEls.get('building');
     const lines = [...el.querySelectorAll('.fbuild__line')];
     const bar = el.querySelector('[data-build-bar]');
+    const pct = el.querySelector('[data-build-pct]');
+
+    /*
+     * The headline, addressed to them.
+     *
+     * Written before the early return, so a reader who comes back to this
+     * step still sees their name rather than the nameless fallback.
+     */
+    const title = el.querySelector('[data-fill="title"]');
+    const step = byId['building'];
+    const name = readerName();
+    if (title && name && step?.greeting) {
+      title.textContent = `${name}, ${step.greeting}`;
+    }
 
     if (built) {
       next();
@@ -438,10 +487,31 @@
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const per = reduced ? 120 : 520;
 
+    /* The figure climbs to each line's share over that line's own interval,
+       so it moves continuously rather than jumping in quarters. */
+    const to = (share) => {
+      if (!pct) return;
+      const from = Number(pct.textContent) || 0;
+      const target = Math.round(share * 100);
+      if (reduced) {
+        pct.textContent = String(target);
+        return;
+      }
+      const started = performance.now();
+      const tick = (now) => {
+        const through = Math.min(1, (now - started) / per);
+        pct.textContent = String(Math.round(from + (target - from) * through));
+        if (through < 1) window.requestAnimationFrame(tick);
+      };
+      window.requestAnimationFrame(tick);
+    };
+
     lines.forEach((line, i) => {
       window.setTimeout(() => {
         line.setAttribute('data-done', 'true');
-        if (bar) bar.style.width = `${Math.round(((i + 1) / lines.length) * 100)}%`;
+        const share = (i + 1) / lines.length;
+        if (bar) bar.style.width = `${Math.round(share * 100)}%`;
+        to(share);
       }, per * (i + 1));
     });
 

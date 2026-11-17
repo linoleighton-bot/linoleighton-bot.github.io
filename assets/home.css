@@ -3140,3 +3140,92 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   The phone
+   ==========================================================================
+
+   Everything below is inside the mobile breakpoint, and deliberately so: the
+   desktop page was not the problem, so nothing here is allowed to reach it.
+
+   Three things made this page read badly on a phone, and all three are the
+   same mistake — a layout designed at 1440px and then merely *allowed* to
+   reflow. A composition that frames a headline at desktop width collides with
+   it at 390px; a scroll-driven section that is seven and a half screens long
+   on a laptop is seven and a half screens of held scroll on a phone, where
+   the reader's thumb is the only way through.
+   ========================================================================== */
+
+@media (max-width: 47.99rem) {
+  /*
+   * The headline, with air in it.
+   *
+   * `line-height: 1` is right for the two-line desktop setting and wrong for
+   * the three-line phone one: at 42px the descenders of "doomscrolling" run
+   * into "with" on the line beneath, and the coral strike through the middle
+   * of it lands close enough to the line above to read as a mistake.
+   */
+  .home-bold .hero h1 {
+    line-height: 1.06;
+  }
+
+  /*
+   * The covers, out of the words.
+   *
+   * They are a frame around the headline at desktop width. At 390px the
+   * nearest of them reaches 55px *into* a 390px screen, so it sits under the
+   * first line of the headline — which is most of why this screen reads as
+   * cluttered rather than designed. Pushing their offsets further from the
+   * centre keeps the frame and gets it off the text; the covers themselves
+   * are not scaled, so none of them distorts.
+   *
+   * They are also dropped back. Behind type at this size they are texture,
+   * and texture at full contrast is competition.
+   */
+  .home-bold .hb {
+    left: calc(50% + var(--x) * 1.2);
+  }
+
+  /*
+   * 1.2 rather than something gentler, because they drift.
+   *
+   * `hb__drift` swings each cover by around ninety pixels, so a measurement
+   * taken at one moment says nothing about the worst one: the nearest cover
+   * reaches 55px into a 390px screen at the inward end of its swing and sits
+   * clear of it at the outward end. 1.2 is the smallest push that holds at
+   * the inward end. On a wider phone they come back into view at the edges,
+   * and nothing above 768px is touched at all.
+   */
+
+  .home-bold .hero-books {
+    opacity: 0.62;
+  }
+
+  /*
+   * The story, at a thumb's length.
+   *
+   * It runs on scroll progress from 0 to 1 across its own height, so this
+   * changes nothing about what happens — only how far the reader has to push
+   * to get through it. Seven and a half screens of pinned scrolling is the
+   * "it won't let me scroll" complaint almost exactly; at four, each beat
+   * still has room to land and the section ends before patience does.
+   */
+  .has-motion .home-bold .story {
+    height: 420svh;
+  }
+
+  /*
+   * The manifesto is deliberately NOT shortened.
+   *
+   * It looks like the same problem as the story and it is not. Its stage
+   * unsticks one viewport before the section ends, and across that last
+   * screen the scene has already played out — so there is a screen of empty
+   * coral at the end of it whatever height the section is. That screen is a
+   * fixed 100svh, so shortening the section does not shrink it, it only makes
+   * it a larger share of what is left: at 300svh it is the last third, and at
+   * 190svh it was the last half, which is why a phone scrolling through it
+   * landed on a blank screen. Three screens for a headline and a paragraph is
+   * more than it needs, but the fix is to the tail, not the height, and that
+   * is a change to how the scene ends rather than a mobile override.
+   */
+}
