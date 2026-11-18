@@ -4382,3 +4382,33 @@ body.is-keeping {
 }
 .keep__lose b { font-weight: 650; }
 .keep__lose span { color: var(--ink-soft, #5c5a55); font-size: 0.92rem; }
+
+/* ------------------------------------------------- both stores, in the footer */
+.footer__stores {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line, #e3ded3);
+}
+.footer__stores > p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft, #5c5a55);
+}
+.footer__stores > div { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.store-btn--sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid currentColor;
+  text-decoration: none;
+  color: inherit;
+  line-height: 1.1;
+}
+.store-btn--sm:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.store-btn--sm svg { width: 1.2rem; height: 1.2rem; fill: currentColor; flex: none; }
+.store-btn--sm .store-btn__text { display: grid; }
+.store-btn--sm small { font-size: 0.66rem; opacity: 0.75; }
+.store-btn--sm strong { font-size: 0.92rem; font-weight: 600; }
