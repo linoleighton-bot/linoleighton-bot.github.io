@@ -1236,7 +1236,23 @@
           if (!pkg) throw new Error('That plan is not available right now.');
 
           say('');
-          if (till) till.hidden = false;
+          if (till) {
+            till.hidden = false;
+            /*
+             * Put the form where the reader is looking.
+             *
+             * Unhiding it is not the same as showing it: on a phone the
+             * paywall is taller than the screen, so the till can open
+             * perfectly well somewhere the reader cannot see, and pressing
+             * Subscribe appears to do nothing. Scrolling to it makes the
+             * response to the press the thing they asked for.
+             */
+            try {
+              till.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            } catch {
+              till.scrollIntoView();
+            }
+          }
           unfit = fitTill(till);
 
           const result = await purchases.purchase({

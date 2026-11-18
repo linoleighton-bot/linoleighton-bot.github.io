@@ -1162,3 +1162,30 @@ body.page-funnel2 .fscale--worded {
      the pair sits in the middle of the screen rather than on its floor. */
   margin-bottom: auto;
 }
+
+/* ------------------------------------------------ the till, above the plans */
+/*
+ * While the checkout is open it is the only thing being asked of the reader,
+ * so it reads as a panel rather than as another block in the stack. The plans
+ * stay visible underneath, quieter, because changing your mind at the till is
+ * ordinary and the cards are how you do it.
+ */
+body.page-funnel2 .pw__till:not([hidden]) {
+  display: block;
+  margin: 0 0 1.1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--f2-edge, #e3ded3);
+  border-radius: 0.9rem;
+  background: var(--f2-card, #fff);
+  box-shadow: 0 10px 28px -18px rgba(0, 0, 0, 0.45);
+  scroll-margin-top: 1rem;
+}
+
+body.page-funnel2 .pw__till:not([hidden]) + .pw2__plans {
+  opacity: 0.72;
+  transition: opacity 0.2s ease;
+}
+body.page-funnel2 .pw__till:not([hidden]) + .pw2__plans:hover,
+body.page-funnel2 .pw__till:not([hidden]) + .pw2__plans:focus-within {
+  opacity: 1;
+}
