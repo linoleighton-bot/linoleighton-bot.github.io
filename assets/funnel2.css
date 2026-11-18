@@ -1211,3 +1211,144 @@ body.page-funnel2 .pw2__plansub {
   color: var(--f2-ink-soft, #5c5a55);
   text-wrap: balance;
 }
+
+/* ===================================================== the paywall, extended */
+
+/*
+ * The shine on the call to action.
+ *
+ * A highlight travelling across the button, the way the app's does. It is a
+ * masked pseudo-element rather than an animated background, so the label is
+ * never repainted and the text stays crisp while it runs. It stops once the
+ * reader is busy with the checkout, and never starts for anyone who has asked
+ * for less motion.
+ */
+body.page-funnel2 .fstep[data-kind='offer'] .fs__cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+body.page-funnel2 .fstep[data-kind='offer'] .fs__cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.42) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  animation: pw2-shine 3.1s ease-in-out infinite;
+}
+
+@keyframes pw2-shine {
+  0%, 12% { left: -60%; }
+  58%, 100% { left: 120%; }
+}
+
+/* While the till is open the button is no longer the thing being asked. */
+body.page-funnel2 .pw__till:not([hidden]) ~ * .fs__cta::after,
+body.page-funnel2 .fs__cta:disabled::after {
+  animation: none;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.page-funnel2 .fstep[data-kind='offer'] .fs__cta::after { animation: none; opacity: 0; }
+}
+
+/* ---- the badge now carries a figure, so it should read as one */
+body.page-funnel2 .pw2__flag {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* ---- everything below the button */
+body.page-funnel2 .pw2__more {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--f2-edge, #e3ded3);
+  text-align: initial;
+}
+
+body.page-funnel2 .pw2__morehint {
+  margin: -2.9rem 0 2rem;
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--f2-ink-soft, #7a736a);
+}
+body.page-funnel2 .pw2__morehint::after {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 1.1rem;
+  margin: 0.45rem auto 0;
+  background: linear-gradient(to bottom, var(--f2-edge, #e3ded3), transparent);
+}
+
+body.page-funnel2 .pw2__h {
+  margin: 2rem 0 0.9rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+body.page-funnel2 .pw2__more > .pw2__h:first-of-type { margin-top: 0; }
+
+body.page-funnel2 .pw2__feat {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.05rem;
+}
+
+body.page-funnel2 .pw2__featrow {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  column-gap: 0.85rem;
+  align-items: start;
+}
+body.page-funnel2 .pw2__featrow b { display: block; }
+body.page-funnel2 .pw2__featrow span span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--f2-ink-soft, #7a736a);
+  font-size: 0.92rem;
+}
+
+body.page-funnel2 .pw2__feati {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--f2-card, #fff);
+  border: 1px solid var(--f2-edge, #e3ded3);
+}
+body.page-funnel2 .pw2__feati svg { width: 1rem; height: 1rem; }
+
+body.page-funnel2 .pw2__swap {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border-radius: 0.8rem;
+  background: var(--f2-card, #fff);
+  border: 1px solid var(--f2-edge, #e3ded3);
+}
+
+body.page-funnel2 .pw2__faq { margin: 0; }
+body.page-funnel2 .pw2__faq dt { font-weight: 650; margin-top: 1rem; }
+body.page-funnel2 .pw2__faq dt:first-child { margin-top: 0; }
+body.page-funnel2 .pw2__faq dd {
+  margin: 0.25rem 0 0;
+  color: var(--f2-ink-soft, #7a736a);
+  font-size: 0.93rem;
+}
+
+body.page-funnel2 .pw2__fine { margin-top: 2rem; }

@@ -1025,9 +1025,17 @@
 
       if (!smallprint) return;
       const every = chosen.period === 'year' ? 'year' : 'week';
+      /*
+       * The price, then the reassurance, on one line.
+       *
+       * The long consent paragraph that used to sit under the button is gone;
+       * what a reader actually wants to know at this moment is that they are
+       * not locked in, and it belongs beside the figure rather than three
+       * paragraphs below it.
+       */
       smallprint.textContent = chosen.trialDays
         ? `${chosen.trialDays} days free, then ${chosen.amount} every ${every}. Cancel any time before it ends and you are not charged.`
-        : `${chosen.amount} every ${every}, starting today.`;
+        : `${chosen.amount} every ${every} · Cancel anytime, no commitment.`;
     };
 
     /*
