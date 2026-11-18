@@ -2202,3 +2202,36 @@ body.page-funnel .funnel__body {
   border: 1px solid currentColor;
 }
 .fs__cta--alt:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+
+/* ------------------------------------------------- the opening screen, on a phone */
+/*
+ * The hook was 967px of content in an 844px viewport, so the last line of the
+ * body copy — "Five minutes a day from books worth the time —" — sat under the
+ * Continue button and read as cut off mid-sentence.
+ *
+ * The drawing is what costs the room: `max-width: 21rem` on a 390px screen is
+ * nearly the whole width, and with no height limit it takes whatever its aspect
+ * ratio asks for. Capping it by height instead of width keeps it the same
+ * picture and gives the sentence its line back. Everything else here is the
+ * small change that stops the screen feeling crowded around it.
+ */
+@media (max-width: 47.99rem) {
+  .fhook__art {
+    max-height: 30svh;
+    width: auto;
+    max-width: 100%;
+  }
+
+  .fhook__scene {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+  }
+
+  .fhook__quote {
+    margin-top: 1.1rem;
+  }
+
+  .fhook__badges {
+    margin-top: 1.1rem;
+  }
+}
