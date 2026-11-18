@@ -216,13 +216,7 @@
       (entries) => {
         for (const entry of entries) {
           const links = navLinks.get(entry.target);
-          if (!links) continue;
-          // Leaving a section clears its link, so the bar does not keep
-          // naming a section the reader has scrolled past into one with no link.
-          if (!entry.isIntersecting) {
-            for (const link of links) link.removeAttribute('aria-current');
-            continue;
-          }
+          if (!links || !entry.isIntersecting) continue;
           for (const group of navLinks.values()) {
             for (const other of group) other.removeAttribute('aria-current');
           }
@@ -275,5 +269,46 @@
     );
 
     for (const heading of document.querySelectorAll('.doc h2[id]')) spy.observe(heading);
+  }
+})();
+
+/*
+ * "Get the app", and the two shops behind it.
+ *
+ * The header has room for one button, not two badges, and a reader only
+ * needs to choose a shop once they have decided to download. The panel is in
+ * the markup as two ordinary links, so with this script blocked the button
+ * does nothing but the links are still reachable from the menu and the
+ * footer — no dead control either way.
+ */
+(() => {
+  'use strict';
+
+  for (const root of document.querySelectorAll('[data-getapp]')) {
+    const toggle = root.querySelector('[data-getapp-toggle]');
+    const panel = root.querySelector('[data-getapp-panel]');
+    if (!toggle || !panel) continue;
+
+    const open = (on) => {
+      panel.hidden = !on;
+      toggle.setAttribute('aria-expanded', String(on));
+      root.toggleAttribute('data-open', on);
+    };
+
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      open(panel.hidden);
+    });
+
+    /* A panel that will not close is worse than one that never opened. */
+    document.addEventListener('click', (event) => {
+      if (!panel.hidden && !root.contains(event.target)) open(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !panel.hidden) {
+        open(false);
+        toggle.focus();
+      }
+    });
   }
 })();

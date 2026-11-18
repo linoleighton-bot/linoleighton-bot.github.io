@@ -4438,3 +4438,54 @@ body.is-keeping {
 .footer__stores { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line, #e3ded3); }
 .footer__stores > p { margin: 0 0 0.8rem; font-size: 0.9rem; color: var(--ink-soft, #5c5a55); }
 .footer__stores > div { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+/* ------------------------------------------- "Get the app" and its two shops */
+.getapp { position: relative; display: inline-flex; }
+
+.getapp__panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 60;
+  min-width: 13.5rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  background: var(--surface, #fffdf8);
+  border: 1px solid var(--line, #e3ded3);
+  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.45);
+}
+
+.getapp__hint {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft, #5c5a55);
+}
+
+/* A small pointer back to the button, so the panel reads as its answer. */
+.getapp__panel::before {
+  content: '';
+  position: absolute;
+  top: -0.37rem;
+  right: 1.4rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: inherit;
+  border-left: 1px solid var(--line, #e3ded3);
+  border-top: 1px solid var(--line, #e3ded3);
+  transform: rotate(45deg);
+}
+
+.getapp[data-open] .getapp__btn { filter: brightness(0.94); }
+
+/* On a phone it sits across the screen rather than hanging off the button. */
+@media (max-width: 30rem) {
+  .getapp { position: static; }
+  .getapp__panel {
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    min-width: 0;
+  }
+  .getapp__panel::before { right: 4.5rem; }
+}
