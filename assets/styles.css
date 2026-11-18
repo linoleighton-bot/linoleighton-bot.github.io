@@ -4383,63 +4383,58 @@ body.is-keeping {
 .keep__lose b { font-weight: 650; }
 .keep__lose span { color: var(--ink-soft, #5c5a55); font-size: 0.92rem; }
 
-/* ------------------------------------------------- both stores, in the footer */
-.footer__stores {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line, #e3ded3);
-}
-.footer__stores > p {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-  color: var(--ink-soft, #5c5a55);
-}
-.footer__stores > div { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 
-.store-btn--sm {
+/* ===================================================== App Store / Google Play */
+/*
+ * Proper store badges: a dark pill, the store's own mark, and the two lines
+ * everybody recognises. The dark fill is the convention on both platforms and
+ * is what makes them read as "download" rather than as two more site buttons.
+ *
+ * The Apple mark takes the badge's own colour, so it is light on the dark
+ * pill. The Play mark keeps Google's four colours, which is how that mark is
+ * supposed to appear, so it is never recoloured.
+ */
+.store-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: 0.6rem;
-  border: 1px solid currentColor;
+  gap: 0.6rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.7rem;
+  background: var(--ink, #16181a);
+  color: var(--paper, #fff);
   text-decoration: none;
-  line-height: 1.1;
-  /*
-   * `.store-btn` is Apple's badge: a dark pill with light text. These are
-   * ordinary outlined buttons that happen to carry a store's mark, so they
-   * take the page's ink and give the fill back — without this they render as
-   * two solid dark squares once the labels drop away at phone width.
-   */
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
+  line-height: 1.12;
+  border: 1px solid transparent;
+  transition: transform 0.16s ease, opacity 0.16s ease;
 }
-.store-btn--sm:hover { transform: none; box-shadow: none; }
-.store-btn--sm:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-.store-btn--sm svg { width: 1.2rem; height: 1.2rem; fill: currentColor; flex: none; }
-.store-btn--sm .store-btn__text { display: grid; }
-.store-btn--sm small { font-size: 0.66rem; opacity: 0.75; }
-.store-btn--sm strong { font-size: 0.92rem; font-weight: 600; }
+.store-badge:hover { transform: translateY(-1px); opacity: 0.92; }
+.store-badge:focus-visible { outline: 2px solid var(--clay, #b4542a); outline-offset: 2px; }
 
-/* ------------------------------------- both stores, in the header and menu */
-/*
- * The header has a logo, a menu button and now two stores to fit, so the
- * buttons give up their labels before the row gives up a button: at phone
- * width each shows only its mark, which is the part people recognise anyway.
- */
-.header-stores { display: flex; gap: 0.4rem; align-items: center; }
+.store-badge__mark { display: grid; place-items: center; flex: none; }
+.store-badge__mark svg { width: 1.35rem; height: 1.35rem; display: block; }
+/* Apple's mark follows the badge; Google's keeps its own colours. */
+.store-badge__mark svg:not(.glyph-play) { fill: currentColor; }
 
-.store-btn--tight { padding: 0.4rem 0.6rem; gap: 0.4rem; }
-.store-btn--tight small { display: none; }
-.store-btn--tight strong { font-size: 0.82rem; }
+.store-badge__text { display: grid; }
+.store-badge__text small { font-size: 0.62rem; letter-spacing: 0.04em; opacity: 0.78; text-transform: uppercase; }
+.store-badge__text strong { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; }
+
+/* In the header there is less room, so the badges tighten before they shrink. */
+.store-badge--tight { padding: 0.42rem 0.7rem; gap: 0.45rem; }
+.store-badge--tight .store-badge__mark svg { width: 1.15rem; height: 1.15rem; }
+.store-badge--tight .store-badge__text small { display: none; }
+.store-badge--tight .store-badge__text strong { font-size: 0.86rem; }
 
 @media (max-width: 46rem) {
-  .store-btn--tight { padding: 0.45rem; }
-  .store-btn--tight .store-btn__text { display: none; }
-  .store-btn--tight svg { width: 1.25rem; height: 1.25rem; }
+  .store-badge--tight { padding: 0.45rem; }
+  .store-badge--tight .store-badge__text { display: none; }
+  .store-badge--tight .store-badge__mark svg { width: 1.3rem; height: 1.3rem; }
 }
 
-/* In the slide-out there is room, so they keep their words. */
-.menu-stores { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
-.menu-stores .store-btn--sm { justify-content: center; }
+.header-stores { display: flex; gap: 0.4rem; align-items: center; }
+.menu-stores { display: grid; gap: 0.5rem; margin-top: 0.6rem; }
+.menu-stores .store-badge { justify-content: center; }
+
+.footer__stores { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line, #e3ded3); }
+.footer__stores > p { margin: 0 0 0.8rem; font-size: 0.9rem; color: var(--ink-soft, #5c5a55); }
+.footer__stores > div { display: flex; flex-wrap: wrap; gap: 0.6rem; }
