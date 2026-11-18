@@ -340,7 +340,17 @@
       }
     }
 
-    if (['hook', 'insight', 'note', 'plan', 'pledge'].includes(step.kind)) {
+    /*
+     * Every step whose only job is to be read and moved on from.
+     *
+     * This list is the one thing standing between a step and a dead end: a
+     * kind missing from it still renders its `[data-next]` button, styled
+     * exactly like every other Continue, and clicking it does nothing at all.
+     * `showcase` was missing, so `app-set` and `app-recall` — the two screens
+     * between the plan and the account — stopped the funnel dead, two steps
+     * short of the offer. Anything added here must be added there too.
+     */
+    if (['hook', 'insight', 'note', 'plan', 'pledge', 'showcase'].includes(step.kind)) {
       /* A pledge has two buttons and both go forward. */
       for (const cta of el.querySelectorAll('[data-next]')) {
         cta.addEventListener('click', next);
