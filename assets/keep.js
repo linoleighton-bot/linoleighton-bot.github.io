@@ -220,6 +220,22 @@
 
       const state = { reason: null, stay: null, detail: '', surveyId: null, step: 0 };
 
+    /*
+     * The free plan's real limits, handed over by the page.
+     *
+     * The fallback is the same set, so a page built before this attribute
+     * existed still shows true numbers rather than nothing; the attribute is
+     * what keeps them honest when the product changes them.
+     */
+    const limits = () => {
+      const fallback = { maxSaves: 50, maxCollections: 3, historyDays: 30, audioPreviewCards: 2 };
+      try {
+        return { ...fallback, ...JSON.parse(root.dataset.freeLimits || '{}') };
+      } catch {
+        return fallback;
+      }
+    };
+
       /* ------------------------------------------------- survey recording */
 
       /*
@@ -348,7 +364,7 @@
 
       /* The way out, on every screen: small, plain, underlined text. */
       const exitLink = (label = 'Take me to cancel') =>
-        h('button', { class: 'keep__exit', type: 'button', onclick: () => stepDecide() }, [label]);
+        h('button', { class: 'keep__exit', type: 'button', onclick: () => stepLose() }, [label]);
 
       /** One question's worth of options, with a Continue that waits for one. */
       const askList = (options, selected, onAnswer) => {
@@ -663,6 +679,60 @@
               h('span', { class: 'keep__to', text: row.after }),
             ]),
           ),
+        ]);
+      }
+
+      /*
+       * What actually changes, before they decide.
+       *
+       * The last thing someone sees before cancelling should be the thing
+       * they are giving up, stated as fact rather than as pleading. Every
+       * figure here is the limit the app really enforces — `free` in
+       * src/domain/entitlements/limits.ts — passed in from the page rather
+       * than typed here, so it cannot drift from what the product does.
+       *
+       * It is one screen with a plain way past it. A reader who wants to
+       * cancel can, from here, in one press; that is deliberate, and not only
+       * because cancellation has to be as easy as signing up. Somebody kept
+       * by an obstacle churns angrily and charges it back, which costs more
+       * than the subscription was worth.
+       */
+      function stepLose() {
+        const free = limits();
+        const lines = [
+          [`${free.maxSaves} saves`, 'Everything you have saved above that stops syncing.'],
+          ['No downloads', 'Nothing is available offline — aeroplanes, the underground, a dead signal.'],
+          ['Narration stops', `You get ${free.audioPreviewCards} cards a day as a preview, not the whole idea.`],
+          [`${free.historyDays} days of history`, 'Older reading drops out of your timeline.'],
+          [`${free.maxCollections} collections`, 'The rest become read-only.'],
+          ['The review stops', 'Ideas stop coming back on the day you were about to forget them.'],
+        ];
+
+        paint(4, [
+          h('p', { class: 'keep__step', text: 'Before you decide' }),
+          h('h2', { class: 'keep__title', id: 'keep-title', text: 'What changes on the free plan' }),
+          h('p', { class: 'keep__lead', text: 'The free plan keeps working. These are the parts that stop.' }),
+          h(
+            'ul',
+            { class: 'keep__lose' },
+            lines.map(([name, detail]) =>
+              h('li', {}, [
+                h('b', { text: name }),
+                h('span', { text: detail }),
+              ]),
+            ),
+          ),
+          h('p', { class: 'keep__status', 'data-keep-status': true, hidden: true }),
+          h('button', {
+            class: 'btn btn--primary keep__primary',
+            type: 'button',
+            onclick: () => close('kept'),
+          }, ['Keep my subscription']),
+          h('button', {
+            class: 'keep__exit',
+            type: 'button',
+            onclick: () => stepDecide(),
+          }, ['I understand — continue to cancel']),
         ]);
       }
 
