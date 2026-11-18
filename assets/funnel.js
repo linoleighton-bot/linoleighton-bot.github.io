@@ -1010,9 +1010,17 @@
        */
       const button = offerEl.querySelector('[data-checkout]');
       if (button) {
+        /*
+         * The no-trial wording belongs to the step, not to this line.
+         *
+         * It was hard-coded to "Subscribe", which quietly overwrote whatever
+         * the offer was configured to say the moment this ran — so the
+         * markup shipped one label and the reader saw another, and changing
+         * the copy in the funnel data appeared to do nothing at all.
+         */
         button.textContent = chosen.trialDays
           ? `Start my ${chosen.trialDays} days free`
-          : 'Subscribe';
+          : byId['offer']?.cta || 'Subscribe';
       }
 
       if (!smallprint) return;
@@ -1042,6 +1050,33 @@
       });
     }
     paint();
+
+    /*
+     * The headline and the plan line, as the app writes them.
+     *
+     * `personalTitle` in src/features/paywall/config.ts puts the reader's name
+     * in front of the headline and lowercases what follows; `planSubtitle`
+     * names the goals they picked. This is the same moment on the web, so it
+     * says the same thing rather than inventing a second voice for it.
+     */
+    (() => {
+      const head = offerEl.querySelector('[data-fill="title"]');
+      const step = byId['offer'];
+      const name = readerName();
+      if (head && name && step?.greeting) head.textContent = `${name}, ${step.greeting}`;
+
+      const sub = offerEl.querySelector('[data-plan-subtitle]');
+      if (!sub) return;
+      const held = answers.goals;
+      const picked = Array.isArray(held) ? held : held == null ? [] : [held];
+      const phrases = picked
+        .map((id) => boot.goals?.[id]?.phrase)
+        .filter(Boolean)
+        .slice(0, 2);
+      if (!phrases.length) return;
+      sub.textContent = `Your plan to ${phrases.join(' and ')} is ready.`;
+      sub.hidden = false;
+    })();
 
     const checkout = offerEl.querySelector('[data-checkout]');
     const till = offerEl.querySelector('[data-till]');

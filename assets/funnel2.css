@@ -1204,3 +1204,10 @@ body.page-funnel2 .pw__till:not([hidden]) + .pw2__plans:hover,
 body.page-funnel2 .pw__till:not([hidden]) + .pw2__plans:focus-within {
   opacity: 1;
 }
+
+/* The goals they picked, under the paywall headline — the app's planSubtitle. */
+body.page-funnel2 .pw2__plansub {
+  margin: 0.5rem 0 0;
+  color: var(--f2-ink-soft, #5c5a55);
+  text-wrap: balance;
+}
