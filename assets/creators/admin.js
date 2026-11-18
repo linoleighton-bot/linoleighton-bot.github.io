@@ -549,7 +549,7 @@
       button.addEventListener(
         'click',
         act(button, async () => {
-          await ok(db.from('creators').update({ status, ...(status === 'active' && !c.approved_at ? { approved_at: new Date().toISOString() } : {}) }).eq('id', c.id));
+          await ok(db.from('program_creators').update({ status, ...(status === 'active' && !c.approved_at ? { approved_at: new Date().toISOString() } : {}) }).eq('id', c.id));
           toast(`${c.display_name}: ${status}`);
           await reload();
         }),
@@ -565,13 +565,13 @@
         act(save, async () => {
           const value = Number(input.value);
           if (!(value >= 0 && value <= 100)) throw new Error('Enter a rate between 0 and 100.');
-          await ok(db.from('creators').update({ commission_rate: value / 100 }).eq('id', c.id));
+          await ok(db.from('program_creators').update({ commission_rate: value / 100 }).eq('id', c.id));
           toast(`${c.display_name} now earns ${value}% on new payments.`);
           await reload();
         }),
       );
       const clear = h('button', { class: 'cp-link', type: 'button' }, 'Use tier rate');
-      clear.addEventListener('click', act(clear, async () => { await ok(db.from('creators').update({ commission_rate: null }).eq('id', c.id)); await reload(); }));
+      clear.addEventListener('click', act(clear, async () => { await ok(db.from('program_creators').update({ commission_rate: null }).eq('id', c.id)); await reload(); }));
       return h('span', { class: 'cp-inline' }, input, '%', save, c.commission_rate == null ? h('span', { class: 'cp-muted cp-small' }, 'set by tier') : clear);
     };
 
@@ -618,7 +618,7 @@
         'click',
         act(save, async () => {
           try {
-            await ok(db.from('creators').update({ tiktok: clean(tiktok.value) || null, instagram: clean(instagram.value) || null }).eq('id', c.id));
+            await ok(db.from('program_creators').update({ tiktok: clean(tiktok.value) || null, instagram: clean(instagram.value) || null }).eq('id', c.id));
           } catch (error) {
             throw new Error(/duplicate|unique/i.test(error.message) ? 'Another creator has already linked that account.' : error.message);
           }
@@ -640,16 +640,16 @@
     /* Suspected cheating: nothing is paid, released or ranked while the hold is on. */
     const holdControl = (c) => {
       if (c.payout_hold) {
-        const lift = confirmButton('Lift the hold', 'Confirm: release their money again', 'cp-link', async () => { await ok(db.from('creators').update({ payout_hold: false, hold_reason: null }).eq('id', c.id)); toast(`Hold lifted for ${c.display_name}.`); await reload(); });
+        const lift = confirmButton('Lift the hold', 'Confirm: release their money again', 'cp-link', async () => { await ok(db.from('program_creators').update({ payout_hold: false, hold_reason: null }).eq('id', c.id)); toast(`Hold lifted for ${c.display_name}.`); await reload(); });
         return h('span', { class: 'cp-inline' }, h('span', { class: 'cp-bad' }, `On hold${c.hold_reason ? `: ${c.hold_reason}` : ''}`), lift);
       }
       const why = h('input', { class: 'cp-input', placeholder: 'Why (only you see this)', maxlength: '200', 'aria-label': `Reason for holding ${c.display_name}` });
-      const hold = confirmButton('Hold payouts', 'Confirm: stop all money to this creator', 'cp-link', async () => { await ok(db.from('creators').update({ payout_hold: true, hold_reason: why.value.trim() || null }).eq('id', c.id)); toast(`${c.display_name} is on hold. Nothing will be paid or released.`); await reload(); });
+      const hold = confirmButton('Hold payouts', 'Confirm: stop all money to this creator', 'cp-link', async () => { await ok(db.from('program_creators').update({ payout_hold: true, hold_reason: why.value.trim() || null }).eq('id', c.id)); toast(`${c.display_name} is on hold. Nothing will be paid or released.`); await reload(); });
       return h('span', { class: 'cp-inline' }, why, hold);
     };
     const verifyControl = (c) => {
       const button = h('button', { class: 'cp-link', type: 'button' }, c.handle_verified ? 'Mark as not checked' : 'Mark account as checked');
-      button.addEventListener('click', act(button, async () => { await ok(db.from('creators').update({ handle_verified: !c.handle_verified }).eq('id', c.id)); await reload(); }));
+      button.addEventListener('click', act(button, async () => { await ok(db.from('program_creators').update({ handle_verified: !c.handle_verified }).eq('id', c.id)); await reload(); }));
       return h('span', { class: 'cp-inline' }, c.handle_verified ? pill('Account checked', 'good') : h('span', { class: 'cp-muted' }, 'Look for ', h('code', { class: 'cp-mono' }, `mindroll-${c.code}`), ' in their bio'), button);
     };
     /* ManyChat: flagged once they have earned enough commission; you set it up and mark it done. */
@@ -658,7 +658,7 @@
     const manyControl = (c) => {
       if (!manyNeed) return null;
       const button = h('button', { class: 'cp-link', type: 'button' }, c.manychat_at ? 'Mark as not set up' : 'Mark ManyChat as set up');
-      button.addEventListener('click', act(button, async () => { await ok(db.from('creators').update({ manychat_at: c.manychat_at ? null : new Date().toISOString() }).eq('id', c.id)); await reload(); }));
+      button.addEventListener('click', act(button, async () => { await ok(db.from('program_creators').update({ manychat_at: c.manychat_at ? null : new Date().toISOString() }).eq('id', c.id)); await reload(); }));
       return h('div', { class: 'cp-inline cp-small' }, h('span', { class: 'cp-muted' }, 'ManyChat'), c.manychat_at ? pill(`Set up ${day(c.manychat_at)}`, 'good') : manyDue(c) ? pill('Eligible: contact them', 'warn') : h('span', { class: 'cp-muted' }, `Unlocks at ${cp.dollars(manyNeed)} of commission (${cp.dollars(Math.max(0, c.balance.commission_cents || 0))} so far)`), button);
     };
     /* Lots of views and almost nobody clicking is the usual sign of bought views. */
