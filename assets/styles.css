@@ -4235,3 +4235,53 @@ body.is-keeping {
 .renew__panel .signin__providers {
   margin-top: 1.25rem;
 }
+
+/* ------------------------------------------------------------- creators */
+/* The back office. Plain on purpose: it is read, not sold from. */
+.page-creators .creators { padding: 2.5rem 0 4rem; }
+.cd__state { padding: 2rem 0; color: var(--ink-soft, #5c5a55); }
+.cd__state h2 { margin: 0 0 0.4rem; font-size: 1.3rem; }
+
+.cd__add { margin: 0 0 2rem; padding: 1.25rem; border: 1px solid var(--line, #e3ded3);
+  border-radius: 0.9rem; background: var(--surface, #fffdf8); }
+.cd__add h2 { margin: 0 0 0.3rem; font-size: 1.15rem; }
+.cd__hint { margin: 0 0 1rem; font-size: 0.85rem; color: var(--ink-soft, #5c5a55); }
+.cd__fields { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+.cd__field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 11rem; }
+.cd__field span { font-size: 0.8rem; color: var(--ink-soft, #5c5a55); }
+.cd__field input { padding: 0.6rem 0.7rem; border: 1px solid var(--line, #e3ded3);
+  border-radius: 0.55rem; font: inherit; background: #fff; }
+.cd__status { margin: 0.8rem 0 0; font-size: 0.88rem; min-height: 1.2em; }
+.cd__status[data-kind='bad'] { color: #a4332a; }
+.cd__status[data-kind='ok'] { color: #2f6b45; }
+
+.cd__tablewrap { overflow-x: auto; }
+.cd__table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.cd__table th, .cd__table td { padding: 0.65rem 0.6rem; text-align: left;
+  border-bottom: 1px solid var(--line, #e3ded3); vertical-align: middle; }
+.cd__table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-soft, #5c5a55); font-weight: 600; }
+.cd__table tfoot td { border-bottom: 0; border-top: 2px solid var(--line, #e3ded3); font-weight: 600; }
+.cd__who b { display: block; }
+.cd__who span { font-size: 0.78rem; color: var(--ink-soft, #5c5a55); font-family: ui-monospace, monospace; }
+.cd__link { display: flex; gap: 0.4rem; align-items: center; min-width: 17rem; }
+.cd__link input { flex: 1 1 auto; padding: 0.4rem 0.5rem; border: 1px solid var(--line, #e3ded3);
+  border-radius: 0.4rem; font-size: 0.8rem; font-family: ui-monospace, monospace; background: #fff; }
+.cd__copy, .cd__toggle { padding: 0.4rem 0.7rem; border: 1px solid var(--line, #e3ded3);
+  border-radius: 0.4rem; background: #fff; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.cd__copy:hover, .cd__toggle:hover { background: var(--surface-2, #f6f1e7); }
+.cd__n { text-align: right; font-variant-numeric: tabular-nums; }
+.cd__money { font-weight: 600; }
+.cd__table tr.is-off { opacity: 0.55; }
+.cd__empty { padding: 1.5rem 0; color: var(--ink-soft, #5c5a55); }
+
+.cd__note { margin-top: 2.5rem; padding: 1.1rem 1.25rem; border-radius: 0.9rem;
+  background: var(--surface-2, #f6f1e7); font-size: 0.88rem; }
+.cd__note h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.cd__note p { margin: 0 0 0.6rem; }
+.cd__note p:last-child { margin-bottom: 0; }
+
+@media (max-width: 47.99rem) {
+  .cd__link { min-width: 13rem; }
+  .cd__table { font-size: 0.82rem; }
+}

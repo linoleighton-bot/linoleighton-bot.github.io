@@ -577,10 +577,71 @@
      * looking at the sign-in screen, which is indistinguishable from a failed
      * one. Re-rendering hands the step back to the skip that already exists.
      */
+    /*
+     * Who sent this reader.
+     *
+     * A creator's link is this funnel with `?c=<code>` on it. The code is put
+     * somewhere that survives the trip to Apple or Google and back, because
+     * the moment that matters — the account being made — happens after that
+     * round trip, and a code held only in the URL would be long gone.
+     *
+     * The row is written once and never updated. A reader who arrives again
+     * through somebody else's link stays with whoever sent them first, which
+     * is the only version of this that two creators can both be told.
+     */
+    const CREATOR_KEY = 'mindroll.creator.code';
+    const CLICK_KEY = 'mindroll.creator.counted';
+
+    const creatorCode = (() => {
+      const fromUrl = new URLSearchParams(location.search).get('c');
+      const clean = String(fromUrl || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '')
+        .slice(0, 32);
+      try {
+        if (clean) localStorage.setItem(CREATOR_KEY, clean);
+        return clean || localStorage.getItem(CREATOR_KEY) || null;
+      } catch {
+        /* Private browsing, or storage refused. Attribution is worth less
+           than the funnel working, so carry on without it. */
+        return clean || null;
+      }
+    })();
+
+    /* One click per arrival, not per step. */
+    if (creatorCode) {
+      let counted = false;
+      try {
+        counted = sessionStorage.getItem(CLICK_KEY) === creatorCode;
+        if (!counted) sessionStorage.setItem(CLICK_KEY, creatorCode);
+      } catch {
+        counted = false;
+      }
+      if (!counted) {
+        client
+          .from('creator_clicks')
+          .insert({ code: creatorCode, referrer: document.referrer || null })
+          .then(() => {}, () => {});
+      }
+    }
+
+    const claimed = new Set();
+    const claimCreator = (person) => {
+      if (!creatorCode || !person || claimed.has(person.id)) return;
+      claimed.add(person.id);
+      client
+        .from('creator_attribution')
+        .insert({ user_id: person.id, code: creatorCode, landed_at: new Date().toISOString() })
+        /* A duplicate means they already belong to somebody. That is the
+           rule working, not a failure, so nothing is said either way. */
+        .then(() => {}, () => {});
+    };
+
     const sessionArrived = (session) => {
       const wasSignedOut = !user;
       user = session?.user ?? null;
       if (!user) return;
+      claimCreator(user);
       showSignedIn();
       if (wasSignedOut && byId[order[index]]?.kind === 'account') render({ push: false });
     };
