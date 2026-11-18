@@ -20,7 +20,7 @@
 
   /* One accent, used for every chart and button in the admin. */
   Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
-  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
+  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0',
@@ -31,6 +31,7 @@
     chart: 'M4 20V10m6 10V4m6 16v-7m5 7H2',
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
     sliders: 'M4 6h10m4 0h2M4 12h4m4 0h8M4 18h12m4 0h.01M16 4v4M10 10v4M18 16v4',
+    link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1.2z',
   };
   const icon = (name) => {
@@ -130,7 +131,7 @@
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
-    const body = { overview: home, alerts, creators, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
+    const body = { overview: home, alerts, creators, links: linksTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
@@ -715,6 +716,96 @@
             )
           : h('p', { class: 'cp-empty' }, 'No creators yet. Applications appear above as they come in.'),
       ),
+    ];
+  }
+
+  /* ----------------------------------------------------------------- links */
+
+  /*
+   * Every active creator's affiliate link: how many people clicked it, how many
+   * made an account, how many subscribed, and how many creators joined the
+   * program on that creator's invite link.
+   */
+  function linksTab() {
+    const active = state.creators.filter((c) => c.status === 'active');
+    const joinedOn = (c) => state.creators.filter((x) => x.referred_by === c.id);
+    const sum = (pick) => active.reduce((n, c) => n + (pick(c) || 0), 0);
+    const pct = (x, y) => (y > 0 ? `${Math.round((x / y) * 1000) / 10}%` : '–');
+    const clicks = sum((c) => c.stats?.clicks);
+    const signups = sum((c) => c.stats?.signups);
+    const subs = sum((c) => c.stats?.customers);
+    const joined = state.creators.filter((x) => x.referred_by).length;
+    const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
+    const copy = (text) => {
+      const b = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch { b.textContent = 'Copy failed'; } setTimeout(() => { b.textContent = 'Copy'; }, 1500); } }, 'Copy');
+      return b;
+    };
+    const linkOf = (c) => `https://getmindroll.com/?ref=${c.code}`;
+    const inviteOf = (c) => `https://getmindroll.com/creators/?invite=${c.code}`;
+    const ranked = [...active].sort((x, y) => (y.stats?.clicks || 0) - (x.stats?.clicks || 0));
+    const invited = state.creators.filter((x) => x.referred_by).map((x) => ({ ...x, by: state.creators.find((c) => c.id === x.referred_by) }));
+    const STATUS = { active: ['Accepted', 'good'], pending: ['Waiting for review', 'warn'], paused: ['Paused', 'muted'], rejected: ['Declined', 'bad'] };
+
+    return [
+      h(
+        'div',
+        { class: 'mr-grid' },
+        tile('paper', 'Active links', num(active.length), 'one per approved creator'),
+        tile('paper', 'Clicks', compact(clicks), 'people who opened a link'),
+        tile('paper', 'Signed up', num(signups), `${pct(signups, clicks)} of clicks`),
+        tile('amber', 'Subscribed', num(subs), `${pct(subs, clicks)} of clicks`),
+      ),
+      section(
+        'Affiliate links',
+        h('span', { class: 'cp-muted' }, `${num(active.length)} active`),
+        table(
+          [
+            { label: 'Creator', cell: (c) => h('span', { class: 'cp-inline' }, h('b', {}, c.display_name), pill(tierName(c), c.champion ? 'good' : undefined)) },
+            { label: 'Link', cell: (c) => h('span', { class: 'cp-inline' }, h('code', { class: 'cp-mono' }, linkOf(c).replace('https://', '')), copy(linkOf(c))) },
+            { label: 'Clicks', num: true, cell: (c) => h('b', {}, num(c.stats?.clicks || 0)) },
+            { label: 'Signed up', num: true, cell: (c) => num(c.stats?.signups || 0) },
+            { label: 'Subscribed', num: true, cell: (c) => num(c.stats?.customers || 0) },
+            { label: 'Click to subscriber', num: true, cell: (c) => pct(c.stats?.customers || 0, c.stats?.clicks || 0) },
+            { label: 'Creators joined', num: true, cell: (c) => num(joinedOn(c).length) },
+          ],
+          ranked,
+          'No active links yet. A creator gets their link the moment you approve them.',
+        ),
+        h('p', { class: 'cp-muted cp-small' }, 'Most clicked first. "Creators joined" counts people who applied to the program on that creator\'s invite link.'),
+      ),
+      section(
+        'Joined on an invite link',
+        h('b', {}, num(joined)),
+        table(
+          [
+            { label: 'New creator', cell: (x) => h('b', {}, x.display_name) },
+            { label: 'Invited by', cell: (x) => (x.by ? x.by.display_name : '–') },
+            { label: 'Applied', cell: (x) => since(x.created_at) },
+            { label: 'Status', cell: (x) => pill(...(STATUS[x.status] || [x.status, 'muted'])) },
+          ],
+          invited,
+          'Nobody has joined on a creator\'s invite link yet.',
+        ),
+        h('p', { class: 'cp-muted cp-small' }, 'Each creator also has an invite link for bringing in other creators (getmindroll.com/creators/?invite=their-code). Clicks on invite links are not counted, only the people who applied.'),
+      ),
+      (state.links || []).length
+        ? section(
+            'Links per video or niche',
+            h('span', { class: 'cp-muted' }, 'Tagged links, best first'),
+            table(
+              [
+                { label: 'Creator', cell: (l) => h('b', {}, l.creator) },
+                { label: 'Link', cell: (l) => h('code', { class: 'cp-mono' }, l.tag) },
+                { label: 'Clicks', num: true, cell: (l) => num(l.clicks) },
+                { label: 'Signed up', num: true, cell: (l) => num(l.signups) },
+                { label: 'Subscribed', num: true, cell: (l) => num(l.customers) },
+                { label: 'Sales', num: true, cell: (l) => h('b', {}, cp.dollars(l.sales_cents)) },
+              ],
+              [...state.links].sort((x, y) => y.clicks - x.clicks || y.sales_cents - x.sales_cents).slice(0, 100),
+              '',
+            ),
+          )
+        : null,
     ];
   }
 
@@ -1561,7 +1652,7 @@
       id, display_name: name, code, status, country: 'US', email: `${code}@example.com`, commission_rate: o.rate ?? null, payouts_enabled: o.stripe ?? true, created_at: ago(o.age ?? 40), approved_at: ago(38),
       tiktok: `@${code}`, instagram: o.ig ? `@${code}` : null, youtube: null, note: o.note ?? null, cashout_requested_at: o.cashout ? ago(1) : null, scan_error: o.scanError ?? null,
       payout_method: o.stripe === false ? null : 'venmo', payout_handle: o.stripe === false ? null : `@${code}`,
-      tier_level: o.tier ?? 1, champion: false, payout_hold: !!o.hold, hold_reason: o.hold || null, handle_verified: o.verified ?? true, terms_accepted_at: status === 'active' ? ago(37) : null,
+      referred_by: o.by ?? null, tier_level: o.tier ?? 1, champion: false, payout_hold: !!o.hold, hold_reason: o.hold || null, handle_verified: o.verified ?? true, terms_accepted_at: status === 'active' ? ago(37) : null,
       rate: o.rate ?? [0.1, 0.12, 0.15][(o.tier ?? 1) - 1], incentives: { tier_level: o.tier ?? 1, by_kind: o.kinds ?? {}, month_by_kind: o.month ?? {}, window_revenue_cents: Math.round((o.rev ?? 0) * 0.8), window_views: Math.round((o.views ?? 0) * 0.9), window_posts: o.videos ?? 0 },
       balance: { available_cents: o.ready ?? 0, pending_cents: o.pending ?? 0, paid_cents: o.paid ?? 0, in_transit_cents: 0, commission_cents: o.comm ?? 0, bonus_cents: o.bonus ?? 0 },
       stats: { clicks: o.clicks ?? 0, signups: o.signups ?? 0, customers: o.subs ?? 0, revenue_cents: o.rev ?? 0, videos: o.videos ?? 0, views: o.views ?? 0 },
@@ -1577,11 +1668,11 @@
       ],
       volume: [],
       creators: [
-        c('c5', 'Jonah Reads', 'jonah', 'pending', { age: 1, ig: true, note: '48K on TikTok, mostly book and study content. Posting three times a week.' }),
+        c('c5', 'Jonah Reads', 'jonah', 'pending', { by: 'c1', age: 1, ig: true, note: '48K on TikTok, mostly book and study content. Posting three times a week.' }),
         c('c6', 'Priya', 'priya', 'pending', { age: 2 }),
         c('c1', 'Maya', 'maya', 'active', { ready: 16160, pending: 5744, paid: 14200, comm: 20604, bonus: 15500, clicks: 6240, signups: 388, subs: 41, rev: 173354, videos: 4, views: 718400, ig: true, tier: 2, cashout: true, kinds: { views: 5000, rank_up: 2500 }, month: { views: 4000, rank_up: 2500 } }),
         c('c2', 'Theo Studies', 'theo', 'active', { ready: 3400, pending: 2800, paid: 2000, comm: 6200, bonus: 2000, clicks: 2210, signups: 142, subs: 16, rev: 62000, videos: 6, views: 264000, tier: 1, kinds: { views: 1000, manual: 1000 }, month: { views: 1000 } }),
-        c('c3', 'Bookish Lina', 'lina', 'active', { verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),
+        c('c3', 'Bookish Lina', 'lina', 'active', { by: 'c1', verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),
         c('c4', 'Sam', 'sam', 'paused', { clicks: 210, signups: 9, subs: 1, rev: 1699, comm: 170, pending: 170, videos: 1, views: 4100 }),
       ],
       pulse: { sales_today_cents: 21400, sales_7d_cents: 98200, sales_prev_7d_cents: 71400, subs_today: 6, subs_7d: 31, views_today: 61300, views_7d: 412000, videos_7d: 14, daily: Array.from({ length: 90 }, (_, i) => { const cents = Math.round((1800 + i * 190) * (1 + 0.45 * Math.sin(i * 1.7)) * (i % 7 === 5 ? 1.6 : 1)); return { day: ago(89 - i).slice(0, 10), sales_cents: cents, paid_cents: Math.round(cents * 0.14), subs: Math.round(cents / 2600), views: cents * 4 }; }) },
