@@ -2185,3 +2185,20 @@ body.page-funnel .funnel__body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* The line that has to survive the trip to the store and back. */
+.fs__signin {
+  margin: 0 0 0.9rem;
+  font-weight: 650;
+  font-size: 1.02rem;
+  text-align: center;
+  color: var(--ink, #1b1a18);
+}
+/* The second store is the same offer, not a lesser one — quieter, not smaller. */
+.fs__cta--alt {
+  margin-top: 0.55rem;
+  background: transparent;
+  color: var(--ink, #1b1a18);
+  border: 1px solid currentColor;
+}
+.fs__cta--alt:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
