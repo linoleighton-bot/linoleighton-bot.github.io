@@ -498,11 +498,92 @@
   /** A card that leads with one figure. */
   const figure = (label, value, hero) => h('div', { class: 'cp-figure' }, h('p', { class: 'cp-figure__label' }, label), h('p', { class: hero ? 'cp-figure__value cp-figure__value--hero' : 'cp-figure__value' }, value));
 
+
+  /*
+   * The UGC brief as it ships. The admin edits a copy of this in the database
+   * (Admin > UGC Brief); this one is what shows until the first publish, and in
+   * previews.
+   */
+  const defaultBrief = {
+    title: 'MindRoll UGC Brief',
+    lead: 'Guidance for creators making MindRoll videos: what to make, what to say, and what to include.',
+    examples: {
+      title: 'The type of content we are looking for',
+      note: 'These are not UGC videos we made. They are our competitors\' videos, and this content style is what we think will perform best. Subtly integrate MindRoll into videos like these.',
+      allUrl: 'https://drive.google.com/drive/folders/1FOp2VS4h6rT0o3l4FbsqBD0CEsxBJek8',
+      items: [
+        { image: 'brief/ex1.jpg', title: 'How To Be Good At Anything', note: 'Numbered tips, skill grid behind the creator', url: 'https://drive.google.com/file/d/1CxdJJRo3I92R2EOk0QPzImPHi2XzgxpF/view' },
+        { image: 'brief/ex2.jpg', title: 'How to become The Mentalist', note: 'Pop-culture character hook, stills cut in', url: 'https://drive.google.com/file/d/1dzMHwkOloNlEYkDVdL6bVmsAMs0WwzRz/view' },
+        { image: 'brief/ex3.jpg', title: '10/10 habits to become disgustingly overeducated', note: 'Rated listicle, photo strip on top', url: 'https://drive.google.com/file/d/1DB6k2j0dSHKcKYeR3gDYUTX673bAQmcu/view' },
+        { image: 'brief/ex4.jpg', title: 'Fast talking head, movie stills', note: 'Captions under the face, high energy', url: 'https://drive.google.com/file/d/19x0W8iJ7yv5va4R7AEXMNSu8sOyILrDq/view' },
+        { image: 'brief/ex5.jpg', title: '10/10 things every man should do', note: 'Rated listicle, character stills under the face', url: 'https://drive.google.com/file/d/1GfmEPs7LBXA2MrtYokegtRC1UHsxoHv6/view' },
+        { image: 'brief/ex6.jpg', title: 'Five apps every man must have on his phone', note: 'App list, icons under the face. MindRoll is one of the five.', url: 'https://drive.google.com/file/d/14-Wwa_5kfrOdnQBcbxR0OS4g-Q7CDVbu/view' },
+        { image: 'brief/ex7.jpg', title: '10/10 highest ROI skills that cost you nothing', note: 'Rated listicle, big title on top', url: 'https://drive.google.com/file/d/1ENkCYdvmyWGx_nT7RqDPZ0O8RTcBoXZp/view' },
+        { image: 'brief/ex8.jpg', title: 'How to shift', note: 'Talking head, concept images under the face', url: 'https://drive.google.com/file/d/1KJCEIKeG8FullFlHhGvJBDKHrpukV4Vy/view' },
+        { image: 'brief/ex9.jpg', title: 'The highest form of...', note: 'Close-up talking head, captions only', url: 'https://drive.google.com/file/d/1zxb-5h_LvtgrmRfamPVqouQfwV0u_Xfv/view' },
+      ],
+    },
+    ctas: {
+      title: 'Use something similar to these',
+      note: 'Drop it in naturally, the way the examples mention their app. Say the name MindRoll.',
+      listUrl: 'https://docs.google.com/document/d/1txrugBaecNOUzhjMN2iRuoZCG6He0285X_4ULGbiWhc/edit',
+      items: [
+        'Read books about a topic that interests you. I use this method that has all of the world\'s best books, but summarized for you with the most valuable information, so I have the knowledge of all the books in way less time.',
+        'Reading books takes way too much time, so I\'ve been using apps like MindRoll so I just scan any book and scroll through key point summaries in the book, allowing you to read way more books in way less time.',
+        'This method which helped me, which gives me bite sized ideas from actual books instead of brain rotting content. It makes you dangerously smart instead of doomscrolling all day.',
+        'By using apps like MindRoll, which allows you to scan any book cover, it allows you to scroll through the key ideas and key point summaries, allowing you to read multiple books insanely fast.',
+        'I use a method that gives me bite sized ideas from actual books, instead of scrolling and filling my brain with bullshit on TikTok, so now I\'m absorbing the greatest ideas from the top books out there.',
+      ],
+    },
+    assets: {
+      title: 'Everything is in our Google Drive',
+      items: [
+        { title: 'MindRoll Assets folder', note: 'App Store image, screen recording, app clips', url: 'https://drive.google.com/drive/folders/1SRvBU9OLonephUFqgxaEmeLVz4yR_D3K', lead: true },
+        { title: 'App screen recording', note: 'Use this where the examples show their app', url: 'https://drive.google.com/file/d/16bNkPkCzN5pxGTYzn7oOTp_2sbYTgeFB/view' },
+        { title: 'Logo files', note: 'PNG and SVG', url: 'https://drive.google.com/drive/folders/1jHU1XAuTSqGYT-zeRTqvZq_obSc5nVo2' },
+        { title: 'MindRoll on the App Store', note: 'Link for your bio', url: 'https://apps.apple.com/us/app/mindroll-get-smarter-daily/id6810303765' },
+      ],
+    },
+    must: {
+      title: 'Include this image in every video',
+      text: 'This is our App Store screenshot with our logo. Show it in every creative so people know what to search for.',
+      image: 'brief/appstore-listing.jpg',
+      url: 'https://drive.google.com/file/d/1rK54XQt2V9c19_it0f0H1ms9-JghLQll/view',
+      linkLabel: 'Download the image (IMG_2819.PNG)',
+    },
+    tips: {
+      title: 'Send viewers to the comments, then DM them your link',
+      items: [
+        'End every video the way the examples do: "Comment **book** and I\'ll send it to you." Pick any word, keep it the same across your videos.',
+        'Then manually DM everyone who comments your custom link. That is how a sale gets attributed to you, so tracking stays accurate.',
+        'You don\'t have to do this. But if you skip it you will miss out on a lot of extra money, and sales that came from your video won\'t be credited to you.',
+        'Once you reach a certain rank, we pay for your ManyChat and the DMs become fully automated.',
+      ],
+    },
+    closing: '**You have freedom.** If you think another format or different CTAs will perform better for your audience, do that. This is guidance on what we think will perform best, not a script.',
+    questions: 'Questions: teammindroll@gmail.com. Send us the post link the same day you post.',
+  };
+
+  /** Text with **bold** in it, as nodes. Nothing else is interpreted. */
+  const rich = (text) => String(text || '').split(/(\*\*[^*]+\*\*)/).filter(Boolean).map((part) => (/^\*\*[^*]+\*\*$/.test(part) ? h('b', {}, part.slice(2, -2)) : part));
+
+  /** Where a brief image lives: shipped with the site, uploaded by an admin, or a full address. */
+  const briefImage = (src) => {
+    if (!src) return null;
+    if (src.startsWith('brief/')) return `/assets/creators/${src}`;
+    if (src.startsWith('upload:')) return url ? `${url}/storage/v1/object/public/creator-briefs/${src.slice(7).split('/').map(encodeURIComponent).join('/')}` : null;
+    return safeUrl(src);
+  };
+
+  /* Pinned videos first, in the order they were placed. */
+  const briefVideos = (brief) => { const items = brief?.examples?.items || []; return [...items.filter((v) => v.pinned), ...items.filter((v) => !v.pinned)]; };
+
   window.mindrollCreators = {
     root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM,
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
     COLOR, segbar, hbars, timeChart, milestones, ladder, dollars, KINDS, fold, figure,
     /* Where an uploaded reference video is served from. */
+    defaultBrief, rich, briefImage, briefVideos,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),
   };
 })();

@@ -20,7 +20,7 @@
 
   /* One accent, used for every chart and button in the admin. */
   Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
-  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
+  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['brief', 'UGC Brief', 'book'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0',
@@ -31,6 +31,7 @@
     chart: 'M4 20V10m6 10V4m6 16v-7m5 7H2',
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
     sliders: 'M4 6h10m4 0h2M4 12h4m4 0h8M4 18h12m4 0h.01M16 4v4M10 10v4M18 16v4',
+    book: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10M9 8h5',
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1.2z',
   };
@@ -89,7 +90,7 @@
   async function reload() {
     if (cp.demo) return render();
     try {
-      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, recent] = await Promise.all([
+      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, briefs, recent] = await Promise.all([
         cp.rpc('creator_admin_overview'),
         cp.rpc('creator_admin_funnel', { p_creator: funnelCreator, p_days: 30 }),
         ok(db.from('creator_videos').select('*').order('created_at', { ascending: false }).limit(500)),
@@ -98,10 +99,12 @@
         ok(db.from('creator_payouts').select('*').order('created_at', { ascending: false }).limit(300)),
         ok(db.from('creator_volume_rules').select('*').order('min_videos')),
         cp.rpc('creator_admin_campaigns'),
+        cp.rpc('creator_admin_brief').catch(() => null),
         ok(db.from('creator_briefs').select('*').order('created_at', { ascending: false })),
         ok(db.from('creator_commissions').select('id, creator_id, kind, plan, store, base_cents, amount_cents, occurred_at').order('occurred_at', { ascending: false }).limit(60)),
       ]);
-      state = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent };
+      state = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc };
+      if (!briefDirty) briefEdit = null;
       render();
     } catch (error) {
       view.replaceChildren(h('div', { class: 'cp-card' }, h('h2', {}, 'Could not load'), h('p', { class: 'cp-muted' }, error.message), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: reload }, 'Try again')));
@@ -131,7 +134,7 @@
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
-    const body = { overview: home, alerts, creators, links: linksTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
+    const body = { overview: home, alerts, creators, links: linksTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
@@ -806,6 +809,145 @@
             ),
           )
         : null,
+    ];
+  }
+
+  /* ------------------------------------------------------------- UGC brief */
+
+  /*
+   * The brief creators read under "UGC Brief". Everything here edits a draft;
+   * nothing a creator sees changes until Publish is pressed.
+   */
+  let briefEdit = null;
+  let briefDirty = false;
+  function briefTab() {
+    const doc = state.briefDoc || {};
+    const clone = (v) => JSON.parse(JSON.stringify(v));
+    if (!briefEdit) briefEdit = clone(doc.draft || doc.published || cp.defaultBrief);
+    const b = briefEdit;
+    for (const key of ['examples', 'ctas', 'assets', 'tips']) { b[key] = b[key] || {}; b[key].items = b[key].items || []; }
+    b.must = b.must || {};
+    const unpublished = JSON.stringify(b) !== JSON.stringify(doc.published || null);
+    const touch = () => { briefDirty = true; const el = view.querySelector('[data-brief-state]'); if (el) { el.textContent = 'Unpublished changes'; el.dataset.tone = 'warn'; } };
+    const redraw = () => { briefDirty = true; render(); };
+
+    const text = (obj, key, label, o = {}) => {
+      const input = h(o.area ? 'textarea' : 'input', { class: 'cp-input', rows: o.area ? String(o.rows || 2) : null, type: o.area ? null : o.type || 'text', placeholder: o.placeholder || '', 'aria-label': label });
+      input.value = obj[key] || '';
+      input.addEventListener('input', () => { obj[key] = input.value; touch(); });
+      return o.bare ? input : h('label', { class: 'mr-edit__field' }, h('span', {}, label), input);
+    };
+    const mini = (label, onclick, o = {}) => h('button', { class: 'btn btn--ghost btn--sm', type: 'button', disabled: o.disabled || null, 'aria-pressed': o.pressed == null ? null : String(!!o.pressed), title: o.title || null, onclick }, label);
+    const move = (list, i, by) => { const j = i + by; if (j < 0 || j >= list.length) return; [list[i], list[j]] = [list[j], list[i]]; redraw(); };
+    const remove = (list, i) => confirmButton('Delete', 'Confirm delete', 'cp-link', async () => { list.splice(i, 1); redraw(); });
+
+    const imageField = (obj, key, label) => {
+      const src = cp.briefImage(obj[key]);
+      const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
+      const pick = mini(src ? 'Change image' : 'Add image', () => file.click());
+      file.addEventListener('change', act(pick, async () => {
+        const f = file.files[0];
+        if (!f) return;
+        if (f.size > 5 * 1024 * 1024) throw new Error('Images can be up to 5 MB.');
+        if (cp.demo) throw new Error('This is a preview, so uploads are switched off.');
+        const path = `brief/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-60)}`;
+        const { error } = await db.storage.from('creator-briefs').upload(path, f, { contentType: f.type, cacheControl: '31536000' });
+        if (error) throw new Error(error.message);
+        obj[key] = `upload:${path}`;
+        redraw();
+      }));
+      return h('div', { class: 'mr-edit__image' }, src ? h('img', { src, alt: '' }) : h('span', { class: 'cp-muted cp-small' }, 'No image'), h('div', { class: 'cp-inline' }, pick, obj[key] ? mini('Remove', () => { obj[key] = null; redraw(); }) : null), file, h('span', { class: 'cp-visually-hidden' }, label));
+    };
+
+    const vids = b.examples.items;
+    const videoRow = (v, i) => h(
+      'li',
+      { class: 'mr-edit__row', 'data-on': v.highlight ? 'highlight' : v.pinned ? 'pin' : null },
+      imageField(v, 'image', `Thumbnail for ${v.title || 'video'}`),
+      h('div', { class: 'mr-edit__fields' }, text(v, 'title', 'Title', { placeholder: 'What the video is' }), text(v, 'note', 'Description', { placeholder: 'What makes it work' }), text(v, 'url', 'Video link', { type: 'url', placeholder: 'https://' })),
+      h(
+        'div',
+        { class: 'mr-edit__tools' },
+        mini(v.pinned ? 'Pinned' : 'Pin', () => { v.pinned = !v.pinned; redraw(); }, { pressed: v.pinned, title: 'Pinned videos show first' }),
+        mini(v.highlight ? 'Highlighted' : 'Highlight', () => { v.highlight = !v.highlight; redraw(); }, { pressed: v.highlight, title: 'Highlighted videos get a blue frame and a Featured tag' }),
+        mini('Up', () => move(vids, i, -1), { disabled: i === 0 }),
+        mini('Down', () => move(vids, i, 1), { disabled: i === vids.length - 1 }),
+        remove(vids, i),
+      ),
+    );
+    const lineList = (list, label, o = {}) => h(
+      'ul',
+      { class: 'mr-edit__list' },
+      list.map((_, i) => {
+        const holder = { get v() { return list[i]; }, set v(x) { list[i] = x; } };
+        return h('li', { class: 'mr-edit__line' }, text(holder, 'v', `${label} ${i + 1}`, { area: true, rows: o.rows || 2, bare: true }), h('div', { class: 'mr-edit__tools' }, mini('Up', () => move(list, i, -1), { disabled: i === 0 }), mini('Down', () => move(list, i, 1), { disabled: i === list.length - 1 }), remove(list, i)));
+      }),
+    );
+    const assetRow = (it, i) => h('li', { class: 'mr-edit__row' }, h('div', { class: 'mr-edit__fields' }, text(it, 'title', 'Title'), text(it, 'note', 'Description'), text(it, 'url', 'Link', { type: 'url', placeholder: 'https://' })), h('div', { class: 'mr-edit__tools' }, mini(it.lead ? 'Main button' : 'Make main', () => { it.lead = !it.lead; redraw(); }, { pressed: it.lead }), mini('Up', () => move(b.assets.items, i, -1), { disabled: i === 0 }), mini('Down', () => move(b.assets.items, i, 1), { disabled: i === b.assets.items.length - 1 }), remove(b.assets.items, i)));
+
+    const validate = () => {
+      if (!String(b.title || '').trim()) throw new Error('The brief needs a title.');
+      vids.forEach((v, i) => {
+        if (!String(v.title || '').trim()) throw new Error(`Video ${i + 1} needs a title.`);
+        if (!cp.safeUrl(v.url)) throw new Error(`"${v.title}" needs a link that starts with https://`);
+      });
+      b.assets.items.forEach((it) => { if (!String(it.title || '').trim() || !cp.safeUrl(it.url)) throw new Error('Every asset needs a title and a link that starts with https://'); });
+      b.ctas.items = b.ctas.items.map((t) => String(t || '').trim()).filter(Boolean);
+      b.tips.items = b.tips.items.map((t) => String(t || '').trim()).filter(Boolean);
+    };
+    const save = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save draft');
+    save.addEventListener('click', act(save, async () => {
+      validate();
+      if (cp.demo) throw new Error('This is a preview, so saving is switched off.');
+      await cp.rpc('creator_admin_save_brief', { p_brief: b });
+      briefDirty = false;
+      toast('Draft saved. Creators still see the published version.');
+      await reload();
+    }));
+    const publish = confirmButton('Publish', 'Confirm: show this to every creator', 'btn btn--primary btn--sm', async () => {
+      validate();
+      if (cp.demo) throw new Error('This is a preview, so publishing is switched off.');
+      await cp.rpc('creator_admin_save_brief', { p_brief: b });
+      await cp.rpc('creator_admin_publish_brief');
+      briefDirty = false;
+      toast('Published. Every creator sees it now.');
+      await reload();
+    });
+    const discard = unpublished && doc.published ? confirmButton('Discard changes', 'Confirm: go back to the published version', 'cp-link', async () => { briefEdit = clone(doc.published); briefDirty = false; if (!cp.demo) await cp.rpc('creator_admin_save_brief', { p_brief: briefEdit }); toast('Back to the published version.'); cp.demo ? render() : await reload(); }) : null;
+
+    return [
+      h(
+        'section',
+        { class: 'mr-panel mr-edit__bar' },
+        h('div', {}, h('b', { 'data-brief-state': '', 'data-tone': unpublished ? 'warn' : 'good' }, unpublished ? 'Unpublished changes' : 'Published'), h('span', { class: 'cp-muted cp-small' }, doc.published_at ? `Last published ${since(doc.published_at)}` : 'Not published yet: creators see the built-in brief')),
+        h('div', { class: 'cp-inline' }, discard, h('a', { class: 'cp-link', href: '/creators/#brief', target: '_blank', rel: 'noopener' }, 'See the live page'), save, publish),
+      ),
+      section('Heading', null, h('div', { class: 'mr-edit__fields' }, text(b, 'title', 'Title'), text(b, 'lead', 'Line under the title', { area: true }))),
+      section(
+        'Videos',
+        h('span', { class: 'cp-muted' }, `${vids.length} · pinned show first`),
+        h('div', { class: 'mr-edit__fields' }, text(b.examples, 'title', 'Section title'), text(b.examples, 'note', 'Text under it', { area: true, rows: 3 })),
+        vids.length ? h('ul', { class: 'mr-edit__list' }, vids.map(videoRow)) : h('p', { class: 'cp-muted' }, 'No videos yet.'),
+        h('div', { class: 'cp-inline' }, mini('Add a video', () => { vids.unshift({ title: '', note: '', url: '', image: null }); redraw(); })),
+        text(b.examples, 'allUrl', '"All examples" link (leave empty to hide it)', { type: 'url', placeholder: 'https://' }),
+      ),
+      section(
+        'CTAs',
+        h('span', { class: 'cp-muted' }, `${b.ctas.items.length} scripts`),
+        h('div', { class: 'mr-edit__fields' }, text(b.ctas, 'title', 'Section title'), text(b.ctas, 'note', 'Text under it', { area: true }), text(b.ctas, 'listUrl', 'Full CTA list link', { type: 'url', placeholder: 'https://' })),
+        lineList(b.ctas.items, 'CTA', { rows: 3 }),
+        h('div', { class: 'cp-inline' }, mini('Add a CTA', () => { b.ctas.items.push(''); redraw(); })),
+      ),
+      section(
+        'Assets',
+        null,
+        text(b.assets, 'title', 'Section title'),
+        h('ul', { class: 'mr-edit__list' }, b.assets.items.map(assetRow)),
+        h('div', { class: 'cp-inline' }, mini('Add an asset link', () => { b.assets.items.push({ title: '', note: '', url: '' }); redraw(); })),
+      ),
+      section('One must-have', null, h('div', { class: 'mr-edit__row' }, imageField(b.must, 'image', 'Must-have image'), h('div', { class: 'mr-edit__fields' }, text(b.must, 'title', 'Section title'), text(b.must, 'text', 'Text', { area: true, rows: 3 }), text(b.must, 'url', 'Download link', { type: 'url', placeholder: 'https://' }), text(b.must, 'linkLabel', 'Words on the download link')))),
+      section('Highly recommended', null, text(b.tips, 'title', 'Section title'), lineList(b.tips.items, 'Point', { rows: 2 }), h('div', { class: 'cp-inline' }, mini('Add a point', () => { b.tips.items.push(''); redraw(); }))),
+      section('Closing', null, h('div', { class: 'mr-edit__fields' }, text(b, 'closing', 'Closing note', { area: true, rows: 3 }), text(b, 'questions', 'Last line (questions, contact)', { area: true })), h('p', { class: 'cp-muted cp-small' }, 'Put two stars either side of words to make them bold, like **this**.')),
     ];
   }
 
