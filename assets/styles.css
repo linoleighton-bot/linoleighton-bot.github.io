@@ -4360,3 +4360,6 @@ body.is-keeping {
   font-size: 0.86rem;
   color: var(--ink-soft, #5c5a55);
 }
+
+/* A single CTA centres itself rather than sitting in a row of one. */
+.cta-row--single { justify-content: center; }

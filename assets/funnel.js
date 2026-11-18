@@ -52,15 +52,54 @@
     }
   };
 
+  /*
+   * When the answers were last touched.
+   *
+   * Resuming is for somebody who closed the tab and came back — not for
+   * somebody returning a fortnight later, who is a new visit and should see
+   * the opening screen rather than question fourteen with no idea how they
+   * got there. The stamp lives beside the answers, under its own key, so an
+   * older saved funnel simply has no stamp and is treated as stale.
+   */
+  const STAMP_KEY = `${KEY}.at`;
+  const RESUME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
   const save = () => {
     try {
       localStorage.setItem(KEY, JSON.stringify(answers));
+      localStorage.setItem(STAMP_KEY, String(Date.now()));
     } catch {
       /* Private window, or storage refused. The funnel still works forwards. */
     }
   };
 
-  const answers = load();
+  /** Fresh enough to pick up where they left off. */
+  const resumable = () => {
+    try {
+      const at = Number(localStorage.getItem(STAMP_KEY) || 0);
+      return at > 0 && Date.now() - at < RESUME_WINDOW_MS;
+    } catch {
+      return false;
+    }
+  };
+
+  /*
+   * `?restart=1` throws the saved answers away and opens at the top.
+   *
+   * The funnel is otherwise impossible to see from the beginning once you
+   * have walked it, which makes it impossible to check.
+   */
+  const restarting = new URLSearchParams(location.search).has('restart');
+  if (restarting) {
+    try {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(STAMP_KEY);
+    } catch {
+      /* Nothing to clear. */
+    }
+  }
+
+  const answers = restarting ? {} : load();
   let index = 0;
 
   /* Mark the funnel taken over, which switches the stylesheet from the stacked
@@ -1247,7 +1286,7 @@
     return Array.isArray(held) ? held.length > 0 : held != null;
   });
 
-  if (lastAnswered.length) {
+  if (lastAnswered.length && !restarting && resumable()) {
     const resumeAt = order.indexOf(lastAnswered[lastAnswered.length - 1]);
     /*
      * `indexOf` is -1 when this flow has no such step, and `Math.min` then
