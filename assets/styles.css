@@ -4343,3 +4343,20 @@ body.is-keeping {
   margin: 0.15rem 0 0;
   font-size: 0.84rem;
 }
+
+/* ------------------------------------------------- the one CTA, centred */
+/* It replaced an App Store badge, so it has to carry that spot on its own. */
+.store-start {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 15rem;
+  padding-inline: 2rem;
+  padding-block: 0.95rem;
+  font-size: 1.05rem;
+}
+.store-start__note {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+  color: var(--ink-soft, #5c5a55);
+}
