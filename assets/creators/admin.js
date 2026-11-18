@@ -54,10 +54,13 @@
   /* ------------------------------------------------------------------ boot */
 
   let lastUser;
+  let stopLive = null;
   async function route(session) {
     const user = session?.user ?? null;
     if ((user?.id ?? null) === lastUser) return;
     lastUser = user?.id ?? null;
+    stopLive?.();
+    stopLive = null;
     if (!user) {
       setWho(null);
       view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, cp.signInPanel({ title: 'Admin sign-in', lead: 'For the Mindroll team.', oauthOnly: true })));
@@ -70,6 +73,8 @@
       return;
     }
     await reload();
+    stopLive?.();
+    stopLive = cp.live.start(() => reload(true));
   }
 
   function setWho(label) {
@@ -87,7 +92,8 @@
     return data;
   };
 
-  async function reload() {
+  let lastStamp = null;
+  async function reload(quiet = false) {
     if (cp.demo) return render();
     try {
       const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, briefs, recent] = await Promise.all([
@@ -103,10 +109,24 @@
         ok(db.from('creator_briefs').select('*').order('created_at', { ascending: false })),
         ok(db.from('creator_commissions').select('id, creator_id, kind, plan, store, base_cents, amount_cents, occurred_at').order('occurred_at', { ascending: false }).limit(60)),
       ]);
-      state = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc };
-      if (!briefDirty) briefEdit = null;
-      render();
+      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc };
+      const stamp = JSON.stringify(next);
+      const apply = () => {
+        const before = quiet && state ? new Set((state.feed || []).map((e) => `${e.at}|${e.kind}|${e.title}`)) : null;
+        lastStamp = stamp;
+        state = next;
+        if (!briefDirty) briefEdit = null;
+        render();
+        const fresh = before ? (next.feed || []).filter((e) => !before.has(`${e.at}|${e.kind}|${e.title}`)) : [];
+        if (fresh.length) toast(fresh.length === 1 ? `${fresh[0].title}: ${fresh[0].detail}` : `${fresh.length} new notifications`);
+      };
+      if (quiet) {
+        if (stamp === lastStamp) return;
+        if (cp.live.busy() || (briefDirty && tab === 'brief')) return cp.live.offer(apply);
+      }
+      apply();
     } catch (error) {
+      if (quiet) return;
       view.replaceChildren(h('div', { class: 'cp-card' }, h('h2', {}, 'Could not load'), h('p', { class: 'cp-muted' }, error.message), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: reload }, 'Try again')));
     }
   }
@@ -139,6 +159,7 @@
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
     view.replaceChildren(h('div', { class: 'mr-shell' }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))));
+    cp.live.drawn();
   }
   const go = (id) => () => { tab = id; history.replaceState(null, '', `#${id}`); render(); window.scrollTo(0, 0); };
   const store = (key, value) => { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { /* private window */ } return null; };

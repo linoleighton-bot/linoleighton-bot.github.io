@@ -578,12 +578,52 @@
   /* Pinned videos first, in the order they were placed. */
   const briefVideos = (brief) => { const items = brief?.examples?.items || []; return [...items.filter((v) => v.pinned), ...items.filter((v) => !v.pinned)]; };
 
+
+  /*
+   * Live updates. `tick` runs every `every` ms while the tab is in view, and at
+   * once when it comes back into view. A page that is mid-way through something
+   * (typing, a confirm waiting, a pop-up open, a form filled in but not sent) is
+   * not redrawn under the person: it gets a "New activity" button instead.
+   */
+  let typedSince = false;
+  root.addEventListener('input', () => { typedSince = true; });
+  const live = {
+    start(tick, every = 20000) {
+      let running = false;
+      const run = async () => {
+        if (running || document.visibilityState !== 'visible') return;
+        running = true;
+        try { await tick(); } catch { /* try again next round */ }
+        running = false;
+      };
+      const timer = setInterval(run, every);
+      const onShow = () => { if (document.visibilityState === 'visible') run(); };
+      document.addEventListener('visibilitychange', onShow);
+      window.addEventListener('focus', onShow);
+      return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onShow); window.removeEventListener('focus', onShow); live.offer(null); };
+    },
+    /** True while a redraw would interrupt someone. */
+    busy() {
+      const a = document.activeElement;
+      return typedSince || !!(a && root.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || !!document.querySelector('.mr-modal, [data-armed], [aria-busy="true"]');
+    },
+    /** Call after every full redraw: whatever was typed is gone or sent. */
+    drawn() { typedSince = false; live.offer(null); },
+    /** Shows (or with null, removes) the button that applies waiting changes. */
+    offer(apply) {
+      document.querySelector('.mr-fresh')?.remove();
+      if (!apply) return;
+      document.body.append(h('button', { class: 'mr-fresh', type: 'button', onclick: () => { typedSince = false; apply(); } }, 'New activity. Tap to update'));
+    },
+  };
+
   window.mindrollCreators = {
     root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM,
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
     COLOR, segbar, hbars, timeChart, milestones, ladder, dollars, KINDS, fold, figure,
     /* Where an uploaded reference video is served from. */
     defaultBrief, rich, briefImage, briefVideos,
+    live,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),
   };
 })();

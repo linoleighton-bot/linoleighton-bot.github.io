@@ -831,3 +831,7 @@ button.mr-tile:hover { transform: translateY(-3px); }
 .mr-edit__tools [aria-pressed='true'] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .mr-edit__line { display: grid; gap: 0.5rem; background: var(--sunk); border-radius: 1rem; padding: 0.9rem; }
 @media (max-width: 40rem) { .mr-edit__row { grid-template-columns: 1fr; } .mr-edit__bar { position: static; } }
+
+/* Shown when something new has arrived but the page is mid-action, so it is not redrawn under the person. */
+.mr-fresh { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 60; font: inherit; font-size: 0.9375rem; font-weight: 700; color: #fff; background: var(--mr-accent, #2F6BFF); border: 0; border-radius: 999px; padding: 0.75rem 1.25rem; box-shadow: 0 10px 28px rgb(47 107 255 / 0.4); cursor: pointer; }
+.mr-fresh:hover { background: #1E4FD6; }

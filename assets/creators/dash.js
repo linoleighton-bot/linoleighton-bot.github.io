@@ -39,29 +39,52 @@
   /* ------------------------------------------------------------------ boot */
 
   let lastUser;
+  let stopLive = null;
   async function route(session) {
     const user = session?.user ?? null;
     if ((user?.id ?? null) === lastUser) return;
     lastUser = user?.id ?? null;
 
+    stopLive?.();
+    stopLive = null;
     if (!user) {
       setWho(null);
       return renderSignedOut();
     }
     setWho(user.email || 'Signed in');
     await load();
+    stopLive = cp.live.start(() => load(true));
   }
 
-  async function load() {
+  let lastStamp = null;
+  let liveData = null;
+  async function load(quiet = false) {
     try {
       const [data, brief] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null)]);
       if (data) data.brief = brief || null;
-      if (!data.creator) return renderApply(data);
-      if (data.creator.status !== 'active') return renderWaiting(data.creator);
-      if (data.creator.terms_accepted === false) return renderTerms(data);
-      renderDashboard(data);
-      void settleStripeReturn(data);
+      const stamp = JSON.stringify(data);
+      const apply = () => {
+        const countOf = (d) => { try { return d?.creator?.status === 'active' && d.creator.terms_accepted !== false ? feedOf(d).length : null; } catch { return null; } };
+        const before = quiet ? countOf(liveData) : null;
+        lastStamp = stamp;
+        liveData = data;
+        if (!data.creator) renderApply(data);
+        else if (data.creator.status !== 'active') renderWaiting(data.creator);
+        else if (data.creator.terms_accepted === false) renderTerms(data);
+        else renderDashboard(data);
+        cp.live.drawn();
+        const after = countOf(data);
+        if (before != null && after != null && after > before) cp.toast(after - before === 1 ? 'New notification' : `${after - before} new notifications`);
+      };
+      if (quiet) {
+        if (stamp === lastStamp) return;
+        if (cp.live.busy() || tourStep !== null) return cp.live.offer(apply);
+        return apply();
+      }
+      apply();
+      if (data.creator?.status === 'active' && data.creator.terms_accepted !== false) void settleStripeReturn(data);
     } catch (error) {
+      if (quiet) return;
       show(h('div', { class: 'cp-card' }, h('h2', {}, 'We could not load your dashboard'), h('p', { class: 'cp-muted' }, error.message), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: load }, 'Try again')));
     }
   }
@@ -422,6 +445,7 @@
     const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
     const head = h('header', { class: 'mr-head' }, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1]), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
+    cp.live.drawn();
   }
 
   /* " Platinum pays $6 and Diamond $7." - the tiers above theirs that pay more per yearly subscriber. */
