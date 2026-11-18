@@ -179,7 +179,7 @@
   }
 
   /** The same sign-in the account page offers: Apple, Google, or email. */
-  function signInPanel({ title, lead }) {
+  function signInPanel({ title, lead, oauthOnly = false }) {
     const statusEl = h('p', { class: 'auth-status', hidden: true });
     const status = (message, kind = 'error') => {
       statusEl.textContent = message || '';
@@ -238,8 +238,8 @@
       h('p', { class: 'signin__lead' }, lead),
       statusEl,
       h('div', { class: 'signin__providers' }, providerButton('apple', 'Continue with Apple', status), providerButton('google', 'Continue with Google', status)),
-      toggle,
-      form,
+      oauthOnly ? null : toggle,
+      oauthOnly ? null : form,
       h('p', { class: 'signin__legal' }, 'By continuing you agree to our ', h('a', { href: '/terms' }, 'Terms'), ' and ', h('a', { href: '/privacy' }, 'Privacy Policy'), '.'),
     );
   }

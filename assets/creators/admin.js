@@ -59,13 +59,13 @@
     lastUser = user?.id ?? null;
     if (!user) {
       setWho(null);
-      view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, cp.signInPanel({ title: 'Admin sign-in', lead: 'For the Mindroll team.' })));
+      view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, cp.signInPanel({ title: 'Admin sign-in', lead: 'For the Mindroll team.', oauthOnly: true })));
       return;
     }
     setWho(user.email || 'Signed in');
     const { data: isAdmin } = await db.rpc('is_creator_admin');
     if (!isAdmin) {
-      view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'Not an admin account'), h('p', { class: 'cp-muted' }, 'This account does not have access to the creator program admin. If you are a creator, your dashboard is at ', h('a', { href: '/creators/' }, '/creators'), '.')));
+      view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'Access denied.'), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => db.auth.signOut() }, 'Sign out')));
       return;
     }
     await reload();
