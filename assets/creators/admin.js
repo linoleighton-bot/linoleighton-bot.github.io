@@ -740,7 +740,7 @@
       const b = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch { b.textContent = 'Copy failed'; } setTimeout(() => { b.textContent = 'Copy'; }, 1500); } }, 'Copy');
       return b;
     };
-    const linkOf = (c) => `https://getmindroll.com/?ref=${c.code}`;
+    const linkOf = (c) => `https://getmindroll.com/start/?ref=${c.code}`;
     const inviteOf = (c) => `https://getmindroll.com/creators/?invite=${c.code}`;
     const ranked = [...active].sort((x, y) => (y.stats?.clicks || 0) - (x.stats?.clicks || 0));
     const invited = state.creators.filter((x) => x.referred_by).map((x) => ({ ...x, by: state.creators.find((c) => c.id === x.referred_by) }));
