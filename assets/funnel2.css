@@ -840,6 +840,21 @@ body.page-funnel2 .fstep[data-kind='offer']:has(.pw2__plan[data-trial][data-chos
   display: grid;
 }
 
+/*
+ * The rhythm rail is not a countdown, so nothing gates it.
+ *
+ * The rule above hides the rail until a plan with a trial is chosen, which is
+ * right when the rail counts down to a charge: it must never promise free days
+ * to somebody being billed today. When the trial came off the web product the
+ * rail was rewritten as the rhythm of the subscription — today, every morning,
+ * every week after — which is true of every plan on the screen. That rewrite
+ * left this stylesheet behind, so the whole section was in the markup and
+ * invisible, and the paywall went out with its middle missing.
+ */
+body.page-funnel2 .pw2__when--rhythm {
+  display: grid;
+}
+
 body.page-funnel2 .pw2__step {
   position: relative;
   display: grid;
