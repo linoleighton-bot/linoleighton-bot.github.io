@@ -81,6 +81,34 @@
    * dashboard proper. Collapsing the middle one into "no creators yet" is how
    * an empty table gets mistaken for a working one.
    */
+  /*
+   * The unlock link, built for whoever is actually signed in.
+   *
+   * The id has to be theirs, not one baked in at build time — the owner may
+   * sign in with a different account than the one this page was built
+   * expecting, and an unlock that marks the wrong row leaves them staring at
+   * the same locked page with no idea why.
+   */
+  function offerUnlock(user) {
+    const ref = (() => {
+      try {
+        return new URL(url).hostname.split('.')[0];
+      } catch {
+        return null;
+      }
+    })();
+    const sql = `update public.profiles set role = 'admin' where id = '${user.id}';`;
+    const link = root.querySelector('[data-unlock]');
+    const who = root.querySelector('[data-unlock-who]');
+    if (link && ref) {
+      link.setAttribute(
+        'href',
+        `https://supabase.com/dashboard/project/${ref}/sql/new?content=${encodeURIComponent(sql)}`,
+      );
+    }
+    if (who) who.textContent = `This will mark ${user.email || 'this account'} as the owner.`;
+  }
+
   async function gate() {
     const { data } = await client.auth.getUser();
     const user = data?.user || null;
@@ -223,6 +251,7 @@
     show(paneLoading, false);
     show(paneSignedOut, state === 'signed-out');
     show(paneDenied, state === 'denied');
+    if (state === 'denied') offerUnlock((await client.auth.getUser()).data.user);
     show(paneReady, state === 'ready');
     if (state === 'ready') load();
   })();

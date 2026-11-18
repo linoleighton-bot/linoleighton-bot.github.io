@@ -2235,3 +2235,82 @@ body.page-funnel .funnel__body {
     margin-top: 1.1rem;
   }
 }
+
+/* ------------------------------------------------- the agreement scale, worded */
+/*
+ * Five cells that say what they mean, sized like the option rows the later
+ * screens use. The dot grows across the row so the order is readable before
+ * the words are, which is what the old 1–5 was doing badly.
+ */
+.fscale--worded {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  /*
+   * Under the question, not at the foot of the screen.
+   *
+   * The base `.fscale` is pushed down so the old numbered row sat on the
+   * dock. With words the row belongs with the sentence it answers — the
+   * computed margin was 536px, which is a question at the top of a phone and
+   * its answers somewhere near the reader's thumb with nothing in between.
+   */
+  margin-top: 1.5rem;
+}
+
+.fscale--worded .fscale__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  padding: 0.85rem 0.25rem 0.7rem;
+  min-height: 5.1rem;
+  border: 1px solid var(--line, #e3ded3);
+  border-radius: 0.8rem;
+  background: var(--surface, #fffdf8);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.fscale--worded .fscale__dot {
+  display: block;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--clay, #b4542a) 28%, transparent);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+/* The ramp: smallest on "Not me", full on "That's me". */
+.fscale--worded .fscale__step:nth-child(1) .fscale__dot { width: 0.5rem; height: 0.5rem; }
+.fscale--worded .fscale__step:nth-child(2) .fscale__dot { width: 0.68rem; height: 0.68rem; }
+.fscale--worded .fscale__step:nth-child(3) .fscale__dot { width: 0.86rem; height: 0.86rem; }
+.fscale--worded .fscale__step:nth-child(4) .fscale__dot { width: 1.04rem; height: 1.04rem; }
+.fscale--worded .fscale__step:nth-child(5) .fscale__dot { width: 1.22rem; height: 1.22rem; }
+
+.fscale--worded .fscale__word {
+  font-size: 0.74rem;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--ink-soft, #5c5a55);
+  text-wrap: balance;
+}
+
+.fscale--worded .fscale__step:hover {
+  border-color: color-mix(in srgb, var(--clay, #b4542a) 45%, var(--line, #e3ded3));
+}
+
+.fscale--worded .fscale__step[data-chosen] {
+  border-color: var(--clay, #b4542a);
+  background: color-mix(in srgb, var(--clay, #b4542a) 8%, var(--surface, #fffdf8));
+}
+.fscale--worded .fscale__step[data-chosen] .fscale__dot {
+  background: var(--clay, #b4542a);
+  transform: scale(1.1);
+}
+.fscale--worded .fscale__step[data-chosen] .fscale__word {
+  color: var(--ink, #1b1a18);
+  font-weight: 600;
+}
+
+@media (max-width: 24rem) {
+  .fscale--worded .fscale__word { font-size: 0.68rem; }
+  .fscale--worded .fscale__step { padding-inline: 0.15rem; min-height: 4.8rem; }
+}

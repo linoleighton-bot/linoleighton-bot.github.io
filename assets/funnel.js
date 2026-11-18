@@ -1022,10 +1022,23 @@
         : `${chosen.amount} every ${every}, starting today.`;
     };
 
+    /*
+     * Picking a plan while the checkout is open.
+     *
+     * The cards stay live behind the form on purpose — changing your mind at
+     * the till is the most ordinary thing in the world. Repainting them was
+     * not enough: the form already mounted was the old plan's, so the reader
+     * saw weekly selected above an annual payment sheet, and whatever they
+     * typed would have bought the year. `reopen` is set after the handlers
+     * exist, because the checkout is wired further down this same function.
+     */
+    let reopen = null;
     for (const button of planButtons) {
       button.addEventListener('click', () => {
+        const was = plan;
         plan = button.dataset.planId;
         paint();
+        if (was !== plan && reopen) reopen();
       });
     }
     paint();
@@ -1164,8 +1177,21 @@
       node.hidden = !message;
     };
 
+    /*
+     * Which checkout is the live one.
+     *
+     * The till can be reopened before the last one finished — somebody opens
+     * the annual form, then changes their mind and taps weekly. Each open
+     * takes a ticket; anything that comes back holding an old ticket is a
+     * form the reader has already walked away from, and acting on it would
+     * mean charging the plan they just rejected or sending them through to
+     * the closing screen off a purchase that is no longer theirs.
+     */
+    let session = 0;
+    const tillOpen = () => Boolean(till) && !till.hidden;
+
     if (checkout && boot.checkout) {
-      checkout.addEventListener('click', async () => {
+      const openCheckout = async () => {
         /* No account, no identity to attach a subscription to. */
         if (!user) {
           index = order.indexOf('account');
@@ -1173,10 +1199,21 @@
           return;
         }
 
+        const mine = ++session;
         const chosen = boot.plans.find((p) => p.id === plan);
         checkout.disabled = true;
         say('Opening the checkout…', 'busy');
         let unfit = null;
+
+        /*
+         * Empty the till before filling it.
+         *
+         * The SDK mounts its form into this element and has no close of its
+         * own, so a second open would otherwise stack a second form under the
+         * first — the reader would see the plan they rejected sitting above
+         * the one they chose.
+         */
+        if (till) till.replaceChildren();
 
         try {
           const Purchases = await loadSdk();
@@ -1216,6 +1253,9 @@
            * than merely returned — an empty entitlement set here means
            * something went through that did not grant anything.
            */
+          /* A newer checkout has opened since; this one is a ghost. */
+          if (mine !== session) return;
+
           const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
           if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
           unfit();
@@ -1223,6 +1263,8 @@
           next();
         } catch (error) {
           unfit?.();
+          /* Superseded: the newer checkout owns the till now, so leave it be. */
+          if (mine !== session) return;
           if (till) till.hidden = true;
           checkout.disabled = false;
 
@@ -1256,7 +1298,13 @@
               'please try again, or email ' + boot.support + ' and we will sort it out.';
           say(wording);
         }
-      });
+      };
+
+      checkout.addEventListener('click', openCheckout);
+      /* Now that it exists, a plan change can reopen the till on the new one. */
+      reopen = () => {
+        if (tillOpen()) openCheckout();
+      };
     }
   }
 

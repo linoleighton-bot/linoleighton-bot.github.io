@@ -1101,3 +1101,64 @@ body.page-funnel2 .fbuild__line[data-done]::after {
   top: 50%;
   margin-top: -0.42rem;
 }
+
+/* ------------------------------------------- the worded scale, in this flow */
+/*
+ * This flow sizes every scale point as a 3.2rem square, which was right when
+ * each held a single digit and wrong the moment they held a word — "Sometimes"
+ * in a square is two cramped lines. The worded scale keeps the flow's placement
+ * (low on the screen, with the other option lists) and takes its own shape: a
+ * five-column row that is as tall as its labels need.
+ */
+body.page-funnel2 .fscale--worded {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  width: 100%;
+}
+
+body.page-funnel2 .fscale--worded .fscale__step {
+  width: auto;
+  height: auto;
+  min-height: 4.9rem;
+  padding: 0.8rem 0.2rem 0.65rem;
+  font-size: inherit;
+  font-weight: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.8rem;
+}
+
+body.page-funnel2 .fscale--worded .fscale__word {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__word {
+  font-weight: 650;
+}
+
+/*
+ * A short question and a single row of answers belong together.
+ *
+ * This flow pushes its option lists to the bottom so they fall under the
+ * thumb, which is right for a six-item list that fills the space on its way
+ * down. A one-line scale leaves a question stranded at the top of the screen
+ * and its answers 700px below, with nothing in between — the reader reads,
+ * then hunts. Letting the heading take the slack instead puts the pair low
+ * together, so the empty space is above them where it reads as room rather
+ * than as a missing section.
+ */
+body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
+  margin-top: auto;
+}
+
+body.page-funnel2 .fscale--worded {
+  margin-top: 1.4rem;
+  /* With the heading's auto margin above, this splits the slack evenly and
+     the pair sits in the middle of the screen rather than on its floor. */
+  margin-bottom: auto;
+}
