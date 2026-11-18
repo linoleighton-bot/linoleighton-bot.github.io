@@ -234,7 +234,7 @@
   /* Which of the two panes is showing, and the data to redraw it from. */
   /* The same plain scheme as the admin: one accent for every chart and button. */
   Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
-  const PANES = [['home', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['campaigns', 'Campaigns', 'flag'], ['videos', 'Videos', 'play'], ['links', 'Links', 'link'], ['wallet', 'Wallet', 'wallet'], ['pay', 'Ranks', 'trophy'], ['race', 'Race', 'medal'], ['invite', 'Invite', 'users']];
+  const PANES = [['home', 'Home', 'home'], ['brief', 'UGC Brief', 'book'], ['alerts', 'Notifications', 'bell'], ['campaigns', 'Campaigns', 'flag'], ['videos', 'Videos', 'play'], ['links', 'Links', 'link'], ['wallet', 'Wallet', 'wallet'], ['pay', 'Ranks', 'trophy'], ['race', 'Race', 'medal'], ['invite', 'Invite', 'users']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0',
@@ -244,6 +244,7 @@
     trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4m-4 3h8',
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+    book: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10M9 8h5',
     medal: 'M8 3h8l-2.5 6h-3zM12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm0-8v4m-1.5-3.2L12 13',
   };
   const icon = (name) => {
@@ -403,6 +404,7 @@
     };
     const body = {
       home: () => homeView(data),
+      brief: () => briefView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
       videos: () => [briefsCard(data), ironCard(data), videosCard(data), viewsCard(data)],
@@ -413,7 +415,7 @@
       invite: () => [referralCard(data), manychatCard(data)],
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
-    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, String(count[id])) : null)));
+    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
     const help = h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
     const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
@@ -616,6 +618,93 @@
   function raceBanner(label, left, amount, right, foot, state, level) {
     return h('section', { class: 'mr-prize', 'data-won': state === 'won' ? '' : null, 'data-mine': state === 'mine' ? '' : null, 'data-metal': METAL[level] || null }, h('small', {}, label), h('div', { class: 'mr-prize__row' }, h('span', {}, left), h('b', {}, amount), h('span', {}, right)), foot ? h('em', {}, foot) : null);
   }
+  /* ------------------------------------------------------------- UGC brief */
+
+  /* What to make and how to make it: the brief every creator gets, kept in the dashboard. */
+  const BRIEF = {
+    examples: [
+      ['ex1', 'How To Be Good At Anything', 'Numbered tips, skill grid behind the creator', 'https://drive.google.com/file/d/1CxdJJRo3I92R2EOk0QPzImPHi2XzgxpF/view'],
+      ['ex2', 'How to become The Mentalist', 'Pop-culture character hook, stills cut in', 'https://drive.google.com/file/d/1dzMHwkOloNlEYkDVdL6bVmsAMs0WwzRz/view'],
+      ['ex3', '10/10 habits to become disgustingly overeducated', 'Rated listicle, photo strip on top', 'https://drive.google.com/file/d/1DB6k2j0dSHKcKYeR3gDYUTX673bAQmcu/view'],
+      ['ex4', 'Fast talking head, movie stills', 'Captions under the face, high energy', 'https://drive.google.com/file/d/19x0W8iJ7yv5va4R7AEXMNSu8sOyILrDq/view'],
+      ['ex5', '10/10 things every man should do', 'Rated listicle, character stills under the face', 'https://drive.google.com/file/d/1GfmEPs7LBXA2MrtYokegtRC1UHsxoHv6/view'],
+      ['ex6', 'Five apps every man must have on his phone', 'App list, icons under the face. MindRoll is one of the five.', 'https://drive.google.com/file/d/14-Wwa_5kfrOdnQBcbxR0OS4g-Q7CDVbu/view'],
+      ['ex7', '10/10 highest ROI skills that cost you nothing', 'Rated listicle, big title on top', 'https://drive.google.com/file/d/1ENkCYdvmyWGx_nT7RqDPZ0O8RTcBoXZp/view'],
+      ['ex8', 'How to shift', 'Talking head, concept images under the face', 'https://drive.google.com/file/d/1KJCEIKeG8FullFlHhGvJBDKHrpukV4Vy/view'],
+      ['ex9', 'The highest form of...', 'Close-up talking head, captions only', 'https://drive.google.com/file/d/1zxb-5h_LvtgrmRfamPVqouQfwV0u_Xfv/view'],
+    ],
+    allExamples: 'https://drive.google.com/drive/folders/1FOp2VS4h6rT0o3l4FbsqBD0CEsxBJek8',
+    ctaList: 'https://docs.google.com/document/d/1txrugBaecNOUzhjMN2iRuoZCG6He0285X_4ULGbiWhc/edit',
+    ctas: [
+      'Read books about a topic that interests you. I use this method that has all of the world\'s best books, but summarized for you with the most valuable information, so I have the knowledge of all the books in way less time.',
+      'Reading books takes way too much time, so I\'ve been using apps like MindRoll so I just scan any book and scroll through key point summaries in the book, allowing you to read way more books in way less time.',
+      'This method which helped me, which gives me bite sized ideas from actual books instead of brain rotting content. It makes you dangerously smart instead of doomscrolling all day.',
+      'By using apps like MindRoll, which allows you to scan any book cover, it allows you to scroll through the key ideas and key point summaries, allowing you to read multiple books insanely fast.',
+      'I use a method that gives me bite sized ideas from actual books, instead of scrolling and filling my brain with bullshit on TikTok, so now I\'m absorbing the greatest ideas from the top books out there.',
+    ],
+    assets: [
+      ['MindRoll Assets folder', 'App Store image, screen recording, app clips', 'https://drive.google.com/drive/folders/1SRvBU9OLonephUFqgxaEmeLVz4yR_D3K', true],
+      ['App screen recording', 'Use this where the examples show their app', 'https://drive.google.com/file/d/16bNkPkCzN5pxGTYzn7oOTp_2sbYTgeFB/view'],
+      ['Logo files', 'PNG and SVG', 'https://drive.google.com/drive/folders/1jHU1XAuTSqGYT-zeRTqvZq_obSc5nVo2'],
+      ['MindRoll on the App Store', 'Link for your bio', 'https://apps.apple.com/us/app/mindroll-get-smarter-daily/id6810303765'],
+    ],
+    mustHave: 'https://drive.google.com/file/d/1rK54XQt2V9c19_it0f0H1ms9-JghLQll/view',
+  };
+
+  function briefView(data) {
+    const out = (href, ...kids) => h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, ...kids);
+    const copyButton = (text) => {
+      const b = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch { b.textContent = 'Copy failed'; } setTimeout(() => { b.textContent = 'Copy'; }, 1400); } }, 'Copy');
+      return b;
+    };
+    const block = (eyebrow, title, ...body) => h('section', { class: 'mr-panel mr-brief' }, h('p', { class: 'mr-brief__eyebrow' }, eyebrow), h('h2', {}, title), ...body);
+    const link = `https://getmindroll.com/?ref=${data.creator.code}`;
+    return [
+      h('section', { class: 'mr-briefhero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Read this before you film'), h('h2', {}, 'MindRoll UGC Brief'), h('p', {}, 'Guidance for creators making MindRoll videos: what to make, what to say, and what to include.')),
+      block(
+        'Examples',
+        'The type of content we are looking for',
+        h('p', { class: 'cp-muted' }, 'These are not UGC videos we made. They are our competitors\' videos, and this content style is what we think will perform best. Subtly integrate MindRoll into videos like these.'),
+        h(
+          'div',
+          { class: 'mr-brief__cards' },
+          BRIEF.examples.map(([img, title, note, href]) => out(href, h('span', { class: 'mr-brief__thumb' }, h('img', { src: `/assets/creators/brief/${img}.jpg`, alt: '', loading: 'lazy' }), h('i', { 'aria-hidden': 'true' }, '▶')), h('b', {}, title), h('small', {}, note))),
+          out(BRIEF.allExamples, h('span', { class: 'mr-brief__thumb mr-brief__thumb--more' }, h('i', { 'aria-hidden': 'true' }, '+')), h('b', {}, 'All examples'), h('small', {}, 'Opens in Google Drive')),
+        ),
+      ),
+      block(
+        'CTAs',
+        'Use something similar to these',
+        h('p', { class: 'cp-muted' }, 'Drop it in naturally, the way the examples mention their app. Say the name MindRoll. ', out(BRIEF.ctaList, 'Full CTA list'), '.'),
+        h('ul', { class: 'mr-brief__list' }, BRIEF.ctas.map((text) => h('li', {}, h('span', {}, `"${text}"`), copyButton(text)))),
+      ),
+      block(
+        'Assets',
+        'Everything is in our Google Drive',
+        h('div', { class: 'mr-brief__assets' }, BRIEF.assets.map(([title, note, href, lead]) => { const a = out(href, h('b', {}, title), h('small', {}, note)); if (lead) a.dataset.lead = ''; return a; })),
+      ),
+      block(
+        'One must-have',
+        'Include this image in every video',
+        h('div', { class: 'mr-brief__must' }, h('img', { src: '/assets/creators/brief/appstore-listing.jpg', alt: 'MindRoll App Store listing: the MindRoll logo, Mindroll: Get Smarter Daily', loading: 'lazy' }), h('div', {}, h('p', {}, 'This is our App Store screenshot with our logo. Show it in every creative so people know what to search for.'), out(BRIEF.mustHave, 'Download the image (IMG_2819.PNG)'))),
+      ),
+      block(
+        'Highly recommended',
+        'Send viewers to the comments, then DM them your link',
+        h(
+          'ul',
+          { class: 'mr-brief__list' },
+          h('li', {}, h('span', {}, 'End every video the way the examples do: "Comment ', h('b', {}, 'book'), ' and I\'ll send it to you." Pick any word, keep it the same across your videos.')),
+          h('li', {}, h('span', {}, 'Then manually DM everyone who comments your custom link. That is how a sale gets attributed to you, so tracking stays accurate.'), copyButton(link)),
+          h('li', {}, h('span', {}, 'You don\'t have to do this. But if you skip it you will miss out on a lot of extra money, and sales that came from your video won\'t be credited to you.')),
+          h('li', {}, h('span', {}, 'Once you reach a certain rank, we pay for your ManyChat and the DMs become fully automated.')),
+        ),
+        h('p', { class: 'cp-muted cp-small' }, 'Your link: ', h('code', { class: 'cp-mono' }, link.replace('https://', ''))),
+      ),
+      h('section', { class: 'mr-panel mr-brief' }, h('p', {}, h('b', {}, 'You have freedom. '), 'If you think another format or different CTAs will perform better for your audience, do that. This is guidance on what we think will perform best, not a script.'), h('p', { class: 'cp-muted cp-small' }, 'Questions: ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'), '. Send us the post link the same day you post.')),
+    ];
+  }
+
   function raceView(data) {
     const prizes = raceOf(data);
     if (!prizes.length) return [h('div', { class: 'mr-blank' }, icon('medal'), h('b', {}, 'No race on right now'))];
