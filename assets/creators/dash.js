@@ -279,8 +279,8 @@
     const feed = feedOf(data);
     const seen = Number(keep('mindroll.creator.seen') || 0);
     keep('mindroll.creator.seen', String(Date.now()));
-    if (!feed.length) return [h('div', { class: 'ad-blank' }, icon('bell'), h('b', {}, 'Nothing yet'), h('span', {}, 'Bonuses, wins and payments will show up here.'))];
-    return [h('section', { class: 'ad-panel' }, h('ul', { class: 'ad-alerts' }, feed.map((e) => h('li', { class: 'ad-alert', 'data-new': new Date(e.at).getTime() > seen || null }, h('i', {}, icon(e.glyph)), h('div', {}, h('small', {}, e.label), h('b', {}, e.title), h('span', {}, e.detail)), h('time', {}, ago(e.at)), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => openPane(e.to) }, 'Open')))))];
+    if (!feed.length) return [h('div', { class: 'mr-blank' }, icon('bell'), h('b', {}, 'Nothing yet'), h('span', {}, 'Bonuses, wins and payments will show up here.'))];
+    return [h('section', { class: 'mr-panel' }, h('ul', { class: 'mr-alerts' }, feed.map((e) => h('li', { class: 'mr-alert', 'data-new': new Date(e.at).getTime() > seen || null }, h('i', {}, icon(e.glyph)), h('div', {}, h('small', {}, e.label), h('b', {}, e.title), h('span', {}, e.detail)), h('time', {}, ago(e.at)), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => openPane(e.to) }, 'Open')))))];
   }
 
   function walletCard(data) {
@@ -310,14 +310,14 @@
     const big = (cents) => { const v = Math.round(cents / 100); return `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-US')}`; };
     const weeks = weekly(data);
     const top = Math.max(1, ...weeks.map((w) => w.value));
-    const tile = (tone, label, value, foot, to) => h('button', { class: 'ad-tile', 'data-tone': tone, type: 'button', onclick: () => openPane(to) }, h('span', { class: 'ad-tile__label' }, label), h('b', { class: 'ad-tile__value' }, value), foot ? h('span', { class: 'ad-tile__foot' }, foot) : null);
+    const tile = (tone, label, value, foot, to) => h('button', { class: 'mr-tile', 'data-tone': tone, type: 'button', onclick: () => openPane(to) }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
     const live = (data.contests || []).filter((k) => k.open || k.upcoming);
     return [
       creator.payout_hold ? h('div', { class: 'cp-card cp-notice', role: 'status' }, h('b', {}, 'Your payouts are on hold'), h('p', { class: 'cp-muted' }, 'We are checking your account. Nothing is paid out until that is done. Questions: ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))) : null,
       h(
         'section',
-        { class: 'ad-grid' },
-        h('div', { class: 'ad-tile ad-tile--hero', 'data-tone': 'ink' }, h('span', { class: 'ad-tile__label' }, 'Your wallet'), h('b', { class: 'ad-tile__value' }, big(Math.max(0, balance.available_cents))), h('div', { class: 'ad-tile__row' }, h('span', {}, h('b', {}, big(balance.commission_cents + balance.bonus_cents)), 'earned in total'), h('span', {}, h('b', {}, big(Math.max(0, balance.pending_cents))), 'still clearing'), h('span', {}, h('b', {}, big(balance.paid_cents)), 'paid to you')), h('div', { class: 'ad-spark', role: 'img', 'aria-label': 'What you earned each week for the last eight weeks' }, weeks.map((w, i) => h('i', { title: `${w.label}: ${big(w.value)}`, style: `height:${Math.max(4, (w.value / top) * 100).toFixed(1)}%`, 'data-today': i === weeks.length - 1 || null })))),
+        { class: 'mr-grid' },
+        h('div', { class: 'mr-tile mr-tile--hero', 'data-tone': 'ink' }, h('span', { class: 'mr-tile__label' }, 'Your wallet'), h('b', { class: 'mr-tile__value' }, big(Math.max(0, balance.available_cents))), h('div', { class: 'mr-tile__row' }, h('span', {}, h('b', {}, big(balance.commission_cents + balance.bonus_cents)), 'earned in total'), h('span', {}, h('b', {}, big(Math.max(0, balance.pending_cents))), 'still clearing'), h('span', {}, h('b', {}, big(balance.paid_cents)), 'paid to you')), h('div', { class: 'mr-spark', role: 'img', 'aria-label': 'What you earned each week for the last eight weeks' }, weeks.map((w, i) => h('i', { title: `${w.label}: ${big(w.value)}`, style: `height:${Math.max(4, (w.value / top) * 100).toFixed(1)}%`, 'data-today': i === weeks.length - 1 || null })))),
         tile('paper', 'Your rank', creator.champion ? 'Champion' : tier.name, `${pct(creator.rate)} of every sale`, 'pay'),
         tile('paper', 'Subscribers', num(stats.customers || 0), `${cp.dollars(stats.recurring_month_cents || 0)} a month coming in`, 'links'),
         tile('paper', 'Views', compact(stats.views || 0), `${num(stats.videos || 0)} video${stats.videos === 1 ? '' : 's'}`, 'videos'),
@@ -325,7 +325,7 @@
       ),
       firstSaleNote(data),
       ironCard(data),
-      h('div', { class: 'ad-two' }, tierCard(data, tier), h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('campaigns') }, 'Campaigns')), live.length ? h('ul', { class: 'ad-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `Win up to ${cp.dollars(k.prizes[0] || 0)}${k.joined ? (k.place ? ` · you are ${ordinal(k.place)}` : ' · you are in') : ''}`)), h('b', {}, k.joined ? 'Joined' : 'Join')))) : h('p', { class: 'ad-quiet' }, 'No campaign running right now.'))),
+      h('div', { class: 'mr-two' }, tierCard(data, tier), h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('campaigns') }, 'Campaigns')), live.length ? h('ul', { class: 'mr-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `Win up to ${cp.dollars(k.prizes[0] || 0)}${k.joined ? (k.place ? ` · you are ${ordinal(k.place)}` : ' · you are in') : ''}`)), h('b', {}, k.joined ? 'Joined' : 'Join')))) : h('p', { class: 'mr-quiet' }, 'No campaign running right now.'))),
       topVideosCard(data),
       data.videos.length ? null : howCard(data),
       raceStrip(data),
@@ -377,12 +377,12 @@
     const end = () => { tourStep = null; keep('mindroll.creator.toured', '1'); renderDashboard(data); };
     return h(
       'aside',
-      { class: 'ad-tour', role: 'dialog', 'aria-label': 'Demo run' },
-      h('div', { class: 'ad-tour__top' }, h('small', {}, `Demo run · ${tourStep + 1} of ${steps.length}`), h('button', { class: 'cp-link', type: 'button', onclick: end }, 'Skip')),
-      h('div', { class: 'ad-tour__dots', 'aria-hidden': 'true' }, steps.map((_, i) => h('i', { 'data-on': i <= tourStep || null }))),
+      { class: 'mr-tour', role: 'dialog', 'aria-label': 'Demo run' },
+      h('div', { class: 'mr-tour__top' }, h('small', {}, `Demo run · ${tourStep + 1} of ${steps.length}`), h('button', { class: 'cp-link', type: 'button', onclick: end }, 'Skip')),
+      h('div', { class: 'mr-tour__dots', 'aria-hidden': 'true' }, steps.map((_, i) => h('i', { 'data-on': i <= tourStep || null }))),
       h('b', {}, title),
       lines.filter(Boolean).map((line) => h('p', {}, line)),
-      h('div', { class: 'ad-tour__nav' }, tourStep > 0 ? h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: move(tourStep - 1) }, 'Back') : h('span', {}), h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: move(tourStep + 1) }, tourStep === steps.length - 1 ? 'Finish' : 'Next')),
+      h('div', { class: 'mr-tour__nav' }, tourStep > 0 ? h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: move(tourStep - 1) }, 'Back') : h('span', {}), h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: move(tourStep + 1) }, tourStep === steps.length - 1 ? 'Finish' : 'Next')),
     );
   }
 
@@ -413,12 +413,12 @@
       invite: () => [referralCard(data), manychatCard(data)],
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
-    const nav = h('nav', { class: 'ad-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'ad-nav', type: 'button', 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, String(count[id])) : null)));
-    const help = h('button', { class: 'ad-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
-    const bellButton = pane === 'alerts' ? null : h('button', { class: 'ad-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
-    const tour = h('button', { class: 'ad-tool', type: 'button', onclick: startTour }, 'Demo run');
-    const head = h('header', { class: 'ad-head' }, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1]), h('div', { class: 'ad-head__tools' }, tour, help, bellButton));
-    show(h('div', { class: 'ad-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'ad-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
+    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, String(count[id])) : null)));
+    const help = h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
+    const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
+    const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
+    const head = h('header', { class: 'mr-head' }, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1]), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
+    show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
   }
 
   /* " Platinum pays $6 and Diamond $7." - the tiers above theirs that pay more per yearly subscriber. */
@@ -593,10 +593,10 @@
     const need = Number(i.steps_by_views) - Number(i.steps_allowed);
     return h(
       'section',
-      { class: 'ad-panel' },
-      h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Views pay'), h('b', {}, cp.dollars(i.paid_cents))),
+      { class: 'mr-panel' },
+      h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Views pay'), h('b', {}, cp.dollars(i.paid_cents))),
       done
-        ? h('p', { class: 'ad-quiet' }, `You have earned all ${cp.dollars(most * i.step_cents)} of it.`)
+        ? h('p', { class: 'mr-quiet' }, `You have earned all ${cp.dollars(most * i.step_cents)} of it.`)
         : locked
           ? h('div', { class: 'cp-card cp-notice' }, h('b', {}, `Locked at ${cp.dollars(i.paid_cents)}`), h('p', {}, `You have the views. Get ${need === 1 ? '1 more subscriber' : `${need} more subscribers`} through your link to unlock ${need === 1 ? `the next ${each}` : `${cp.dollars(need * i.step_cents)}`}.`))
           : progress(`Views to your next ${each}`, Math.min(views, nextAt), nextAt, compact),
@@ -614,17 +614,17 @@
   /* The metal each rank is named after, by its place in the ladder. */
   const METAL = [null, 'iron', 'silver', 'gold', 'platinum', 'diamond'];
   function raceBanner(label, left, amount, right, foot, state, level) {
-    return h('section', { class: 'ad-prize', 'data-won': state === 'won' ? '' : null, 'data-mine': state === 'mine' ? '' : null, 'data-metal': METAL[level] || null }, h('small', {}, label), h('div', { class: 'ad-prize__row' }, h('span', {}, left), h('b', {}, amount), h('span', {}, right)), foot ? h('em', {}, foot) : null);
+    return h('section', { class: 'mr-prize', 'data-won': state === 'won' ? '' : null, 'data-mine': state === 'mine' ? '' : null, 'data-metal': METAL[level] || null }, h('small', {}, label), h('div', { class: 'mr-prize__row' }, h('span', {}, left), h('b', {}, amount), h('span', {}, right)), foot ? h('em', {}, foot) : null);
   }
   function raceView(data) {
     const prizes = raceOf(data);
-    if (!prizes.length) return [h('div', { class: 'ad-blank' }, icon('medal'), h('b', {}, 'No race on right now'))];
+    if (!prizes.length) return [h('div', { class: 'mr-blank' }, icon('medal'), h('b', {}, 'No race on right now'))];
     const open = prizes.filter((r) => !r.winner);
     const total = prizes.reduce((sum, r) => sum + Number(r.cents), 0);
     const left = open.reduce((sum, r) => sum + Number(r.cents), 0);
     return [
       raceBanner('Race to the podium', 'First to', cp.dollars(total), 'each rank', open.length ? `${cp.dollars(left)} still to win. One winner per rank, one time only.` : 'Every prize has been won.'),
-      h('div', { class: 'ad-race' }, prizes.map((r) => (r.you
+      h('div', { class: 'mr-race' }, prizes.map((r) => (r.you
         ? raceBanner('You won', 'First to', cp.dollars(r.cents), r.name, 'It is in your wallet.', 'mine', r.level)
         : r.winner
           ? raceBanner('Claimed', 'Won by', cp.dollars(r.cents), r.winner, `First creator to reach ${r.name}.`, 'won', r.level)
@@ -636,7 +636,7 @@
   function raceStrip(data) {
     const open = raceOf(data).filter((r) => !r.winner).reverse();
     if (!open.length) return null;
-    return h('button', { class: 'ad-racestrip', type: 'button', onclick: () => openPane('race') }, h('small', {}, 'Race to the podium'), h('b', {}, cp.dollars(open.reduce((sum, r) => sum + Number(r.cents), 0))), h('span', {}, `still to win. First to ${open[0].name} takes ${cp.dollars(open[0].cents)}.`), h('em', {}, 'See the race'));
+    return h('button', { class: 'mr-racestrip', type: 'button', onclick: () => openPane('race') }, h('small', {}, 'Race to the podium'), h('b', {}, cp.dollars(open.reduce((sum, r) => sum + Number(r.cents), 0))), h('span', {}, `still to win. First to ${open[0].name} takes ${cp.dollars(open[0].cents)}.`), h('em', {}, 'See the race'));
   }
 
   /* The first weekly sale and the first yearly sale pay a bigger share, once each. */
@@ -752,10 +752,10 @@
     const total = wins.reduce((sum, b) => sum + b.amount_cents, 0);
     return h(
       'section',
-      { class: 'ad-panel ad-wins' },
-      h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Your wins, last 2 weeks'), h('b', {}, cp.dollars(total))),
-      h('ul', { class: 'ad-leaders' }, wins.map((b, i) => h('li', {}, h('i', {}, String(i + 1)), h('span', {}, h('b', {}, b.label), h('small', {}, ago(b.created_at))), h('b', {}, `+${cp.dollars(b.amount_cents)}`)))),
-      h('div', { class: 'ad-wins__foot' }, h('span', {}, `${wins.length} win${wins.length === 1 ? '' : 's'} · ${cp.dollars(total)} added to your wallet`), h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => openPane('wallet') }, 'Open wallet')),
+      { class: 'mr-panel mr-wins' },
+      h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your wins, last 2 weeks'), h('b', {}, cp.dollars(total))),
+      h('ul', { class: 'mr-leaders' }, wins.map((b, i) => h('li', {}, h('i', {}, String(i + 1)), h('span', {}, h('b', {}, b.label), h('small', {}, ago(b.created_at))), h('b', {}, `+${cp.dollars(b.amount_cents)}`)))),
+      h('div', { class: 'mr-wins__foot' }, h('span', {}, `${wins.length} win${wins.length === 1 ? '' : 's'} · ${cp.dollars(total)} added to your wallet`), h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => openPane('wallet') }, 'Open wallet')),
     );
   }
 

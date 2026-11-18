@@ -129,12 +129,12 @@
       campaigns: contests.filter((k) => !k.settled_at && !k.open && !k.upcoming && new Date(k.pay_from || k.ends_at) <= new Date()).length,
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
-    const nav = h('nav', { class: 'ad-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'ad-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
+    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
     const body = { overview: home, alerts, creators, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
-    const bellButton = h('button', { class: 'ad-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
-    const head = h('header', { class: 'ad-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'ad-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
-    view.replaceChildren(h('div', { class: 'ad-shell' }, nav, h('div', { class: 'ad-main' }, head, ...[body].flat().filter(Boolean))));
+    const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
+    const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
+    view.replaceChildren(h('div', { class: 'mr-shell' }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))));
   }
   const go = (id) => () => { tab = id; history.replaceState(null, '', `#${id}`); render(); window.scrollTo(0, 0); };
   const store = (key, value) => { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { /* private window */ } return null; };
@@ -142,7 +142,7 @@
   /* Explanations are hidden until asked for, so the screens stay numbers and pictures. */
   const helpOn = () => store('mindroll.admin.help') === 'on';
   function helpButton() {
-    return h('button', { class: 'ad-tool', type: 'button', 'aria-pressed': String(helpOn()), title: 'Show or hide the explanations', onclick: () => { store('mindroll.admin.help', helpOn() ? 'off' : 'on'); render(); } }, helpOn() ? 'Hide notes' : 'Explain');
+    return h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), title: 'Show or hide the explanations', onclick: () => { store('mindroll.admin.help', helpOn() ? 'off' : 'on'); render(); } }, helpOn() ? 'Hide notes' : 'Explain');
   }
 
   /* ---------------------------------------------------------- notifications */
@@ -157,15 +157,15 @@
     const feed = state.feed || [];
     const seen = Number(store('mindroll.admin.seen') || 0);
     store('mindroll.admin.seen', String(Date.now()));
-    if (!feed.length) return h('div', { class: 'ad-blank' }, icon('bell'), h('b', {}, 'Nothing yet'), h('span', {}, 'New creators, big videos and payment requests will show up here.'));
+    if (!feed.length) return h('div', { class: 'mr-blank' }, icon('bell'), h('b', {}, 'Nothing yet'), h('span', {}, 'New creators, big videos and payment requests will show up here.'));
     const dayOf = (iso) => { const d = new Date(iso); const today = new Date(); const diff = Math.floor((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5); return diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : 'Earlier'; };
     const row = (e) => {
       const [glyph, label, action] = FEED[e.kind] || ['bell', 'Update', 'Open'];
-      return h('li', { class: 'ad-alert', 'data-kind': e.kind, 'data-new': new Date(e.at).getTime() > seen || null }, h('i', {}, icon(glyph)), h('div', {}, h('small', {}, label), h('b', {}, e.title), h('span', {}, e.detail)), h('time', {}, since(e.at)), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: go(e.tab === 'rankings' && (e.kind === 'milestone' || e.kind === 'growth') ? 'rankings' : e.tab || 'overview') }, action));
+      return h('li', { class: 'mr-alert', 'data-kind': e.kind, 'data-new': new Date(e.at).getTime() > seen || null }, h('i', {}, icon(glyph)), h('div', {}, h('small', {}, label), h('b', {}, e.title), h('span', {}, e.detail)), h('time', {}, since(e.at)), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: go(e.tab === 'rankings' && (e.kind === 'milestone' || e.kind === 'growth') ? 'rankings' : e.tab || 'overview') }, action));
     };
     return ['Today', 'Yesterday', 'Earlier'].map((group) => {
       const items = feed.filter((e) => dayOf(e.at) === group);
-      return items.length ? h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, group), h('b', {}, String(items.length))), h('ul', { class: 'ad-alerts' }, items.map(row))) : null;
+      return items.length ? h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, group), h('b', {}, String(items.length))), h('ul', { class: 'mr-alerts' }, items.map(row))) : null;
     });
   }
 
@@ -187,13 +187,13 @@
     const src = embedOf(url);
     const close = () => { layer.remove(); document.removeEventListener('keydown', onKey); };
     const onKey = (event) => { if (event.key === 'Escape') close(); };
-    const frame = src ? h('iframe', { src, title: title || 'Video', allow: 'encrypted-media; fullscreen; picture-in-picture', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin' }) : h('p', { class: 'ad-quiet' }, 'This link cannot be shown here.');
-    const layer = h('div', { class: 'ad-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title || 'Video preview', onclick: (event) => { if (event.target === layer) close(); } }, h('div', { class: 'ad-modal__box' }, h('div', { class: 'ad-modal__head' }, h('b', {}, title || 'Video'), h('button', { class: 'ad-tool', type: 'button', onclick: close }, 'Close')), frame, cp.safeUrl(url) ? h('a', { class: 'btn btn--ghost btn--sm', href: cp.safeUrl(url), target: '_blank', rel: 'noopener noreferrer' }, 'Open the original') : null));
+    const frame = src ? h('iframe', { src, title: title || 'Video', allow: 'encrypted-media; fullscreen; picture-in-picture', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin' }) : h('p', { class: 'mr-quiet' }, 'This link cannot be shown here.');
+    const layer = h('div', { class: 'mr-modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': title || 'Video preview', onclick: (event) => { if (event.target === layer) close(); } }, h('div', { class: 'mr-modal__box' }, h('div', { class: 'mr-modal__head' }, h('b', {}, title || 'Video'), h('button', { class: 'mr-tool', type: 'button', onclick: close }, 'Close')), frame, cp.safeUrl(url) ? h('a', { class: 'btn btn--ghost btn--sm', href: cp.safeUrl(url), target: '_blank', rel: 'noopener noreferrer' }, 'Open the original') : null));
     document.body.append(layer);
     document.addEventListener('keydown', onKey);
   }
   /* A "Watch" button for any video link that can be shown in place. */
-  const watch = (url, title) => (embedOf(url) ? h('button', { class: 'ad-watch', type: 'button', onclick: () => openPreview(url, title) }, icon('play'), 'Watch') : null);
+  const watch = (url, title) => (embedOf(url) ? h('button', { class: 'mr-watch', type: 'button', onclick: () => openPreview(url, title) }, icon('play'), 'Watch') : null);
 
   /* ----------------------------------------------------------------- money */
 
@@ -211,19 +211,19 @@
     const sum = (rows, key) => rows.reduce((total, d) => total + Number(d[key] || 0), 0);
     const dollars = (cents) => { const v = Math.round(cents / 100); return `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-US')}`; };
     const change = (now, prev) => (before.length === days.length && prev > 0 ? Math.round(((now - prev) / prev) * 100) : null);
-    const kpi = (label, value, delta, hint) => h('div', { class: 'ad-kpi' }, h('span', {}, label), h('b', {}, value), delta == null ? (hint ? h('small', {}, hint) : null) : h('small', { 'data-dir': delta >= 0 ? 'up' : 'down' }, `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}%`, h('em', {}, ` vs the ${revDays} days before`)));
+    const kpi = (label, value, delta, hint) => h('div', { class: 'mr-kpi' }, h('span', {}, label), h('b', {}, value), delta == null ? (hint ? h('small', {}, hint) : null) : h('small', { 'data-dir': delta >= 0 ? 'up' : 'down' }, `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}%`, h('em', {}, ` vs the ${revDays} days before`)));
     const rev = sum(days, 'sales_cents');
     const paid = sum(days, 'paid_cents');
     const subs = sum(days, 'subs');
     const picker = h('div', { class: 'cp-switch', role: 'group', 'aria-label': 'Period' }, [[7, '7 days'], [28, '28 days'], [90, '90 days']].map(([n, label]) => h('button', { type: 'button', 'aria-pressed': String(revDays === n), onclick: () => { revDays = n; render(); } }, label)));
     const label = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
     const points = (key, map = (v) => v) => days.map((d) => ({ label: label(d.day), value: Math.max(0, map(Number(d[key] || 0), d)) }));
-    const chart = (title, total, kind, pts, fmt) => h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, title), h('b', {}, total)), pts.some((pt) => pt.value > 0) ? cp.timeChart(kind, pts, fmt, title, fmt, cp.COLOR.ready) : h('p', { class: 'ad-quiet' }, 'Nothing in this period yet.'));
+    const chart = (title, total, kind, pts, fmt) => h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, title), h('b', {}, total)), pts.some((pt) => pt.value > 0) ? cp.timeChart(kind, pts, fmt, title, fmt, cp.COLOR.ready) : h('p', { class: 'mr-quiet' }, 'Nothing in this period yet.'));
     const who = (id) => creatorOf(id).display_name;
     const KIND = { purchase: 'New subscriber', renewal: 'Renewal', refund: 'Refund' };
     return [
-      h('div', { class: 'ad-bar' }, picker),
-      h('section', { class: 'ad-kpis' },
+      h('div', { class: 'mr-bar' }, picker),
+      h('section', { class: 'mr-kpis' },
         kpi('Revenue', dollars(rev), change(rev, sum(before, 'sales_cents'))),
         kpi('New customers', num(subs), change(subs, sum(before, 'subs'))),
         kpi('Active subscribers', num(t.recurring_subs || 0), null, 'paying weekly now'),
@@ -232,8 +232,8 @@
         kpi('You keep', dollars(rev - paid), change(rev - paid, sum(before, 'sales_cents') - sum(before, 'paid_cents'))),
       ),
       chart('Revenue', dollars(rev), revDays > 28 ? 'line' : 'columns', points('sales_cents'), dollars),
-      h('div', { class: 'ad-two' }, chart('New customers', num(subs), 'columns', points('subs'), num), chart('You keep', dollars(rev - paid), revDays > 28 ? 'line' : 'columns', points('sales_cents', (v, d) => v - Number(d.paid_cents || 0)), dollars)),
-      h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Latest sales')),
+      h('div', { class: 'mr-two' }, chart('New customers', num(subs), 'columns', points('subs'), num), chart('You keep', dollars(rev - paid), revDays > 28 ? 'line' : 'columns', points('sales_cents', (v, d) => v - Number(d.paid_cents || 0)), dollars)),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Latest sales')),
         table(
           [
             { label: 'When', cell: (m) => since(m.occurred_at) },
@@ -283,24 +283,24 @@
 
     const daily = (p.daily || []).slice(-14);
     const top = Math.max(1, ...daily.map((d) => Number(d.sales_cents)));
-    const spark = h('div', { class: 'ad-spark', role: 'img', 'aria-label': 'Sales each day for the last 14 days' }, daily.map((d, i) => cp.tip ? h('i', { style: `height:${Math.max(4, (Number(d.sales_cents) / top) * 100).toFixed(1)}%`, 'data-today': i === daily.length - 1 || null }) : h('i', { title: `${day(d.day)}: ${big(d.sales_cents)}`, style: `height:${Math.max(4, (Number(d.sales_cents) / top) * 100).toFixed(1)}%`, 'data-today': i === daily.length - 1 || null })));
+    const spark = h('div', { class: 'mr-spark', role: 'img', 'aria-label': 'Sales each day for the last 14 days' }, daily.map((d, i) => cp.tip ? h('i', { style: `height:${Math.max(4, (Number(d.sales_cents) / top) * 100).toFixed(1)}%`, 'data-today': i === daily.length - 1 || null }) : h('i', { title: `${day(d.day)}: ${big(d.sales_cents)}`, style: `height:${Math.max(4, (Number(d.sales_cents) / top) * 100).toFixed(1)}%`, 'data-today': i === daily.length - 1 || null })));
     const prev = Number(p.sales_prev_7d_cents || 0);
     const now7 = Number(p.sales_7d_cents || 0);
     const delta = prev > 0 ? Math.round(((now7 - prev) / prev) * 100) : null;
 
-    const tile = (tone, label, value, foot, onclick) => h(onclick ? 'button' : 'div', { class: 'ad-tile', 'data-tone': tone, type: onclick ? 'button' : null, onclick: onclick || null }, h('span', { class: 'ad-tile__label' }, label), h('b', { class: 'ad-tile__value' }, value), foot ? h('span', { class: 'ad-tile__foot' }, foot) : null);
+    const tile = (tone, label, value, foot, onclick) => h(onclick ? 'button' : 'div', { class: 'mr-tile', 'data-tone': tone, type: onclick ? 'button' : null, onclick: onclick || null }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
 
     /* Creators as bubbles, one per tier, sized by how many are in it. */
     const TONE = ['#7A808A', '#A9B1BC', '#D9A441', '#6FA3B5', '#2A78A6'];
     const groups = [...state.tiers.map((tier, i) => ({ name: tier.name, n: active.filter((c) => !c.champion && (c.tier_level ?? c.incentives?.tier_level ?? 1) === tier.level).length, tone: TONE[i % TONE.length] })), { name: 'Champion', n: active.filter((c) => c.champion).length, tone: '#B4552D' }];
     const most = Math.max(1, ...groups.map((g) => g.n));
-    const bubbles = h('div', { class: 'ad-bubbles' }, groups.map((g) => h('div', { class: 'ad-bubble', 'data-empty': g.n === 0 || null }, h('i', { style: `--size:${(3.4 + 4.6 * Math.sqrt(g.n / most)).toFixed(2)}rem;--tone:${g.tone}` }, String(g.n)), h('span', {}, g.name))));
+    const bubbles = h('div', { class: 'mr-bubbles' }, groups.map((g) => h('div', { class: 'mr-bubble', 'data-empty': g.n === 0 || null }, h('i', { style: `--size:${(3.4 + 4.6 * Math.sqrt(g.n / most)).toFixed(2)}rem;--tone:${g.tone}` }, String(g.n)), h('span', {}, g.name))));
 
     /* Click to subscriber, as three shrinking circles. */
     const clicks = state.creators.reduce((sum, c) => sum + (c.stats.clicks || 0), 0);
     const steps = [['Clicks', clicks], ['Sign-ups', t.signups || 0], ['Subscribers', t.customers || 0]];
     const rate = (x, y) => (y > 0 ? `${Math.round((x / y) * 1000) / 10}%` : '–');
-    const funnel = h('div', { class: 'ad-funnel' }, steps.map(([label, n], i) => [i ? h('em', {}, rate(n, steps[i - 1][1])) : null, h('div', { class: 'ad-funnel__step' }, h('i', { style: `--size:${(4 + 5 * Math.sqrt(n / Math.max(1, steps[0][1]))).toFixed(2)}rem` }, compact(n)), h('span', {}, label))]));
+    const funnel = h('div', { class: 'mr-funnel' }, steps.map(([label, n], i) => [i ? h('em', {}, rate(n, steps[i - 1][1])) : null, h('div', { class: 'mr-funnel__step' }, h('i', { style: `--size:${(4 + 5 * Math.sqrt(n / Math.max(1, steps[0][1]))).toFixed(2)}rem` }, compact(n)), h('span', {}, label))]));
 
     const leaders = [...active].sort((x, y) => (y.incentives?.window_revenue_cents || 0) - (x.incentives?.window_revenue_cents || 0)).filter((c) => (c.incentives?.window_revenue_cents || 0) > 0).slice(0, 3);
     const hit = (state.campaigns?.top_videos?.week || [])[0];
@@ -309,13 +309,13 @@
 
     return [
       todo.length
-        ? h('section', { class: 'ad-todo', 'aria-label': 'Needs you' }, h('h2', {}, 'Needs you'), h('div', {}, todo.map(([label, count, to]) => h('button', { type: 'button', onclick: go(to) }, h('b', {}, String(count)), h('span', {}, label)))))
-        : h('section', { class: 'ad-todo ad-todo--clear' }, h('h2', {}, 'Needs you'), h('p', {}, 'Nothing. You are all caught up.')),
+        ? h('section', { class: 'mr-todo', 'aria-label': 'Needs you' }, h('h2', {}, 'Needs you'), h('div', {}, todo.map(([label, count, to]) => h('button', { type: 'button', onclick: go(to) }, h('b', {}, String(count)), h('span', {}, label)))))
+        : h('section', { class: 'mr-todo mr-todo--clear' }, h('h2', {}, 'Needs you'), h('p', {}, 'Nothing. You are all caught up.')),
 
       h(
         'section',
-        { class: 'ad-grid' },
-        h('div', { class: 'ad-tile ad-tile--hero', 'data-tone': 'ink' }, h('span', { class: 'ad-tile__label' }, 'Net income'), h('b', { class: 'ad-tile__value' }, big(net)), h('div', { class: 'ad-tile__row' }, h('span', {}, h('b', {}, big(gross)), 'sales'), h('span', {}, h('b', {}, big(spend)), 'to creators'), kept == null ? null : h('span', { 'data-warn': (s.min_margin_rate != null && kept < s.min_margin_rate * 100) || null }, h('b', {}, `${kept}%`), 'kept')), daily.length ? spark : null),
+        { class: 'mr-grid' },
+        h('div', { class: 'mr-tile mr-tile--hero', 'data-tone': 'ink' }, h('span', { class: 'mr-tile__label' }, 'Net income'), h('b', { class: 'mr-tile__value' }, big(net)), h('div', { class: 'mr-tile__row' }, h('span', {}, h('b', {}, big(gross)), 'sales'), h('span', {}, h('b', {}, big(spend)), 'to creators'), kept == null ? null : h('span', { 'data-warn': (s.min_margin_rate != null && kept < s.min_margin_rate * 100) || null }, h('b', {}, `${kept}%`), 'kept')), daily.length ? spark : null),
         tile('clay', 'Sales, 7 days', big(now7), delta == null ? `${big(p.sales_today_cents || 0)} today` : `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}% on last week`),
         tile('paper', 'New subscribers, 7 days', num(p.subs_7d || 0), `${num(p.subs_today || 0)} today`),
         tile('paper', 'Views, 7 days', compact(p.views_7d || 0), `${compact(p.views_today || 0)} today · ${num(p.videos_7d || 0)} videos`),
@@ -324,27 +324,27 @@
 
       h(
         'div',
-        { class: 'ad-two' },
-        h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Creators'), h('b', {}, String(active.length))), bubbles),
-        h('section', { class: 'ad-panel' }, h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Click to subscriber'), h('b', {}, rate(steps[2][1], steps[0][1]))), funnel),
+        { class: 'mr-two' },
+        h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Creators'), h('b', {}, String(active.length))), bubbles),
+        h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Click to subscriber'), h('b', {}, rate(steps[2][1], steps[0][1]))), funnel),
       ),
 
       h(
         'div',
-        { class: 'ad-two' },
+        { class: 'mr-two' },
         h(
           'section',
-          { class: 'ad-panel' },
-          h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Top creators, 30 days'), h('button', { class: 'cp-link', type: 'button', onclick: go('rankings') }, 'All')),
-          leaders.length ? h('ol', { class: 'ad-leaders' }, leaders.map((c, i) => h('li', {}, h('i', {}, String(i + 1)), h('span', {}, h('b', {}, c.display_name), h('small', {}, tierName(c))), h('b', {}, big(c.incentives.window_revenue_cents))))) : h('p', { class: 'ad-quiet' }, 'No sales yet.'),
+          { class: 'mr-panel' },
+          h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Top creators, 30 days'), h('button', { class: 'cp-link', type: 'button', onclick: go('rankings') }, 'All')),
+          leaders.length ? h('ol', { class: 'mr-leaders' }, leaders.map((c, i) => h('li', {}, h('i', {}, String(i + 1)), h('span', {}, h('b', {}, c.display_name), h('small', {}, tierName(c))), h('b', {}, big(c.incentives.window_revenue_cents))))) : h('p', { class: 'mr-quiet' }, 'No sales yet.'),
         ),
         h(
           'section',
-          { class: 'ad-panel' },
-          h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Top video this week'), h('button', { class: 'cp-link', type: 'button', onclick: go('rankings') }, 'All')),
-          hit ? h('div', { class: 'ad-hit' }, h('b', {}, `+${compact(hit.gained)}`), h('span', {}, cp.safeUrl(hit.url) ? h('a', { href: cp.safeUrl(hit.url), target: '_blank', rel: 'noopener noreferrer' }, hit.title || 'Watch') : hit.title || 'Untitled', h('small', {}, hit.creator)), watch(hit.url, hit.title)) : h('p', { class: 'ad-quiet' }, 'No video has gained views this week.'),
-          h('div', { class: 'ad-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: go('campaigns') }, 'Campaigns')),
-          live.length ? h('ul', { class: 'ad-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `${num(k.entrants)} in${k.standing[0] ? ` · ${k.standing[0].name} leads` : ''}`)), h('b', {}, k.upcoming ? `in ${left(k.starts_at)}` : `${left(k.ends_at)} left`)))) : h('p', { class: 'ad-quiet' }, 'No campaign running.'),
+          { class: 'mr-panel' },
+          h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Top video this week'), h('button', { class: 'cp-link', type: 'button', onclick: go('rankings') }, 'All')),
+          hit ? h('div', { class: 'mr-hit' }, h('b', {}, `+${compact(hit.gained)}`), h('span', {}, cp.safeUrl(hit.url) ? h('a', { href: cp.safeUrl(hit.url), target: '_blank', rel: 'noopener noreferrer' }, hit.title || 'Watch') : hit.title || 'Untitled', h('small', {}, hit.creator)), watch(hit.url, hit.title)) : h('p', { class: 'mr-quiet' }, 'No video has gained views this week.'),
+          h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: go('campaigns') }, 'Campaigns')),
+          live.length ? h('ul', { class: 'mr-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `${num(k.entrants)} in${k.standing[0] ? ` · ${k.standing[0].name} leads` : ''}`)), h('b', {}, k.upcoming ? `in ${left(k.starts_at)}` : `${left(k.ends_at)} left`)))) : h('p', { class: 'mr-quiet' }, 'No campaign running.'),
         ),
       ),
 
