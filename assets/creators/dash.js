@@ -658,7 +658,7 @@
       return b;
     };
     const block = (eyebrow, title, ...body) => h('section', { class: 'mr-panel mr-brief' }, h('p', { class: 'mr-brief__eyebrow' }, eyebrow), h('h2', {}, title), ...body);
-    const link = `https://getmindroll.com/?ref=${data.creator.code}`;
+    const link = `https://getmindroll.com/start/?ref=${data.creator.code}`;
     return [
       h('section', { class: 'mr-briefhero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Read this before you film'), h('h2', {}, 'MindRoll UGC Brief'), h('p', {}, 'Guidance for creators making MindRoll videos: what to make, what to say, and what to include.')),
       block(
