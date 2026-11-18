@@ -1352,3 +1352,102 @@ body.page-funnel2 .pw2__faq dd {
 }
 
 body.page-funnel2 .pw2__fine { margin-top: 2rem; }
+
+/* ---- the product, shown rather than described */
+body.page-funnel2 .pw2__shots {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 62%;
+  gap: 0.85rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  margin-inline: -1rem;
+  padding: 0.25rem 1rem 0.9rem;
+  scrollbar-width: none;
+}
+body.page-funnel2 .pw2__shots::-webkit-scrollbar { display: none; }
+
+body.page-funnel2 .pw2__shot {
+  margin: 0;
+  scroll-snap-align: center;
+  min-width: 0;
+}
+body.page-funnel2 .pw2__shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.9rem;
+  border: 1px solid var(--f2-edge, #e3ded3);
+  background: var(--f2-card, #fff);
+}
+body.page-funnel2 .pw2__shot figcaption { margin-top: 0.6rem; }
+body.page-funnel2 .pw2__shot figcaption b { display: block; font-size: 0.95rem; }
+body.page-funnel2 .pw2__shot figcaption span {
+  color: var(--f2-ink-soft, #7a736a);
+  font-size: 0.86rem;
+}
+
+@media (min-width: 40rem) {
+  body.page-funnel2 .pw2__shots { grid-auto-columns: 30%; }
+}
+
+/* ---- the price against things they already buy */
+body.page-funnel2 .pw2__anchor {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--f2-edge, #e3ded3);
+  border: 1px solid var(--f2-edge, #e3ded3);
+  border-radius: 0.8rem;
+  overflow: hidden;
+}
+body.page-funnel2 .pw2__anchorrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--f2-card, #fff);
+  font-variant-numeric: tabular-nums;
+}
+body.page-funnel2 .pw2__anchorrow b { font-size: 1.02rem; }
+body.page-funnel2 .pw2__anchorrow.is-mine {
+  background: color-mix(in srgb, var(--clay, #b4542a) 9%, var(--f2-card, #fff));
+}
+body.page-funnel2 .pw2__anchorrow.is-mine span,
+body.page-funnel2 .pw2__anchorrow.is-mine b { font-weight: 650; }
+
+/* ---- the three things that remove the risk */
+body.page-funnel2 .pw2__assure {
+  list-style: none;
+  margin: 1.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+body.page-funnel2 .pw2__assure li {
+  display: grid;
+  grid-template-columns: 1.15rem 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  color: var(--f2-ink-soft, #7a736a);
+  font-size: 0.92rem;
+}
+body.page-funnel2 .pw2__assure svg { width: 1.05rem; height: 1.05rem; margin-top: 0.15rem; }
+
+/* ---- the second buy point, for the reader who scrolled */
+body.page-funnel2 .pw2__again {
+  margin-top: 2.2rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--f2-edge, #e3ded3);
+}
+body.page-funnel2 .pw2__againline {
+  margin: 0 0 0.7rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--f2-ink-soft, #7a736a);
+  font-size: 0.92rem;
+}

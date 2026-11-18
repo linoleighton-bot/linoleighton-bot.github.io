@@ -1008,8 +1008,9 @@
        * is a misleading price claim, not a typo: it is the kind of thing the
        * CMA acts on, and the reader finds out at the card form.
        */
-      const button = offerEl.querySelector('[data-checkout]');
-      if (button) {
+      /* Both buy buttons — the one under the plans and the one at the foot of
+         the page — say the same thing, because they do the same thing. */
+      for (const button of offerEl.querySelectorAll('[data-checkout]')) {
         /*
          * The no-trial wording belongs to the step, not to this line.
          *
@@ -1021,6 +1022,12 @@
         button.textContent = chosen.trialDays
           ? `Start my ${chosen.trialDays} days free`
           : byId['offer']?.cta || 'Subscribe';
+      }
+
+      const echo = offerEl.querySelector('[data-plan-echo]');
+      if (echo) {
+        const everyEcho = chosen.period === 'year' ? 'year' : 'week';
+        echo.textContent = `${chosen.name} · ${chosen.amount} every ${everyEcho}`;
       }
 
       if (!smallprint) return;
@@ -1244,7 +1251,7 @@
 
         const mine = ++session;
         const chosen = boot.plans.find((p) => p.id === plan);
-        checkout.disabled = true;
+        for (const n of offerEl.querySelectorAll('[data-checkout]')) n.disabled = true;
         say('Opening the checkout…', 'busy');
         let unfit = null;
 
@@ -1325,7 +1332,7 @@
           /* Superseded: the newer checkout owns the till now, so leave it be. */
           if (mine !== session) return;
           if (till) till.hidden = true;
-          checkout.disabled = false;
+          for (const n of offerEl.querySelectorAll('[data-checkout]')) n.disabled = false;
 
           /*
            * Backing out is not a failure and must not be dressed as one. The
@@ -1359,7 +1366,9 @@
         }
       };
 
-      checkout.addEventListener('click', openCheckout);
+      for (const node of offerEl.querySelectorAll('[data-checkout]')) {
+        node.addEventListener('click', openCheckout);
+      }
       /* Now that it exists, a plan change can reopen the till on the new one. */
       reopen = () => {
         if (tillOpen()) openCheckout();
