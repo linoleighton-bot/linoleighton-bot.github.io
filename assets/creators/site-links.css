@@ -1,0 +1,50 @@
+/*
+ * "Creators" and "Admin" in the top right of every page.
+ *
+ * The header pill has no room left for them (on the home page it is already
+ * full), so on wide screens they sit in a slim row above it. On small screens
+ * the same two links are inside the menu the burger opens, and this row is off.
+ */
+.creator-strip {
+  display: none;
+}
+
+@media (min-width: 56rem) {
+  .creator-strip {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1.25rem;
+    width: min(100% - 1.5rem, 64rem);
+    margin-inline: auto;
+    padding: 0.5rem 1rem 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+  }
+
+  .creator-strip a {
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+
+  .creator-strip a:hover,
+  .creator-strip a:focus-visible {
+    color: var(--clay);
+  }
+
+  /* The home page header floats 1.5rem down the window; the row uses that gap. */
+  .home-bold .creator-strip {
+    position: absolute;
+    top: 0.125rem;
+    left: 0;
+    right: 0;
+    z-index: 49;
+    width: min(100% - 2rem, 54rem);
+    padding-top: 0;
+  }
+}
+
+/* The sign-up funnel hides the site header, so it hides this row too. */
+body.page-funnel .creator-strip {
+  display: none;
+}
