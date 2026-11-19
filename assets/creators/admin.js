@@ -2169,7 +2169,31 @@
         await reload();
       }),
     );
-    return h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Program settings'), form);
+    /*
+     * Where the Discord bot posts for the team (a new application, for now)
+     * and which role it mentions. Read from the server when the card is opened,
+     * so the lists are always the server's real channels and roles.
+     */
+    const alertsBody = h('div', { class: 'cp-form' }, h('p', { class: 'cp-muted' }, 'Loading the server\'s channels…'));
+    const drawAlerts = (a) => {
+      const pick = (list, chosen, auto, empty) => h('select', { class: 'cp-input' }, h('option', { value: '' }, auto ? `Automatic (${auto})` : empty), list.map((x) => h('option', { value: x.id, selected: x.id === chosen }, x.name)));
+      const channel = pick(a.channels.map((c) => ({ id: c.id, name: `#${c.name}` })), a.chosen.channel, a.chosen.channel ? null : a.channel && `#${a.channel.name}`, 'No channel with "admin" in its name: choose one');
+      const role = pick(a.roles.map((r) => ({ id: r.id, name: `@${r.name}` })), a.chosen.role, a.chosen.role ? null : a.role && `@${a.role.name}`, 'Nobody is mentioned');
+      const save = async () => { await ok(db.from('creator_settings').update({ discord_alert_channel: channel.value || null, discord_alert_role: role.value || null }).eq('id', true)); toast('Saved.'); };
+      channel.addEventListener('change', () => save().catch((e) => toast(e.message, 'error')));
+      role.addEventListener('change', () => save().catch((e) => toast(e.message, 'error')));
+      const test = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Send a test message');
+      test.addEventListener('click', act(test, async () => { const out = await cp.fn('creator-discord', { action: 'test_alert' }); toast(out.channel ? `Sent to #${out.channel.name}.` : 'Sent.'); }));
+      alertsBody.replaceChildren(
+        h('p', { class: 'cp-muted' }, a.channel ? `New applications are posted in #${a.channel.name}${a.role ? ` and mention @${a.role.name}` : ''}.` : 'No channel is chosen yet, so nothing is posted.'),
+        h('div', { class: 'cp-form__row' }, field('Channel', channel), field('Role to mention', role)),
+        h('div', {}, test),
+        h('small', { class: 'cp-hint' }, 'The bot must be allowed to see and write in the channel. Creators and managers who connected Discord are messaged directly when someone joins on their invite link.'),
+      );
+    };
+    if (cp.demo) drawAlerts({ channels: [{ id: '1', name: 'admin' }, { id: '2', name: 'announcements' }], roles: [{ id: '1', name: 'Admin' }, { id: '2', name: 'Manager' }], channel: { id: '1', name: 'admin' }, role: { id: '1', name: 'Admin' }, chosen: { channel: null, role: null } });
+    else cp.fn('creator-discord', { action: 'alerts' }).then(drawAlerts, (e) => alertsBody.replaceChildren(h('p', { class: 'cp-bad' }, e.message || 'Could not reach Discord.')));
+    return [h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Discord alerts for the team'), alertsBody), h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Program settings'), form)];
   }
 
   /* ------------------------------------------------------------ sample data */

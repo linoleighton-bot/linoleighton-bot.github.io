@@ -93,6 +93,7 @@
       const [data, brief, team, picture, discordName, boost] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null)]);
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
       if (data?.creator) { data.creator.avatar_url = picture; data.creator.discord_name = discordName; }
+      if (team && !data?.creator) team.discord_name = discordName;
       if (data) { data.brief = brief || null; data.team = team || null; data.first_video = keepBoost(boost); }
       const stamp = JSON.stringify(data);
       const apply = () => {
@@ -173,7 +174,7 @@
   /* What the applicant has answered so far; kept while they move between the steps. */
   const applyDraft = { step: 0 };
   function renderManager(data) {
-    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }))));
+    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), discordBox(data.team.discord_name, () => { data.team.discord_name = 'you'; toast('Connected. (Sample data: nothing was saved.)'); renderManager(data); }, true), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }))));
   }
 
   function renderApply(data) {
@@ -491,6 +492,7 @@
     const tile = (tone, label, value, foot, to) => h('button', { class: 'mr-tile', 'data-tone': tone, type: 'button', onclick: () => openPane(to) }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
     const live = (data.contests || []).filter((k) => k.open || k.upcoming);
     return [
+      discordBox(creator.discord_name, () => { creator.discord_name = creator.display_name; toast('Connected. (Sample data: nothing was saved.)'); renderDashboard(data); }),
       firstVideoBox(data),
       creator.payout_hold ? h('div', { class: 'cp-card cp-notice', role: 'status' }, h('b', {}, 'Your payouts are on hold'), h('p', { class: 'cp-muted' }, 'We are checking your account. Nothing is paid out until that is done. Questions: ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))) : null,
       h(
@@ -864,15 +866,37 @@
    */
   const DISCORD_APP = '1572701230185058336';
   const DISCORD_SERVER = 'https://discord.com/channels/1572693376145293373';
+  function startDiscord() {
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+    try { sessionStorage.setItem('mindroll.discord.state', state); } catch { /* the return is refused without it */ }
+    location.assign(`https://discord.com/oauth2/authorize?${new URLSearchParams({ client_id: DISCORD_APP, response_type: 'token', redirect_uri: `${location.origin}/creators/discord/`, scope: 'identify guilds.join', state, prompt: 'consent' })}`);
+  }
+
+  /*
+   * The first thing a new creator (or a manager) is asked to do: connect
+   * Discord. It is where instructions and daily updates are posted and where
+   * the bot tells them about sales, bonuses and people joining on their link.
+   * Shown at the top of the page until they have connected.
+   */
+  function discordBox(connected, onSample, manager = false) {
+    if (connected) return null;
+    const connect = h('button', { class: 'btn', type: 'button' }, 'Connect Discord');
+    connect.addEventListener('click', () => (cp.demo ? onSample() : startDiscord()));
+    return h(
+      'section',
+      { class: 'mr-boost', 'data-discord': '', role: 'status' },
+      h('div', { class: 'mr-boost__text' }, h('small', {}, 'Do this first'), h('h2', {}, 'Connect to the Discord'), h('p', {}, manager ? 'For instructions and daily updates, and a message the moment someone joins on your invite link.' : 'For more instructions and daily updates. You also get a message for every sale, bonus and payout.'), connect),
+      h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Takes'), h('b', {}, '1 tap'), h('span', {}, 'you join the server straight away')),
+    );
+  }
+
   function discordPanel(data) {
     const creator = data.creator;
     const name = creator.discord_name;
     const connect = h('button', { class: 'btn btn--primary', type: 'button' }, 'Connect to Discord');
     connect.addEventListener('click', () => {
       if (cp.demo) { creator.discord_name = creator.display_name; toast('Connected. (Sample data: nothing was saved.)'); return renderDashboard(data); }
-      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
-      try { sessionStorage.setItem('mindroll.discord.state', state); } catch { /* the return is refused without it */ }
-      location.assign(`https://discord.com/oauth2/authorize?${new URLSearchParams({ client_id: DISCORD_APP, response_type: 'token', redirect_uri: `${location.origin}/creators/discord/`, scope: 'identify guilds.join', state, prompt: 'consent' })}`);
+      startDiscord();
     });
     const off = cp.confirmButton('Disconnect', 'Confirm: disconnect Discord', 'cp-link', async () => {
       if (cp.demo) { creator.discord_name = null; return renderDashboard(data); }
@@ -904,7 +928,7 @@
     if (!back.token || !state || back.state !== state) { toast('Discord did not finish connecting. Try again.'); return false; }
     try {
       const out = await cp.fn('creator-discord', { action: 'link', access_token: back.token });
-      toast(out.in_server ? `Discord connected as ${out.name}. Your roles are set.` : `Discord connected as ${out.name}. Join the server to get your roles.`);
+      toast(out.manager ? `Discord connected as ${out.name}. You will get a message when someone joins on your invite link.` : out.in_server ? `Discord connected as ${out.name}. Your roles are set.` : `Discord connected as ${out.name}. Join the server to get your roles.`);
       return true;
     } catch (cause) {
       toast(cause.message || 'Discord did not finish connecting. Try again.');

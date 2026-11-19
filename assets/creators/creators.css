@@ -1288,3 +1288,8 @@ a.mr-handle:hover { color: var(--mr-accent); }
   .mr-lad__stat { justify-items: start; }
   .mr-lad__row--plain > summary { grid-template-columns: 1fr 1rem; }
 }
+
+/* The same big box, in Discord's colour: connect Discord first. */
+.mr-boost[data-discord] { background: linear-gradient(120deg, #1E1F5C 0%, #4752C4 55%, #5865F2 100%); }
+.mr-boost[data-discord] .mr-boost__text small { color: #C9CDFB; }
+.mr-boost[data-discord] .mr-boost__text .btn { font-weight: 700; padding: 0.8rem 1.4rem; font-size: 1.0625rem; }
