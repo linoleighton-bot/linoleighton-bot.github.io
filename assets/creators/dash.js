@@ -87,10 +87,13 @@
   }
 
   let lastStamp = null;
+  let joinTried = false;
   let liveData = null;
   async function load(quiet = false) {
     try {
       const [data, brief, team, picture, discordName, boost, added] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false)]);
+      /* A manager is a creator too: their first sign-in makes their own creator page, then loads it. */
+      if (team && data && !data.creator && !cp.demo && !joinTried) { joinTried = true; if ((await cp.rpc('creator_manager_join').catch(() => null)) === 'joined') return load(quiet); }
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
       if (data?.creator) { data.creator.avatar_url = picture; data.creator.discord_name = discordName; }
       if (team && !data?.creator) team.discord_name = discordName;
