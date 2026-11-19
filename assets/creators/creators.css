@@ -1241,14 +1241,14 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-earn__list li.mr-earn__wide { grid-column: 1 / -1; }
 .mr-earn__list:has(.mr-earn__wide) { grid-template-columns: 1fr; }
 .mr-earn__count { font-size: 1.0625rem; font-weight: 750; white-space: nowrap; }
-.mr-steps { display: grid; gap: 0; margin: 0.35rem 0 0.15rem; }
-.mr-steps__step { display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'line dot' 'pay pay' 'need need'; align-items: center; row-gap: 0.3rem; justify-items: end; }
-.mr-steps__line { grid-area: line; justify-self: stretch; height: 0; border-top: 3px dotted color-mix(in srgb, var(--muted) 55%, transparent); position: relative; }
-.mr-steps__line span { position: absolute; left: 0; top: -3px; height: 3px; background: var(--mr-accent, #2F6BFF); border-radius: 99px; }
-.mr-steps__dot { grid-area: dot; width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; border: 2.5px solid color-mix(in srgb, var(--muted) 55%, transparent); background: var(--surface, #fff); font-weight: 800; font-size: 1rem; color: #fff; }
+.mr-steps { display: grid; gap: 0; margin: 0.6rem 0 0.25rem; position: relative; }
+.mr-steps__line { position: absolute; left: 0; right: 0; top: calc(0.875rem - 1px); height: 0; border-top: 2px dotted color-mix(in srgb, var(--muted) 45%, transparent); }
+.mr-steps__line span { position: absolute; left: 0; top: -2px; height: 2px; background: var(--mr-accent, #2F6BFF); border-radius: 99px; }
+.mr-steps__step { display: grid; justify-items: center; align-content: start; text-align: center; gap: 0.1rem; position: relative; }
+.mr-steps__dot { width: 1.75rem; height: 1.75rem; border-radius: 50%; display: grid; place-items: center; border: 2px solid color-mix(in srgb, var(--muted) 45%, transparent); background: var(--sunk, #F1F2F6); font-weight: 800; font-size: 0.9rem; color: #fff; margin-bottom: 0.25rem; }
 .mr-steps__step[data-done] .mr-steps__dot { background: var(--mr-accent, #2F6BFF); border-color: var(--mr-accent, #2F6BFF); }
-.mr-steps__step b { grid-area: pay; font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em; }
-.mr-steps__step small { grid-area: need; color: var(--muted); font-size: 0.8125rem; }
+.mr-steps__step b { font-size: 1.125rem; font-weight: 750; letter-spacing: -0.02em; }
+.mr-steps__step small { color: var(--muted); font-size: 0.8125rem; }
 .mr-steps__step:not([data-done]) b { color: var(--muted); }
 
-.mr-steps__dot[data-locked] { font-size: 0.85rem; border-color: #E2B007; background: #FFF7DB; }
+.mr-steps__dot[data-locked] { font-size: 0.75rem; border-color: #E2B007; background: #FFF7DB; }

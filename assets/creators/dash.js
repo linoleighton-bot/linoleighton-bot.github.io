@@ -410,14 +410,23 @@
       const done = rules.filter(met).length;
       const next = rules.find((r) => !met(r));
       const minViews = a?.count_min_views ?? 1000;
-      const steps = rules.map((r, k) => {
+      /* Checkpoints sit in equal columns; the line behind them fills as far as the videos have got. */
+      const at = (k) => (2 * k + 1) / (2 * rules.length);
+      let fill = 1;
+      for (let k = 0; k < rules.length; k += 1) {
         const from = k ? rules[k - 1].min_videos : 0;
-        const fill = Math.max(0, Math.min(1, (videos - from) / Math.max(1, r.min_videos - from)));
-        const reached = met(r);
-        const locked = !reached && videos >= r.min_videos;
-        const needs = Number(r.min_sales || 0);
-        return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__line' }, h('span', { style: `width:${Math.round(fill * 100)}%` })), h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true', 'data-locked': locked || null }, reached ? '✓' : locked ? '\u{1F512}' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, needs ? `${num(r.min_videos)} videos + ${num(needs)} sales` : `${num(r.min_videos)} videos`));
-      });
+        if (videos < rules[k].min_videos) { const start = k ? at(k - 1) : 0; fill = start + (at(k) - start) * Math.max(0, (videos - from) / Math.max(1, rules[k].min_videos - from)); break; }
+        fill = k === rules.length - 1 ? 1 : at(k);
+      }
+      const steps = [
+        h('div', { class: 'mr-steps__line', 'aria-hidden': 'true' }, h('span', { style: `width:${Math.round(fill * 100)}%` })),
+        ...rules.map((r) => {
+          const reached = met(r);
+          const locked = !reached && videos >= r.min_videos;
+          const needs = Number(r.min_sales || 0);
+          return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true', 'data-locked': locked || null }, reached ? '✓' : locked ? '\u{1F512}' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, `${num(r.min_videos)} videos`), h('small', {}, needs ? `+ ${num(needs)} sales` : 'no sales needed'));
+        }),
+      ];
       rows.push(
         h(
           'li',
