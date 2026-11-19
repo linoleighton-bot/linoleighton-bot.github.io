@@ -1451,3 +1451,355 @@ body.page-funnel2 .pw2__againline {
   color: var(--f2-ink-soft, #7a736a);
   font-size: 0.92rem;
 }
+
+/* ==========================================================================
+ * Their geometry, in our colours.
+ *
+ * Measured off deepstash.com/growth-plan/base/personalize on 18 Nov 2026 at
+ * 375px: a 343px column inside 16px gutters, a 28px back pill, the phase name
+ * over a 6px rail, a 22/28 centred question with a 16/24 line under it, and
+ * answer cards 164 wide and 176 tall whose picture sits above a dark caption
+ * bar. Every number below is one of theirs. Every colour is one of ours.
+ *
+ * This block is last on purpose: it is an override layer over the rules above
+ * it, so the earlier BeFreed-shaped styling stays readable as history rather
+ * than being half-edited into something neither thing.
+ * ====================================================================== */
+
+body.page-funnel2 {
+  /* Theirs: #F2EFEB ground, #3B3F44 ink, #FF3820 accent. Ours, in that order. */
+  --f2-bg: #FAF4EA;
+  --f2-ink: var(--ink);
+  --f2-accent: var(--clay);
+  --f2-card: #ffffff;
+  --f2-track: color-mix(in srgb, var(--ink) 11%, var(--f2-bg));
+  --f2-muted: color-mix(in srgb, var(--ink) 58%, var(--f2-bg));
+  --f2-col: 21.4375rem; /* 343px */
+
+  font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--f2-bg);
+  color: var(--f2-ink);
+}
+
+body.page-funnel2 .funnel__body,
+body.page-funnel2 .funnel__bar {
+  width: min(var(--f2-col), 100% - 2rem);
+  margin-inline: auto;
+}
+
+body.page-funnel2 h1,
+body.page-funnel2 h2,
+body.page-funnel2 h3,
+body.page-funnel2 p,
+body.page-funnel2 button,
+body.page-funnel2 input,
+body.page-funnel2 label,
+body.page-funnel2 dt,
+body.page-funnel2 dd {
+  font-family: inherit;
+}
+
+/* ------------------------------------------------- the bar across the top */
+
+body.page-funnel2 .funnel__bar {
+  display: grid;
+  grid-template-areas: 'back' 'rail' 'label';
+  gap: 0;
+  padding-block: 1rem 0;
+}
+
+body.page-funnel2 .funnel__back {
+  grid-area: back;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.75rem;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: var(--f2-track);
+  color: var(--f2-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body.page-funnel2 .funnel__sections {
+  grid-area: rail;
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 1rem;
+}
+
+body.page-funnel2 .funnel__section { flex: 1; }
+
+body.page-funnel2 .funnel__track {
+  display: block;
+  height: 0.375rem;
+  border-radius: 0.25rem;
+  background: var(--f2-track);
+  overflow: hidden;
+}
+
+body.page-funnel2 .funnel__track > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--f2-accent);
+  transition: width 0.3s ease;
+}
+
+body.page-funnel2 .funnel__label {
+  grid-area: label;
+  justify-self: center;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .funnel__count { display: none; }
+
+/* --------------------------------------------------------- the question */
+
+body.page-funnel2 .fstep {
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+  text-align: center;
+}
+
+body.page-funnel2 .fs__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--f2-ink);
+  text-decoration: none;
+}
+body.page-funnel2 .fs__brand svg { width: 1.75rem; height: 1.75rem; }
+
+body.page-funnel2 .fs__title {
+  margin: 0;
+  font-size: 1.375rem;   /* 22px */
+  line-height: 1.75rem;  /* 28px */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+body.page-funnel2 .fs__title--big {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+}
+
+body.page-funnel2 .fs__why,
+body.page-funnel2 .fs__body {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+  color: var(--f2-ink);
+}
+
+body.page-funnel2 .fs__lead {
+  margin: 1.25rem 0 0;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+body.page-funnel2 .fs__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--f2-accent);
+}
+
+/* ------------------------------------------------------- the answer grid */
+
+body.page-funnel2 .fq {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Their picture cards: two across, the label on a bar at the foot. */
+body.page-funnel2 .fq--cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+body.page-funnel2 .fcard {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  aspect-ratio: 164 / 176;
+  padding: 0;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--f2-card);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+body.page-funnel2 .fcard__img {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: cover;
+  display: block;
+}
+
+body.page-funnel2 .fcard__img--blank {
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--clay) 16%, #fff), transparent 68%),
+    var(--f2-track);
+}
+
+body.page-funnel2 .fcard__bar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 2rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--f2-ink);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+body.page-funnel2 .fcard[data-chosen] {
+  box-shadow: inset 0 0 0 3px var(--f2-accent);
+}
+body.page-funnel2 .fcard[data-chosen] .fcard__bar { background: var(--f2-accent); }
+
+/* Their chips: one per row, the emoji in a tile on the left. */
+body.page-funnel2 .fq--chips { grid-template-columns: 1fr; gap: 0.75rem; }
+
+body.page-funnel2 .fq--chips .fq__option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--f2-card);
+  color: var(--f2-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.16s ease;
+}
+
+body.page-funnel2 .fq__emoji {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+body.page-funnel2 .fq--chips .fq__text {
+  display: grid;
+  gap: 0.125rem;
+}
+
+body.page-funnel2 .fq__label {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+}
+
+body.page-funnel2 .fq__note {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--f2-muted);
+}
+
+body.page-funnel2 .fq--chips .fq__option[data-chosen] {
+  box-shadow: inset 0 0 0 2px var(--f2-accent);
+  background: color-mix(in srgb, var(--clay) 7%, var(--f2-card));
+}
+
+body.page-funnel2 .fq--chips .fq__tick { margin-left: auto; }
+
+/* The yes/no pair under a book cover stays side by side. */
+body.page-funnel2 .fq--pair { grid-template-columns: 1fr 1fr; }
+
+/* ------------------------------------------------- the bar that asks back */
+
+body.page-funnel2 .fask {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--f2-card);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.4);
+}
+
+body.page-funnel2 .fask__lead {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .fask__q {
+  margin: 0.375rem 0 1rem;
+  font-size: 1.125rem;
+  line-height: 1.625rem;
+  font-weight: 700;
+}
+
+body.page-funnel2 .fask__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+body.page-funnel2 .fask__btn {
+  min-height: 2.75rem;
+  border: 1px solid var(--f2-track);
+  border-radius: 0.75rem;
+  background: var(--f2-bg);
+  color: var(--f2-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body.page-funnel2 .fask__btn:hover {
+  border-color: var(--f2-accent);
+  color: var(--f2-accent);
+}
+
+/* While a question is up, the count is visibly held rather than finished. */
+body.page-funnel2 .fstep[data-asking] .fbuild__line:not([data-done]) { opacity: 0.35; }
+
+/* ------------------------------------------------------------- the press */
+
+body.page-funnel2 .fs__cta {
+  width: 100%;
+  min-height: 3.25rem;
+  margin-top: 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--f2-ink);
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+body.page-funnel2 .fs__cta:disabled { opacity: 0.4; }

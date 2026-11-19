@@ -508,25 +508,32 @@
    * done, so the figure and the ticks can never disagree — it is one state
    * read two ways rather than two timers that drift.
    */
+  /**
+   * The build screen: a bar that counts, and stops to ask.
+   *
+   * It used to be four lines on a timer, which meant the reader watched a
+   * progress bar they had no part in. The gates change that. Each `[data-ask]`
+   * carries the percentage it interrupts at; the count runs up to that mark
+   * and holds there — bar, number and all — until the question on screen is
+   * answered. The pause is the point: the bar is visibly waiting on the
+   * reader, so answering reads as finishing the job rather than as more form.
+   *
+   * The answers are saved like any other, so a reader who comes back inside
+   * the resume window is not asked again. `built` still guards the whole
+   * screen, because running this twice would hand the reader a second set of
+   * questions they have already answered.
+   */
   function runBuild() {
     const el = stepEls.get('building');
     const lines = [...el.querySelectorAll('.fbuild__line')];
     const bar = el.querySelector('[data-build-bar]');
     const pct = el.querySelector('[data-build-pct]');
-
-    /*
-     * The headline, addressed to them.
-     *
-     * Written before the early return, so a reader who comes back to this
-     * step still sees their name rather than the nameless fallback.
-     */
     const title = el.querySelector('[data-fill="title"]');
     const step = byId['building'];
     const name = readerName();
     if (title && name && step?.greeting) {
       title.textContent = `${name}, ${step.greeting}`;
     }
-
     if (built) {
       next();
       return;
@@ -534,37 +541,80 @@
     built = true;
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const per = reduced ? 120 : 520;
+    const span = reduced ? 900 : 7000;
 
-    /* The figure climbs to each line's share over that line's own interval,
-       so it moves continuously rather than jumping in quarters. */
-    const to = (share) => {
-      if (!pct) return;
-      const from = Number(pct.textContent) || 0;
-      const target = Math.round(share * 100);
-      if (reduced) {
-        pct.textContent = String(target);
+    const gates = [...el.querySelectorAll('[data-ask]')]
+      .map((node) => ({ node, at: Number(node.dataset.at) || 0, done: false }))
+      .sort((a, b) => a.at - b.at);
+
+    const paintLines = (value) => {
+      lines.forEach((line, i) => {
+        const mark = ((i + 1) / lines.length) * 100;
+        line.toggleAttribute('data-done', value >= mark - 0.5);
+      });
+    };
+
+    let shown = 0;
+    let held = false;
+    let holdAt = 0;
+    let started = null;
+    let offset = 0;
+
+    const paint = (value) => {
+      const whole = Math.min(100, Math.round(value));
+      if (pct) pct.textContent = String(whole);
+      if (bar) bar.style.width = `${whole}%`;
+      paintLines(whole);
+    };
+
+    const ask = (gate) => {
+      held = true;
+      holdAt = gate.at;
+      gate.node.hidden = false;
+      el.setAttribute('data-asking', 'true');
+      const answer = (value) => {
+        if (gate.done) return;
+        gate.done = true;
+        answers[`build_${gate.node.dataset.ask}`] = value;
+        save();
+        gate.node.hidden = true;
+        if (!gates.some((g) => !g.done && g.at <= holdAt)) {
+          el.removeAttribute('data-asking');
+          held = false;
+          offset = holdAt;
+          started = null;
+          window.requestAnimationFrame(tick);
+        }
+      };
+      for (const button of gate.node.querySelectorAll('[data-ask-answer]')) {
+        button.addEventListener('click', () => answer(button.dataset.askAnswer), { once: true });
+      }
+    };
+
+    const tick = (now) => {
+      if (held) return;
+      if (started === null) started = now;
+      const value = Math.min(100, offset + ((now - started) / span) * 100);
+      paint(value);
+
+      const gate = gates.find((g) => !g.done && value >= g.at);
+      if (gate) {
+        paint(gate.at);
+        ask(gate);
         return;
       }
-      const started = performance.now();
-      const tick = (now) => {
-        const through = Math.min(1, (now - started) / per);
-        pct.textContent = String(Math.round(from + (target - from) * through));
-        if (through < 1) window.requestAnimationFrame(tick);
-      };
+
+      if (value >= 100) {
+        shown = 100;
+        window.setTimeout(next, reduced ? 120 : 650);
+        return;
+      }
       window.requestAnimationFrame(tick);
     };
 
-    lines.forEach((line, i) => {
-      window.setTimeout(() => {
-        line.setAttribute('data-done', 'true');
-        const share = (i + 1) / lines.length;
-        if (bar) bar.style.width = `${Math.round(share * 100)}%`;
-        to(share);
-      }, per * (i + 1));
-    });
-
-    window.setTimeout(next, per * (lines.length + 1));
+    paint(0);
+    window.requestAnimationFrame(tick);
+    void shown;
   }
 
   /* -------------------------------------------------------------- the plan */
