@@ -206,6 +206,9 @@
      * worked, and somebody who thinks it did not work does not then pay.
      */
     if (step.kind === 'account' && user) {
+      /* Signed in already, so the configure and the offerings can be done now
+         rather than on the press. */
+      warmAhead?.();
       persist();
       const at = order.indexOf('offer');
       if (at !== -1 && at !== index) {
@@ -219,7 +222,22 @@
     if (step.kind === 'note') fillNote(id);
     if (step.kind === 'books') showShelf(id);
     if (step.kind === 'build') runBuild();
-    if (step.kind === 'plan') fillPlan();
+    /* Last chance: a reader who signed up by email reaches the offer without
+       passing through the branch above, so the warm-up is asked for here too.
+       It caches, so asking three times costs nothing. */
+    if (step.kind === 'offer') warmAhead?.();
+    if (step.kind === 'plan') {
+      fillPlan();
+      /*
+       * Start the checkout now, two screens early.
+       *
+       * The reader is about to spend a minute reading their plan and making
+       * an account. That minute is the only free time this funnel has, and
+       * the alternative is spending it after they press Subscribe, watching
+       * a disabled button.
+       */
+      warmAhead?.();
+    }
     if (step.kind === 'done') markDone();
 
     /* Move the focus to the new heading, or a keyboard user is left where the
@@ -527,7 +545,22 @@
     const el = stepEls.get('building');
     const lines = [...el.querySelectorAll('.fbuild__line')];
     const bar = el.querySelector('[data-build-bar]');
+    const ring = el.querySelector('[data-build-ring]');
     const pct = el.querySelector('[data-build-pct]');
+    /*
+     * The ring's own circumference, measured rather than assumed.
+     *
+     * `stroke-dasharray` is in user units, and the circle is drawn at r=54 in
+     * a 120 viewBox that the stylesheet then scales. Reading the length off
+     * the element means the dash maths survives somebody changing the radius
+     * in the markup, which is exactly the kind of change that otherwise
+     * leaves a ring that never quite closes.
+     */
+    const circumference = ring ? ring.getTotalLength?.() || 2 * Math.PI * 54 : 0;
+    if (ring) {
+      ring.style.strokeDasharray = String(circumference);
+      ring.style.strokeDashoffset = String(circumference);
+    }
     const title = el.querySelector('[data-fill="title"]');
     const step = byId['building'];
     const name = readerName();
@@ -547,10 +580,22 @@
       .map((node) => ({ node, at: Number(node.dataset.at) || 0, done: false }))
       .sort((a, b) => a.at - b.at);
 
+    /*
+     * Three states per line, not two.
+     *
+     * A list where every line is already legible and ticks off one by one is
+     * a checklist being read to you. Marking the line the bar is *on* as well
+     * as the ones behind it turns it into work being done: the one in hand is
+     * lit and the ones not started yet are quiet, so the eye has somewhere to
+     * be for the seven seconds this screen lasts.
+     */
     const paintLines = (value) => {
       lines.forEach((line, i) => {
-        const mark = ((i + 1) / lines.length) * 100;
-        line.toggleAttribute('data-done', value >= mark - 0.5);
+        const from = (i / lines.length) * 100;
+        const to = ((i + 1) / lines.length) * 100;
+        const done = value >= to - 0.5;
+        line.toggleAttribute('data-done', done);
+        line.toggleAttribute('data-now', !done && value >= from);
       });
     };
 
@@ -564,6 +609,7 @@
       const whole = Math.min(100, Math.round(value));
       if (pct) pct.textContent = String(whole);
       if (bar) bar.style.width = `${whole}%`;
+      if (ring) ring.style.strokeDashoffset = String(circumference * (1 - whole / 100));
       paintLines(whole);
     };
 
@@ -639,11 +685,240 @@
   }
 
   function fillPlan() {
+    /* Funnel 2 draws a different object out of different answers. */
+    if (root.querySelector('[data-plan2]')) {
+      fillPlan2();
+      return;
+    }
     const values = planValues();
     for (const [key, value] of Object.entries(values)) {
       const node = root.querySelector(`[data-plan="${key}"]`);
       if (node) node.textContent = value;
     }
+  }
+
+  /* ------------------------------------------------- the plan, said back */
+
+  /** Every label a step offered, so an answer id can be read as English. */
+  const labelsFor = (stepId) => boot.labels?.[stepId] || {};
+
+  /** One step's answer as a list of ids, however it was stored. */
+  const chosenIds = (stepId) => {
+    const key = boot.answerKeys?.[stepId] || stepId;
+    const held = answers[key];
+    if (held == null) return [];
+    return Array.isArray(held) ? held : [held];
+  };
+
+  /** One step's answer as a list of labels, in the order it was asked. */
+  const chosenLabels = (stepId) => {
+    const map = labelsFor(stepId);
+    return chosenIds(stepId)
+      .map((id) => map[id])
+      .filter(Boolean);
+  };
+
+  /** A list as a sentence: "a, b and c". */
+  const andList = (items) =>
+    items.length <= 1
+      ? items.join('')
+      : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+
+  /**
+   * The plan screen, filled from twenty answers.
+   *
+   * This is the screen the funnel is for. Everything on it comes from
+   * something the reader actually pressed: the card states the four decisions
+   * they made, the quotes are the statements they agreed with in the words
+   * that were on the buttons, the week is built out of the books they said
+   * yes to, and the arithmetic is the number of minutes they chose multiplied
+   * out. Nothing is invented to fill a space — a section with no answer
+   * behind it hides itself, because a shorter plan is honest and a padded one
+   * is the thing that makes a reader stop believing the rest of it.
+   */
+  function fillPlan2() {
+    const el = stepEls.get('plan');
+    if (!el) return;
+    const name = readerName();
+    const step = byId['plan'];
+
+    const head = el.querySelector('[data-fill="title"]');
+    if (head && name && step?.greeting) head.textContent = `${name}, ${step.greeting}`;
+
+    const set = (key, value) => {
+      const node = el.querySelector(`[data-plan2="${key}"]`);
+      if (node) node.textContent = value;
+    };
+
+    /* ---- the four decisions */
+
+    const commitment = chosenIds('commitment')[0];
+    const ideas = boot.commitment?.[commitment] ?? 5;
+    const minutes = boot.minutes?.[commitment] ?? 5;
+
+    set('owner', name ? `${name}’s reading plan` : 'Your reading plan');
+    set(
+      'made',
+      new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }),
+    );
+    set('daily', `${ideas} ideas · about ${minutes} minutes`);
+    set('when', chosenLabels('when')[0] || 'Whenever suits you');
+
+    /*
+     * How they learn, in one phrase.
+     *
+     * They may have ticked four. Naming all four is a list, not a decision,
+     * and the card has one line for it — so two, then "and more", which is
+     * true and reads as a setting rather than as a dump of the answer.
+     */
+    /*
+     * One style, plus a count.
+     *
+     * The card has a cell, not a paragraph. Four ticked styles spelled out
+     * ran to four lines and pushed the cell beside it off its own baseline —
+     * so the first one is named and the rest are counted, which fits and is
+     * still exactly what they chose.
+     */
+    const styles = chosenLabels('styles');
+    set(
+      'style',
+      styles.length === 0
+        ? 'A bit of everything'
+        : styles.length === 1
+          ? styles[0]
+          : `${styles[0]} +${styles.length - 1}`,
+    );
+    set('ladder', `${(boot.ladder || []).join(', ')} days`);
+
+    /* ---- what it draws from */
+
+    const topics = chosenLabels('topics');
+    const topicBox = el.querySelector('[data-plan2-topics]');
+    const topicList = el.querySelector('[data-plan2-topiclist]');
+    if (topicBox && topicList) {
+      topicList.replaceChildren(
+        ...topics.map((label) => {
+          const li = document.createElement('li');
+          li.textContent = label;
+          return li;
+        }),
+      );
+      topicBox.hidden = topics.length === 0;
+    }
+
+    /* ---- their own answers, quoted */
+
+    /*
+     * Only what they actually leaned into.
+     *
+     * The agreement rows run 1–5. Quoting back a 1 ("you said this is not
+     * you") is telling somebody what they are not, which is neither useful
+     * nor what they came for; quoting a 3 is quoting a shrug. Four and five
+     * are the ones where they told us something, and those are the ones the
+     * plan answers.
+     */
+    const heard = [];
+    for (const [id, scale] of Object.entries(boot.scales || {})) {
+      const value = chosenIds(id)[0];
+      if (value !== '4' && value !== '5') continue;
+      const word = (scale.words?.[value] || '').toLowerCase();
+      heard.push({
+        word: value === '5' ? 'Always' : 'Often',
+        line: scale.title,
+        note: word,
+      });
+    }
+
+    const struggles = chosenLabels('struggles');
+    const reasons = chosenLabels('reason');
+    const extras = [];
+    if (struggles.length) {
+      extras.push({ word: 'In the way', line: andList(struggles), note: '' });
+    }
+    if (reasons.length) {
+      extras.push({ word: 'Driving it', line: andList(reasons), note: '' });
+    }
+
+    const heardBox = el.querySelector('[data-plan2-heard]');
+    const heardList = el.querySelector('[data-plan2-heardlist]');
+    if (heardBox && heardList) {
+      /* Four at most. A plan that recites twenty answers is a receipt. */
+      const rows = [...extras, ...heard].slice(0, 4);
+      heardList.replaceChildren(
+        ...rows.map((row) => {
+          const li = document.createElement('li');
+          const tag = document.createElement('b');
+          tag.textContent = row.word;
+          const text = document.createElement('span');
+          text.textContent = row.line;
+          li.append(tag, text);
+          return li;
+        }),
+      );
+      heardBox.hidden = rows.length === 0;
+    }
+
+    /* ---- the first week */
+
+    /*
+     * Built from the books they said yes to, then from their topics.
+     *
+     * A week of seven identical "a lesson from your topics" rows is a
+     * placeholder with a calendar drawn around it. The books are real titles
+     * the reader has just chosen in front of us, so those go first and the
+     * topics carry the rest — and if they said no to everything and picked no
+     * topics, the week hides rather than inventing one.
+     */
+    const yes = Object.entries(boot.tasteBooks || {})
+      .filter(([id]) => chosenIds(id)[0] === 'yes')
+      .map(([, book]) => book);
+
+    const days = [];
+    for (const book of yes) {
+      if (days.length >= 7) break;
+      days.push({ title: book.title, note: book.author || 'From your shelf' });
+    }
+    for (const topic of topics) {
+      if (days.length >= 7) break;
+      days.push({ title: topic, note: 'Chosen for you' });
+    }
+
+    const weekBox = el.querySelector('[data-plan2-week]');
+    const weekList = el.querySelector('[data-plan2-weeklist]');
+    if (weekBox && weekList) {
+      weekList.replaceChildren(
+        ...days.map((day, i) => {
+          const li = document.createElement('li');
+          li.className = 'fweek__day';
+          if (i === 0) li.setAttribute('data-first', '');
+          const n = document.createElement('span');
+          n.className = 'fweek__n';
+          n.textContent = `Day ${i + 1}`;
+          const text = document.createElement('span');
+          text.className = 'fweek__text';
+          const title = document.createElement('b');
+          title.textContent = day.title;
+          const note = document.createElement('small');
+          note.textContent = day.note;
+          text.append(title, note);
+          li.append(n, text);
+          return li;
+        }),
+      );
+      weekBox.hidden = days.length === 0;
+    }
+
+    /* ---- the arithmetic */
+
+    const count = (n) => n.toLocaleString();
+    set('m30', count(ideas * 30));
+    set('m365', count(ideas * 365));
+    set('mhours', count(Math.round((minutes * 365) / 60)));
+    set(
+      'mathsnote',
+      `At ${minutes} minutes a day — the amount you chose — and only if you keep showing up. ` +
+        'That part is yours.',
+    );
   }
 
   /* ---------------------------------------------------------------- account */
@@ -1011,6 +1286,17 @@
 
   /* --------------------------------------------------------------- checkout */
 
+  /*
+   * Set by the offer's own wiring, called from the plan screen.
+   *
+   * The two live in different scopes — the checkout is set up inside the
+   * `offerEl` block and the plan is rendered from `render()` — and the
+   * warm-up has to be reachable from the one that happens first. A function
+   * handed outward is the smallest way to do that; before the offer's block
+   * runs it is simply absent, and the plan screen's call is a no-op.
+   */
+  let warmAhead = null;
+
   const offerEl = stepEls.get('offer');
   if (offerEl) {
     const planButtons = [...offerEl.querySelectorAll('[data-plan-id]')];
@@ -1155,6 +1441,22 @@
      * the reader is reading two prices. Cached after the first call, so a
      * second attempt after a declined card is instant.
      */
+    /*
+     * …except that by the time somebody means to buy, they have already told
+     * us they mean to.
+     *
+     * Asking for the script on the Subscribe press put the whole of it — most
+     * of a megabyte, then a round trip for the offerings, then the sheet's own
+     * mount — between the press and anything visible happening. On a phone on
+     * mobile data that is several seconds of a button that looks broken, at
+     * the one moment in the funnel where hesitation costs the sale.
+     *
+     * `warmCheckout` below starts all of it the moment the reader reaches the
+     * plan, which is two screens and about a minute earlier. Nothing is
+     * charged and nothing is shown; the work simply happens while they read.
+     * By the press, `loadSdk` and `instance` are resolved promises and the
+     * offerings are in hand, so the sheet is the next thing that paints.
+     */
     let sdk = null;
     const loadSdk = () => {
       if (sdk) return sdk;
@@ -1191,6 +1493,41 @@
       configured = Purchases.configure({ apiKey: boot.checkout.key, appUserId: user.id });
       return configured;
     };
+
+    /*
+     * Everything the press needs, fetched before the press.
+     *
+     * Each piece caches its own promise, so calling this twice is free and
+     * calling it before there is a signed-in reader still gets the script —
+     * which is the expensive part — while the two steps that need an identity
+     * wait for one. A failure here is swallowed on purpose: this is a warm-up
+     * nobody asked for, and the real attempt reports its own errors properly.
+     */
+    let offerings = null;
+    const warmCheckout = () => {
+      loadSdk()
+        .then((Purchases) => {
+          if (!user) return null;
+          return instance(Purchases).then((purchases) => {
+            if (!offerings) offerings = purchases.getOfferings();
+            return offerings;
+          });
+        })
+        .catch(() => {
+          /* Nothing is on screen that depends on this. The press will try
+             again properly and say so if it fails then. */
+          offerings = null;
+        });
+    };
+    /*
+     * Handed outward, not called here.
+     *
+     * Calling it at setup would start the megabyte on page load for every
+     * visitor, and most visitors never reach this screen — which is the thing
+     * the note above is at pains to avoid. The plan step calls it, two
+     * screens and about a minute before the press.
+     */
+    warmAhead = warmCheckout;
 
     /**
      * Give the checkout somewhere with a height to be drawn in.
@@ -1319,8 +1656,17 @@
           const Purchases = await loadSdk();
           const purchases = await instance(Purchases);
 
-          const offerings = await purchases.getOfferings();
-          const current = offerings?.current;
+          /* Warmed on the plan screen. Re-asked only if that failed or never
+             ran, so the ordinary path has nothing left to wait for. */
+          if (!offerings) offerings = purchases.getOfferings();
+          let current;
+          try {
+            current = (await offerings)?.current;
+          } catch (error) {
+            /* A warm-up that failed must not poison the real attempt. */
+            offerings = purchases.getOfferings();
+            current = (await offerings)?.current;
+          }
           if (!current) throw new Error('No plans are available right now.');
 
           /*

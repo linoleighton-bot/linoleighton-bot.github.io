@@ -1802,4 +1802,1076 @@ body.page-funnel2 .fs__cta {
   font-weight: 600;
 }
 
-body.page-funnel2 .fs__cta:disabled { opacity: 0.4; }
+/*
+ * Disabled, and still a button.
+ *
+ * At 40% opacity an ink pill on cream is a ghost — on the multi-answer
+ * screens, where it is pinned to the foot and is the only thing to press,
+ * readers could not see there was anything there to press. It keeps its shape
+ * and loses its weight instead: unmistakably not ready, unmistakably present.
+ */
+body.page-funnel2 .fs__cta:disabled {
+  opacity: 1;
+  background: color-mix(in srgb, var(--ink) 16%, var(--f2-bg));
+  color: color-mix(in srgb, var(--ink) 52%, var(--f2-bg));
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+ * The phone pass.
+ *
+ * Everything above this line was written against a design measured at 375px
+ * and then read on a desktop. Read on an actual iPhone it had four problems,
+ * and this block is the four fixes. It is last, as an override layer, for the
+ * same reason the layer above it is: the measured geometry stays legible as
+ * what it is rather than being half-edited into something neither thing.
+ *
+ *   1. On the screens that take several answers the Continue button sits at
+ *      the foot of a list twelve items long, which on a phone is below the
+ *      fold — so the reader picks four topics and has nothing to press.
+ *   2. Answering had a 300ms hold on it and then an arrival animation that
+ *      staggered the next screen's options in over another 380ms. Twenty
+ *      questions of that is most of a minute spent waiting for a screen that
+ *      had already decided what it was going to say.
+ *   3. The 1–5 agreement rows were five squares across a 343px column, each
+ *      holding a word like "Sometimes" in two cramped lines.
+ *   4. The yes/no cards were white and black, which says nothing about which
+ *      one is which until you read them.
+ * ====================================================================== */
+
+/* --------------------------------------------------- 1. the button stays */
+
+/*
+ * The Continue button sticks to the bottom of the screen.
+ *
+ * `sticky` rather than `fixed`: on a short screen it sits where it falls, at
+ * the end of the list like any other element, and only on a screen tall
+ * enough to scroll does it pin itself to the foot. So nothing moves on the
+ * screens that never needed it, and the screens that did have a button that
+ * is always under the thumb.
+ *
+ * The band behind it is the page's own ground, faded upward, so the list
+ * scrolling underneath passes out of sight rather than through the label.
+ */
+body.page-funnel2 .fs__cta {
+  position: sticky;
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+}
+
+/*
+ * Room under the last option.
+ *
+ * Without it the final chip ends exactly where the pinned button begins and
+ * can never be scrolled clear of it — so the twelfth topic is permanently
+ * half-covered by the thing that asks you to confirm the twelfth topic.
+ */
+body.page-funnel2 .fstep[data-kind='multi'],
+body.page-funnel2 .fstep[data-kind='grid'],
+body.page-funnel2 .fstep[data-kind='plan'] {
+  padding-bottom: 1rem;
+}
+
+/*
+ * The band behind it is drawn with a shadow, not a pseudo-element.
+ *
+ * The obvious way to do this is a `::before` stretched past the button's own
+ * edges — and it is wrong here, because the offer's shine already puts this
+ * button in its own stacking context, which flips a negative-z pseudo-element
+ * from behind the button's background to in front of it. The result was a
+ * cream rectangle painted over a cream-on-ink label: a Continue button that
+ * was, on the one screen where it is the only thing to press, invisible.
+ *
+ * An outer box-shadow always paints behind the element's own background, with
+ * no stacking context to reason about. A hard spread in the page's ground
+ * gives the opaque band; a blurred one above it softens the edge the list
+ * scrolls out through.
+ */
+body.page-funnel2 .fstep[data-kind='multi'] .fs__cta,
+body.page-funnel2 .fstep[data-kind='grid'] .fs__cta,
+body.page-funnel2 .fstep[data-kind='plan'] .fs__cta {
+  box-shadow:
+    0 0 0 0.85rem var(--f2-bg),
+    0 -0.55rem 0.9rem 0.85rem var(--f2-bg);
+}
+
+/* ------------------------------------------------- 2. answering is instant */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The screen itself: a short slide, not a transition to sit through. */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) {
+    animation-duration: 0.17s;
+  }
+
+  /*
+   * The question arrives with the screen, not after it.
+   *
+   * The staggered composition was written for a flow whose screens carry a
+   * sentence and a picture. On a question with twelve options it delays the
+   * thing the reader is waiting for by the length of the list.
+   */
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__title,
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__why,
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__body,
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__field,
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__cta,
+  body.page-funnel2 .funnel[data-live] .fstep[data-kind]:not([data-kind='hook']):not([hidden]) > .fs__skip {
+    animation-duration: 0.2s;
+    animation-delay: 0ms;
+  }
+
+  /* The options come in behind it, close enough together that the twelfth is
+     not a second behind the first. */
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fq__option,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fcard,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fgrid__cell,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fscale__step {
+    animation-duration: 0.22s;
+    animation-delay: calc(var(--i, 0) * 11ms);
+  }
+}
+
+/*
+ * The press lands in the frame it happens in.
+ *
+ * Every one of these carried a 160ms transition on the property that shows
+ * the answer, so the confirmation the reader is waiting for started after
+ * the tap and finished after the screen had already begun to leave. The
+ * chosen state now has no transition at all: it is simply true the moment
+ * the finger is down, and the small dip below is what gives it weight.
+ */
+body.page-funnel2 .fq__option,
+body.page-funnel2 .fcard,
+body.page-funnel2 .fscale__step {
+  transition: box-shadow 0.09s ease, background-color 0.09s ease, transform 0.09s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body.page-funnel2 .fq__option[data-chosen],
+body.page-funnel2 .fcard[data-chosen],
+body.page-funnel2 .fscale__step[data-chosen] {
+  transition: none;
+}
+
+body.page-funnel2 .fq__option:active,
+body.page-funnel2 .fcard:active,
+body.page-funnel2 .fscale__step:active,
+body.page-funnel2 .fs__cta:not(:disabled):active {
+  transform: scale(0.982);
+}
+
+/* ------------------------------------------- 3. the agreement rows, stacked */
+
+/*
+ * Five rows down, not five squares across.
+ *
+ * Five columns inside a 343px column gives each point 61 pixels to hold a
+ * word; "Sometimes" wrapped onto two lines in a box too small for one, which
+ * is why these screens looked unfinished next to the rest of the flow. A row
+ * each gives every point a full line of type, puts all five under the thumb,
+ * and makes the scale read in the same shape as every other question here —
+ * which is the actual fix, because the problem was never the size of the
+ * boxes, it was that these were the one screen that looked like a form.
+ */
+body.page-funnel2 .fscale--worded {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+body.page-funnel2 .fscale--worded .fscale__step {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--f2-card);
+  color: var(--f2-ink);
+  text-align: left;
+}
+
+/* The dot is the radio. Outlined until chosen, filled after — the one
+   convention nobody has to be taught. */
+body.page-funnel2 .fscale--worded .fscale__dot {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid color-mix(in srgb, var(--ink) 22%, var(--f2-card));
+  border-radius: 50%;
+  background: transparent;
+}
+
+body.page-funnel2 .fscale--worded .fscale__word {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+}
+
+body.page-funnel2 .fscale--worded .fscale__step[data-chosen] {
+  background: color-mix(in srgb, var(--clay) 7%, var(--f2-card));
+  box-shadow: inset 0 0 0 2px var(--f2-accent);
+}
+
+body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__dot {
+  border-color: var(--f2-accent);
+  background: var(--f2-accent);
+  box-shadow: inset 0 0 0 3px var(--f2-card);
+}
+
+body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__word {
+  font-weight: 600;
+}
+
+/* With the points stacked there is no row for the end labels to sit under. */
+body.page-funnel2 .fstep[data-kind='scale'] .fscale__ends {
+  display: none;
+}
+
+/* The question no longer needs pushing to the floor to meet its answers. */
+body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
+  margin-top: 0;
+}
+body.page-funnel2 .fscale--worded {
+  margin-bottom: 0;
+}
+
+/* -------------------------------------------- 4. the yes and the no, read */
+
+/*
+ * No is red, yes is green.
+ *
+ * These two buttons were white and near-black, which is a pair of buttons
+ * rather than a choice: the reader has to read both before either means
+ * anything, five times in a row. Colour does that work before the words do,
+ * and these are the brand's own red and green rather than a browser's.
+ */
+body.page-funnel2 .fq--pair .fq__option {
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 650;
+  justify-content: center;
+}
+
+body.page-funnel2 .fq--pair .fq__option:first-child {
+  background: color-mix(in srgb, var(--danger) 10%, var(--f2-card));
+  color: var(--danger);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child {
+  background: color-mix(in srgb, var(--moss) 12%, var(--f2-card));
+  color: var(--moss);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--moss) 32%, transparent);
+}
+
+/* The chosen one fills, so the answer is unmistakable in the beat before the
+   screen moves on. */
+body.page-funnel2 .fq--pair .fq__option:first-child[data-chosen] {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: none;
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child[data-chosen] {
+  background: var(--moss);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* The cross and the tick inherit the button's colour, so they travel with it
+   — the cross was pinned to `--muted`, which is the one grey on the page that
+   is neither the red nor the white it sits on. */
+body.page-funnel2 .fq--pair .fq__option::before,
+body.page-funnel2 .fq--pair .fq__option:first-child::before {
+  color: currentColor;
+  opacity: 1;
+}
+
+/* ==========================================================================
+ * Rollo, and the two screens he was brought in for.
+ *
+ * The flow's between-question screens used to be a sentence over nothing, or
+ * over a spot illustration drawn for one line of copy. They carry the
+ * character now — the same one the app uses, drawn doing the thing the screen
+ * is about — because a reader three minutes into a questionnaire is being
+ * asked to trust something, and a character they have been watching the whole
+ * way is the cheapest trust on the page.
+ * ====================================================================== */
+
+body.page-funnel2 .fscene {
+  display: block;
+  width: 11.5rem;
+  max-width: 62%;
+  height: auto;
+  margin: 1.25rem auto 1rem;
+}
+
+/* The affirmation screens are the ones he is the picture of, so he is bigger
+   there and the sentence sits under him. */
+body.page-funnel2 .fstep[data-kind='note'] .fscene {
+  width: 13rem;
+  max-width: 70%;
+  margin-top: 0.5rem;
+}
+
+/* On the plan and the sign-in he is punctuation beside a lot of other
+   material, so he gives the space back. */
+body.page-funnel2 .fstep[data-kind='plan'] .fscene,
+body.page-funnel2 .fstep[data-kind='account'] .fscene {
+  width: 7.5rem;
+  margin: 0.75rem auto 0.9rem;
+}
+
+/* A screen short enough to hold both keeps both; a short phone drops him
+   rather than pushing the question under the fold. */
+@media (max-height: 40rem) {
+  body.page-funnel2 .fstep[data-kind='plan'] .fscene,
+  body.page-funnel2 .fstep[data-kind='account'] .fscene {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) > .fscene,
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fring {
+    animation: f2-art-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* ------------------------------------------------- the plan being built */
+
+/*
+ * A ring closing around the character building the thing.
+ *
+ * The figure used to sit over a flat bar, which is the shape of a download —
+ * something arriving from elsewhere while you wait. A ring drawing itself
+ * around Rollo with his blocks is the shape of something being assembled
+ * here, which is what this screen is claiming happens. The bar stays
+ * underneath it, because the bar is what tells you how much is left.
+ */
+body.page-funnel2 .fring {
+  position: relative;
+  width: 11rem;
+  height: 11rem;
+  margin: 1.5rem auto 0.5rem;
+}
+
+body.page-funnel2 .fring__dial {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Start the stroke at twelve o'clock rather than at three. */
+  transform: rotate(-90deg);
+}
+
+body.page-funnel2 .fring__track,
+body.page-funnel2 .fring__fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+body.page-funnel2 .fring__track {
+  stroke: var(--f2-track);
+}
+
+body.page-funnel2 .fring__fill {
+  stroke: var(--f2-accent);
+  /* The dash is set from script, which measures the circle rather than
+     assuming its radius. The transition is what keeps the stroke smooth
+     between the whole percentages the figure is painted in. */
+  transition: stroke-dashoffset 0.12s linear;
+}
+
+body.page-funnel2 .fring .fscene {
+  position: absolute;
+  inset: 1.35rem;
+  width: auto;
+  max-width: none;
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.page-funnel2 .fstep[data-kind='build']:not([hidden]) .fring .fscene {
+    animation: f2-build-bob 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes f2-build-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* The lines: one in hand, the rest waiting. */
+body.page-funnel2 .fbuild__line {
+  opacity: 0.38;
+  transition: opacity 0.25s ease, color 0.25s ease;
+}
+
+body.page-funnel2 .fbuild__line[data-now] {
+  opacity: 1;
+  font-weight: 600;
+}
+
+body.page-funnel2 .fbuild__line[data-done] {
+  opacity: 1;
+  font-weight: 400;
+}
+
+/*
+ * The line being worked on gets the only moving thing on the screen.
+ *
+ * Three dots after a label is the oldest signal there is for "this is
+ * happening now", and it is doing real work here: without it the list reads
+ * as five things that are already true, waiting to be ticked.
+ */
+body.page-funnel2 .fbuild__line[data-now]::before {
+  animation: f2-build-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes f2-build-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.page-funnel2 .fbuild__line[data-now]::before,
+  body.page-funnel2 .fstep[data-kind='build'] .fring .fscene { animation: none; }
+  body.page-funnel2 .fring__fill { transition: none; }
+}
+
+/* ==========================================================================
+ * The plan.
+ *
+ * This is the screen everything before it was for, and the one place in the
+ * funnel where the reader should recognise themselves. So the shape of it is
+ * the shape of an object issued to one person: a card with their name and the
+ * date on it, then the evidence that we were listening — their own words
+ * quoted, their own books in their own first week — and last the arithmetic,
+ * because a number you worked out from what they told you is more persuasive
+ * than any sentence about how good the product is.
+ *
+ * It scrolls. It is meant to: a reader who scrolls a plan is a reader reading
+ * their plan, and the Continue button stays pinned to the foot the whole way
+ * down so the scroll never costs them the way out.
+ * ====================================================================== */
+
+body.page-funnel2 .fstep[data-kind='plan'] {
+  text-align: center;
+}
+
+body.page-funnel2 .fstep[data-kind='plan'] .fs__body {
+  margin-bottom: 1.5rem;
+}
+
+/* ---------------------------------------------------------------- the card */
+
+/*
+ * Ink, not paper.
+ *
+ * Everything else in this flow is a white card on a cream ground. The plan
+ * has to be the thing on the page, and the cheapest way to make one object
+ * outrank twenty identical ones is to invert it — so this is the only dark
+ * surface in the funnel, and the reader's name is on it.
+ */
+body.page-funnel2 .fcard2 {
+  margin: 0 0 1.75rem;
+  padding: 1.15rem 1.15rem 1.25rem;
+  border-radius: 1rem;
+  background: var(--f2-ink);
+  color: var(--f2-bg);
+  text-align: left;
+  box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.75);
+}
+
+body.page-funnel2 .fcard2__head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+body.page-funnel2 .fcard2__mark {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: none;
+  border-radius: 0.6rem;
+  background: var(--f2-accent);
+}
+
+body.page-funnel2 .fcard2__mark svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  /* The mark is drawn in `currentColor`, and on the clay tile that is white. */
+  color: #fff;
+  fill: currentColor;
+}
+
+body.page-funnel2 .fcard2__who {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+body.page-funnel2 .fcard2__who b {
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+body.page-funnel2 .fcard2__who small {
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+/* The four decisions, two across. */
+body.page-funnel2 .fcard2__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 0.9rem;
+  margin: 1rem 0 0;
+}
+
+body.page-funnel2 .fcard2__cell {
+  min-width: 0;
+}
+
+body.page-funnel2 .fcard2__cell dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+body.page-funnel2 .fcard2__cell dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  font-weight: 500;
+  /* Four answers of wildly different lengths in a two-column grid: the long
+     one wraps rather than widening its column and squashing its neighbour. */
+  overflow-wrap: anywhere;
+}
+
+body.page-funnel2 .fcard2__topics {
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+body.page-funnel2 .fcard2__cap {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+body.page-funnel2 .fcard2__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.page-funnel2 .fcard2__chips li {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+/* ------------------------------------------------------- the sections under */
+
+body.page-funnel2 .fplan2__sec {
+  margin-bottom: 1.75rem;
+  text-align: left;
+}
+
+body.page-funnel2 .fplan2__h {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--f2-muted);
+}
+
+/* ---- their own answers, quoted back */
+
+body.page-funnel2 .fheard {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.page-funnel2 .fheard li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.7rem;
+  background: var(--f2-card);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+body.page-funnel2 .fheard b {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f2-accent);
+  white-space: nowrap;
+}
+
+body.page-funnel2 .fheard span {
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+/* ---- the first week */
+
+body.page-funnel2 .fweek {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.page-funnel2 .fweek__day {
+  position: relative;
+  display: grid;
+  grid-template-columns: 3.6rem 1fr;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.65rem 0 0.75rem 0;
+}
+
+/*
+ * The rail is drawn between one day and the next, not down the whole list.
+ *
+ * Down the whole list it runs past the last day into nothing, which reads as
+ * a week that was cut off rather than one that ends on day seven.
+ */
+body.page-funnel2 .fweek__day:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 1.78rem;
+  top: 1.7rem;
+  bottom: -0.15rem;
+  width: 2px;
+  background: var(--f2-track);
+}
+
+body.page-funnel2 .fweek__n {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: var(--f2-track);
+  color: var(--f2-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+/* Day one is the one that happens; the rest are a promise. */
+body.page-funnel2 .fweek__day[data-first] .fweek__n {
+  background: var(--f2-accent);
+  color: #fff;
+}
+
+body.page-funnel2 .fweek__text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+body.page-funnel2 .fweek__text b {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+body.page-funnel2 .fweek__text small {
+  font-size: 0.8rem;
+  color: var(--f2-muted);
+}
+
+/* ---- the arithmetic */
+
+body.page-funnel2 .fmaths {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.page-funnel2 .fmaths li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--clay) 7%, var(--f2-card));
+}
+
+body.page-funnel2 .fmaths b {
+  font-size: 1.35rem;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .fmaths span {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+body.page-funnel2 .fmaths__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--f2-muted);
+}
+
+body.page-funnel2 .fstep[data-kind='plan'] .fs__note {
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+/* ==========================================================================
+ * The till.
+ * ====================================================================== */
+
+/*
+ * The buy button is clay, and stays clay.
+ *
+ * It was ink, like every other Continue in the flow — which is right for a
+ * button that means "next" and wrong for the one button that means "yes".
+ * Clay is the brand's own accent and the only place it is used as a fill, so
+ * on this screen it is unmistakably the thing to press.
+ */
+body.page-funnel2 .fstep[data-kind='offer'] .fs__cta {
+  background: var(--clay);
+  color: var(--on-clay, #fff);
+}
+
+body.page-funnel2 .fstep[data-kind='offer'] .fs__cta:not(:disabled):hover {
+  background: var(--clay-deep);
+}
+
+/*
+ * Busy is not off.
+ *
+ * While the checkout opens the button is disabled so it cannot be pressed
+ * twice, and the flow's disabled style takes it to 40% — which on a clay fill
+ * is a grey smear, and reads as the button having broken at the exact moment
+ * the reader committed. It keeps its colour and gives up a little light
+ * instead: visibly not pressable, visibly still the same button.
+ */
+body.page-funnel2 .fstep[data-kind='offer'] .fs__cta:disabled {
+  opacity: 0.88;
+  background: var(--clay);
+  color: var(--on-clay, #fff);
+  cursor: progress;
+}
+
+/*
+ * The form opens where the reader is looking.
+ *
+ * `scroll-margin-top` was 1rem, which puts the top of the payment sheet level
+ * with the top of the viewport — under the phone's own status bar and under
+ * the funnel's progress rail. Clearing both means the first thing in view is
+ * the first field, which is the whole reason the till sits above the plans.
+ */
+body.page-funnel2 .pw__till:not([hidden]) {
+  scroll-margin-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  /* The sheet draws its own white card, so the panel around it is one border
+     rather than a second plate with its own padding on a 343px column. */
+  padding: 0.5rem;
+  min-height: 22rem;
+}
+
+/*
+ * Something to look at while the sheet mounts.
+ *
+ * Even preloaded there is a moment between the panel opening and the card
+ * fields painting. Empty, that moment reads as a blank box; a quiet pulse
+ * reads as something arriving. It is behind the sheet, so it disappears on
+ * its own the instant the form draws over it.
+ */
+body.page-funnel2 .pw__till:not([hidden])::before {
+  content: '';
+  position: absolute;
+  inset: 1.25rem;
+  z-index: 0;
+  border-radius: 0.6rem;
+  background: linear-gradient(
+    100deg,
+    var(--f2-track) 25%,
+    color-mix(in srgb, var(--f2-track) 45%, var(--f2-card)) 50%,
+    var(--f2-track) 75%
+  );
+  background-size: 220% 100%;
+  animation: pw2-wait 1.3s ease-in-out infinite;
+}
+
+body.page-funnel2 .pw__till:not([hidden]) {
+  position: relative;
+}
+
+body.page-funnel2 .pw__till > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pw2-wait {
+  from { background-position: 120% 0; }
+  to { background-position: -20% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.page-funnel2 .pw__till:not([hidden])::before { animation: none; }
+}
+
+/* ==========================================================================
+ * Corrections from the phone.
+ * ====================================================================== */
+
+/*
+ * One dot, one size.
+ *
+ * `funnel.css` ramps the dot from 8px on "Not me" to 20px on "Always", which
+ * reads as intensity when the five points are a row across the screen. Stacked
+ * as five rows they are radio buttons, and five radio buttons of five
+ * different sizes read as a rendering fault rather than as a scale. The ramp
+ * is overridden point by point because that is the specificity it was written
+ * at.
+ */
+body.page-funnel2 .fscale--worded .fscale__step:nth-child(1) .fscale__dot,
+body.page-funnel2 .fscale--worded .fscale__step:nth-child(2) .fscale__dot,
+body.page-funnel2 .fscale--worded .fscale__step:nth-child(3) .fscale__dot,
+body.page-funnel2 .fscale--worded .fscale__step:nth-child(4) .fscale__dot,
+body.page-funnel2 .fscale--worded .fscale__step:nth-child(5) .fscale__dot {
+  width: 1.2rem;
+  height: 1.2rem;
+  background: transparent;
+  transform: none;
+}
+
+body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__dot {
+  background: var(--f2-accent);
+  transform: none;
+}
+
+body.page-funnel2 .fscale--worded .fscale__word {
+  text-align: left;
+  color: var(--f2-ink);
+}
+
+/*
+ * The question and its five answers sit together in the middle.
+ *
+ * Five rows is a short screen, and left at the top of a 844px phone they
+ * leave a third of the display empty underneath — which reads as a section
+ * that failed to load. Letting the slack fall above the heading and below the
+ * last row puts the pair where the eye and the thumb already are.
+ */
+body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
+  margin-top: auto;
+}
+body.page-funnel2 .fstep[data-kind='scale'] .fscale--worded {
+  margin-bottom: auto;
+}
+
+/* ---------------------------------------------------- the build screen, sized */
+
+/*
+ * Rollo inside the ring, at a size the ring can hold.
+ *
+ * `inset` plus `height: auto` on an image is not a box — the image keeps its
+ * intrinsic height and overflows, which put a 448px mascot across the
+ * checklist underneath. Stated width and height, offset from the ring's own
+ * corner, gives a square he is drawn to fit inside.
+ */
+body.page-funnel2 .fring .fscene {
+  position: absolute;
+  inset: auto;
+  top: 1.6rem;
+  left: 1.6rem;
+  width: 7.8rem;
+  height: 7.8rem;
+  max-width: none;
+  margin: 0;
+  object-fit: contain;
+}
+
+/*
+ * The ring is the progress. The bar underneath it was the progress too.
+ *
+ * Two of them is one too many: the eye cannot tell which it is meant to watch,
+ * and the figure beside them was set at the size it needed when it was the
+ * only thing on the screen saying how far along this was. The ring keeps the
+ * job, the figure shrinks to a caption under it, and the bar goes.
+ */
+body.page-funnel2 .fstep[data-kind='build'] .fbuild__bar {
+  display: none;
+}
+
+body.page-funnel2 .fbuild__pct {
+  /* The rule above sets `justify-content`, so this is a flex row and
+     `text-align` alone would not move it. */
+  justify-content: center;
+  margin: 0.4rem 0 0.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+body.page-funnel2 .fbuild__pct b {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--f2-accent);
+}
+
+/* With the bar gone there is nothing between the figure and the checklist, so
+   the checklist takes the spacing the bar used to provide. */
+body.page-funnel2 .fstep[data-kind='build'] .fbuild {
+  margin-top: 1.6rem;
+}
+
+body.page-funnel2 .fbuild__pct i {
+  font-style: normal;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--f2-accent);
+}
+
+/*
+ * No back-to-top on a funnel.
+ *
+ * It is the site's own control, added for the long marketing pages, and it is
+ * fixed to the bottom right of the viewport — which on these screens is on
+ * top of the Continue button, and on the plan it is a second round thing
+ * competing with the one the reader is supposed to press. A questionnaire
+ * also has nowhere to go back up to: each screen is its own page.
+ */
+body.page-funnel2 .to-top {
+  display: none;
+}
+
+/*
+ * The button falls to the foot of a screen that does not fill.
+ *
+ * Half the screens in this flow are shorter than a phone — an affirmation and
+ * a Continue, five scale rows, a book and two buttons — and the button landed
+ * wherever the content stopped, which on an 844px display is in the middle of
+ * the screen with a third of it empty underneath. `auto` sends it to the
+ * bottom when there is slack and resolves to nothing when there is not, which
+ * is also what keeps it pinned under the thumb on the long ones.
+ *
+ * The gap above it is on the blocks it follows rather than on the button
+ * itself, because a top margin on the button is exactly what an `auto` has to
+ * replace.
+ */
+body.page-funnel2 .fq,
+body.page-funnel2 .fscale,
+body.page-funnel2 .ftaste,
+body.page-funnel2 .fplan2__sec,
+body.page-funnel2 .fbuild {
+  margin-bottom: 1.5rem;
+}
+
+body.page-funnel2 .fs__cta {
+  margin-top: auto;
+}
+
+/* The sign-in's own stack keeps its shape: the providers are the buttons
+   there, and the step has no `.fs__cta` of its own on screen. */
+body.page-funnel2 .fstep[data-kind='account'] .fs__cta {
+  margin-top: 1rem;
+}
+
+/* The question and its answers stay together at the middle of a short screen
+   rather than being pulled apart by the button's own auto margin. */
+body.page-funnel2 .fstep[data-kind='scale'] .fscale--worded {
+  margin-bottom: 1.5rem;
+}
+
+/* ------------------------------------- the sign-in reads like the rest of it */
+
+/*
+ * The heading and the line under it are centred, like every other screen in
+ * this flow. The providers below stay left-aligned inside their own buttons,
+ * which is where left alignment is actually doing something.
+ */
+body.page-funnel2 .fstep[data-kind='account'] .fs__eyebrow,
+body.page-funnel2 .fstep[data-kind='account'] .fs__title,
+body.page-funnel2 .fstep[data-kind='account'] .signin__lead {
+  text-align: center;
+}
+
+body.page-funnel2 .fstep[data-kind='account'] .signin__lead {
+  margin-bottom: 1.75rem;
+}
+
+/*
+ * While the sheet is open, the sheet is the screen.
+ *
+ * The till opens above the plans, which is right — the reader presses
+ * Subscribe and the form is the first thing in view. But everything that
+ * argued them into pressing it is still there: a three-step timeline above
+ * the form and six sections of reassurance below it, so on a phone the card
+ * fields sat in the middle of a two-thousand-pixel page. None of it is being
+ * read at that point. It folds away while the form is up and comes straight
+ * back if they close it.
+ *
+ * The plans stay, directly under the form, because changing your mind at the
+ * till is ordinary and the cards are how you do it.
+ */
+body.page-funnel2 .fstep[data-kind='offer']:has(.pw__till:not([hidden])) .pw2__when,
+body.page-funnel2 .fstep[data-kind='offer']:has(.pw__till:not([hidden])) .pw2__more {
+  display: none;
+}
+
+body.page-funnel2 .pw__till:not([hidden]) {
+  min-height: 18rem;
+}
+
+/* Two shots and a hint of the third, so the cut reads as "keep going" rather
+   than as a picture that failed to fit. */
+body.page-funnel2 .pw2__shots {
+  grid-auto-columns: 56%;
+}
+
+body.page-funnel2 .pw2__shot figcaption span {
+  text-wrap: balance;
+}
