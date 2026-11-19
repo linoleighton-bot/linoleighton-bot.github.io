@@ -424,7 +424,7 @@
           const reached = met(r);
           const locked = !reached && videos >= r.min_videos;
           const needs = Number(r.min_sales || 0);
-          return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true', 'data-locked': locked || null }, reached ? '✓' : locked ? '\u{1F512}' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, `${num(r.min_videos)} videos`), h('small', {}, needs ? `+ ${num(needs)} sales` : 'no sales needed'));
+          return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true', 'data-locked': locked || null }, reached ? '✓' : locked ? '\u{1F512}' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, `${num(r.min_videos)} videos`), h('small', {}, needs ? `+ ${num(needs)} sales` : 'no sales'));
         }),
       ];
       rows.push(
