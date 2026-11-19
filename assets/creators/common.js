@@ -750,8 +750,8 @@
           h('li', {}, h('span', {}, h('b', {}, 'Activeness'), h('small', {}, `${dollars0(pay.active_cents)} for every active week a creator completes`)), h('b', {}, dollars0(pay.from_active_cents))),
           h('li', {}, h('span', {}, h('b', {}, 'Views'), h('small', {}, `${dollars0(pay.views_cents)} for every 100K views your team gains`)), h('b', {}, dollars0(pay.from_views_cents))),
           pay.referral_cents > 0 && team.manager?.code
-            ? h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Creators you bring in'), h('small', {}, `${dollars0(pay.referral_cents)} for each creator who joins on your link and reaches ${compact(pay.referral_views)} views. Added the moment they get there. Tap for your link.`)), h('b', {}, dollars0(pay.from_referral_cents))),
-                h('p', { class: 'cp-small' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, `getmindroll.com/creators/?team=${team.manager.code}`)),
+            ? h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Creators you bring in'), h('small', {}, `${dollars0(pay.referral_cents)} for each creator who joins on your link and reaches ${compact(pay.referral_views)} views. Added as soon as their views are counted. Tap for your link.`)), h('b', {}, dollars0(pay.from_referral_cents))),
+                h('p', { class: 'cp-small', style: 'margin:0.5rem 0.75rem' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, `getmindroll.com/creators/?team=${team.manager.code}`)),
                 (pay.referrals || []).length
                   ? h('ul', { class: 'mr-rankups' }, pay.referrals.map((r) => h('li', {}, h('span', {}, h('b', {}, r.display_name), h('small', {}, r.paid ? 'Reached the goal' : r.status === 'pending' ? 'Waiting for approval' : `${compact(r.views)} of ${compact(pay.referral_views)} views`)), h('b', {}, r.paid ? dollars0(pay.referral_cents) : '–'))))
                   : h('p', { class: 'cp-small cp-muted' }, 'Nobody has joined on your link yet.')))

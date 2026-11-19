@@ -902,7 +902,7 @@
           invited,
           'Nobody has joined on a creator\'s invite link yet.',
         ),
-        h('p', { class: 'cp-muted cp-small' }, 'Each creator also has an invite link for bringing in other creators (getmindroll.com/creators/?invite=their-code). Clicks on invite links are not counted, only the people who applied.'),
+        h('p', { class: 'cp-muted cp-small' }, 'Each creator also has an invite link for bringing in other creators (getmindroll.com/creators/?invite=their-code). Clicks and sign-ups on invite links are on the Referrals page.'),
       ),
       (state.links || []).length
         ? section(
@@ -1168,7 +1168,7 @@
         { class: 'mr-panel mr-ref__how' },
         h('ol', {}, h('li', {}, h('b', {}, '1'), h('span', {}, 'A creator or a manager shares their invite link')), h('li', {}, h('b', {}, '2'), h('span', {}, 'Someone applies on it and you accept them')), h('li', {}, h('b', {}, '3'), h('span', {}, `Their videos reach ${compact(goal)} views in total`)), h('li', { 'data-pay': '' }, h('b', {}, bonus === mgrBonus ? cp.dollars(bonus) : `${cp.dollars(bonus)} / ${cp.dollars(mgrBonus)}`), h('span', {}, bonus === mgrBonus ? 'goes straight to whoever invited them' : 'to the creator / the manager who invited them'))),
       ),
-      h('div', { class: 'mr-grid' }, tile('paper', 'Invite link clicks', num(sum('clicks')), 'counted from the day this went live'), tile('paper', 'Signed up', num(sum('signups')), 'signed in on an invite link'), tile('paper', 'Accepted', num(sum('accepted')), `of ${num(sum('referred'))} who applied`), tile('amber', 'Paid to referrers', cp.dollars(paidOut), 'added the moment the goal is reached')),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Invite link clicks', num(sum('clicks')), 'counted from the day this went live'), tile('paper', 'Signed up', num(sum('signups')), 'signed in on an invite link'), tile('paper', 'Accepted', num(sum('accepted')), `of ${num(sum('referred'))} who applied`), tile('amber', 'Paid to referrers', cp.dollars(paidOut), 'added when the views are next counted after the goal')),
       section(
         'Referral ladder',
         h('span', { class: 'cp-muted' }, `${num(rows.length)} creators and managers · most referred first`),
@@ -2278,7 +2278,7 @@
       ],
       referrals: { clicks: [{ kind: 'creator', ref_id: 'c1', n: 148 }, { kind: 'creator', ref_id: 'c2', n: 31 }, { kind: 'creator', ref_id: 'c3', n: 6 }, { kind: 'manager', ref_id: 'm1', n: 64 }, { kind: 'manager', ref_id: 'm2', n: 12 }], signups: [{ kind: 'creator', ref_id: 'c1', n: 9 }, { kind: 'creator', ref_id: 'c2', n: 2 }, { kind: 'manager', ref_id: 'm1', n: 5 }, { kind: 'manager', ref_id: 'm2', n: 1 }], manager_bonuses: [{ manager_id: 'm1', creator_id: 'c7', amount_cents: 10000, created_at: ago(4) }] },
       managers: [
-        { manager: { id: 'm1', display_name: 'Alex Rivera', code: 'alex_rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 331200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100 } },
+        { manager: { id: 'm1', display_name: 'Alex Rivera', code: 'alex_rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 341200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100, referral_cents: 10000, referral_views: 100000, from_referral_cents: 10000, referrals: [{ id: 'c7', display_name: 'Noor Notes', status: 'active', views: 186000, paid: true }, { id: 'c8', display_name: 'Eli Annotates', status: 'active', views: 38500, paid: false }] } },
         { manager: { id: 'm2', display_name: 'Dana Cho', code: 'dana_cho', active: true }, email: 'dana@example.com', signed_in: false, creators: [], totals: {}, pay: { total_cents: 4100 } },
       ],
       bonuses: [
