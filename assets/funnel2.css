@@ -2875,3 +2875,220 @@ body.page-funnel2 .pw2__shots {
 body.page-funnel2 .pw2__shot figcaption span {
   text-wrap: balance;
 }
+
+/* ==========================================================================
+ * The opening screen.
+ *
+ * Measured off the screen this flow is modelled on, at the same place in the
+ * same order: a wordmark, a 28/36 promise, a 16/22.4 line under it, two rows
+ * of book covers drifting opposite ways, the question, and the answers as two
+ * pills side by side. Their tile is 84 wide and 120 tall with 8px between
+ * them, and their rows travel 27 pixels a second — all three are taken from
+ * their running page rather than guessed.
+ *
+ * The covers are ours: the same books, in the same order, as the app's own
+ * first screen. That is the whole argument for this screen. Somebody who has
+ * just clicked an advert for a reading app is asking what they are getting,
+ * and for this product the answer that needs no reading is the books.
+ * ====================================================================== */
+
+/*
+ * Centred, like everything else on this screen.
+ *
+ * `.fs__brand` is an inline-flex anchor, which centres itself inside a
+ * centred block — except that this step is the one place the anchor is the
+ * first child of a flex column, and a flex item ignores the text alignment of
+ * its parent and stretches instead. Stated here rather than left to inherit.
+ */
+body.page-funnel2 .fstep[data-step='hook'] .fs__brand {
+  display: flex;
+  align-self: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  font-size: 1.125rem;
+}
+
+body.page-funnel2 .fstep[data-step='hook'] .fs__why {
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  color: var(--f2-muted);
+}
+
+/* ---------------------------------------------------------- the shelf */
+
+/*
+ * Full width of the screen, not of the column.
+ *
+ * Everything else in this funnel lives in a 343px column, and a shelf that
+ * stopped at both of its edges would read as a widget on a page rather than
+ * as the wall of books the screen is about. `100vw` with a negative inline
+ * margin breaks it out; `overflow-x: clip` on the funnel keeps that from
+ * becoming a horizontal scrollbar. `clip` rather than `hidden` on purpose —
+ * `hidden` would make the funnel a scroll container and strand the sticky
+ * Continue button on every other screen.
+ */
+body.page-funnel2 .funnel {
+  overflow-x: clip;
+}
+
+body.page-funnel2 .fshelf {
+  width: 100vw;
+  max-width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  margin-block: 0.75rem 0;
+  display: grid;
+  gap: 8px;
+  overflow: hidden;
+  /* The column's text alignment must not reach the rows, or a row shorter
+     than the screen would centre itself and leave a gap at one end. */
+  text-align: left;
+}
+
+body.page-funnel2 .fshelf__row {
+  height: 120px;
+  overflow: hidden;
+}
+
+/*
+ * One pass over exactly one span, looped.
+ *
+ * The row holds its covers several times over and travels the width of one
+ * copy, so the frame it loops back to is the frame it left and there is no
+ * seam. `--span` and `--secs` are written into the markup because they depend
+ * on how many covers the build actually found.
+ */
+body.page-funnel2 .fshelf__track {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+  will-change: transform;
+  animation: f2-shelf var(--secs, 40s) linear infinite;
+}
+
+body.page-funnel2 .fshelf__row--back .fshelf__track {
+  animation-name: f2-shelf-back;
+}
+
+@keyframes f2-shelf {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(var(--span) * -1), 0, 0); }
+}
+
+@keyframes f2-shelf-back {
+  from { transform: translate3d(calc(var(--span) * -1), 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/*
+ * Still, for anyone who asked for less motion.
+ *
+ * The shelf still says what it is there to say standing still — it is a wall
+ * of books either way — so it holds rather than disappearing.
+ */
+@media (prefers-reduced-motion: reduce) {
+  body.page-funnel2 .fshelf__track { animation: none; }
+}
+
+/* The tile: a spine down the left, rounded on the fore edge, lifted a little
+   off the page. The gradient is the shading across the pages, which is what
+   stops a flat rectangle reading as a thumbnail. */
+body.page-funnel2 .fshelf__book {
+  position: relative;
+  flex: none;
+  display: block;
+  width: 84px;
+  height: 120px;
+  border-radius: 0 5% 5% 0;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+body.page-funnel2 .fshelf__book img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--f2-track);
+}
+
+body.page-funnel2 .fshelf__book::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(255, 255, 255, 0.22) 5%,
+    rgba(0, 0, 0, 0.06) 9%,
+    transparent 16%
+  );
+}
+
+/* --------------------------------------------------------- the question */
+
+/*
+ * 44px under the shelf — theirs, measured.
+ *
+ * Pushing the pair to the floor of the screen was tried and is worse: on a
+ * tall phone it opens a dead band between the shelf and the question, and the
+ * question stops reading as the thing the shelf was shown for. Their own
+ * screen leaves the slack at the bottom, under the answers, and so does this.
+ */
+body.page-funnel2 .fstep[data-step='hook'] .fs__lead {
+  margin-top: 2.75rem;
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+}
+
+body.page-funnel2 .fstep[data-step='hook'] .fq--two {
+  margin-bottom: auto;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/*
+ * Two across, then the rest underneath.
+ *
+ * Their screen offers two and puts them side by side, which is the right
+ * shape for a two-way question: one row, read at a glance, no scanning. Ours
+ * has a third that nobody should have to scroll for and nobody should feel
+ * is the main answer, so it sits under the pair at full width and quieter.
+ */
+body.page-funnel2 .fq--two {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 1.75rem;
+}
+
+body.page-funnel2 .fq--two .fq__option {
+  display: grid;
+  place-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--f2-ink);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+body.page-funnel2 .fq--two .fq__option:nth-child(n + 3) {
+  grid-column: 1 / -1;
+  background: transparent;
+  color: var(--f2-muted);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+body.page-funnel2 .fq--two .fq__option[data-chosen] {
+  background: var(--f2-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* A one-tap answer leaves the screen straight away, so a tick that appears
+   for a tenth of a second is a flicker, not a confirmation. */
+body.page-funnel2 .fq--two .fq__tick {
+  display: none;
+}
