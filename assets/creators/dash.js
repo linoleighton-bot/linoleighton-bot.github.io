@@ -254,10 +254,12 @@
   function renderWaiting(creator, previewNote) {
     const COPY = {
       pending: ['You are all set', 'Your accounts have gone to the Mindroll team. This page becomes your dashboard as soon as we approve you.'],
-      rejected: ['You are not in the creator program', 'Your application was not accepted, or your place in the program has ended. Email us if you think this is a mistake.'],
+      rejected: ['Your application was not accepted', 'You are not in the Mindroll creator program. Email us if you think this is a mistake.'],
       paused: ['Your creator account is paused', 'Email us if you think this is a mistake.'],
     };
-    const [title, body] = COPY[creator.status] || COPY.pending;
+    /* Let in once, then removed by the team: say so plainly. */
+    COPY.removed = ['You no longer have access', 'Your place in the Mindroll creator program has ended, so this dashboard is closed. Email us if you think this is a mistake.'];
+    const [title, body] = COPY[creator.status === 'rejected' && creator.terms_accepted ? 'removed' : creator.status] || COPY.pending;
     show(
       h('div', { class: 'cp-card cp-narrow' }, statusPill(creator.status), h('h1', {}, title), h('p', { class: 'cp-muted' }, body), previewNote && h('p', { class: 'cp-hint' }, previewNote), previewNote && h('p', {}, h('a', { class: 'btn btn--primary btn--sm', href: '/creators/?dashboard' }, 'See the dashboard after approval')), h('p', { class: 'cp-muted' }, 'Questions? ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))),
     );
