@@ -583,6 +583,14 @@
       return button;
     };
 
+    /* Removing is the existing 'rejected' status: the link, tracking, prizes and payouts all require 'active'. */
+    const kick = (c) =>
+      confirmButton('Remove from the program', `Confirm: remove ${c.display_name}`, 'cp-link cp-bad', async () => {
+        await ok(db.from('program_creators').update({ status: 'rejected' }).eq('id', c.id));
+        toast(`${c.display_name} was removed from the program`);
+        await reload();
+      });
+
     const rateEditor = (c) => {
       const input = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(rateOf(c) * 1000) / 10), 'aria-label': `Commission rate for ${c.display_name}` });
       const save = h('button', { class: 'cp-link', type: 'button' }, 'Save');
@@ -744,7 +752,8 @@
                     h('div', { class: 'cp-inline cp-small' }, h('span', { class: 'cp-muted' }, 'Suspected cheating'), holdControl(c)),
                     h('p', { class: 'cp-small cp-muted' }, c.terms_accepted_at ? `Accepted the terms ${day(c.terms_accepted_at)}` : 'Has not accepted the terms yet'),
                     h('p', { class: 'cp-small cp-muted' }, `Code ${c.code} · ${num(c.stats.clicks)} clicks · ${num(c.stats.signups)} sign-ups · ${money(c.balance.pending_cents)} still clearing · ${money(c.balance.paid_cents)} paid so far`),
-                    c.status === 'active' ? setStatus(c, 'paused', 'Pause this creator', 'cp-link') : setStatus(c, 'active', c.status === 'rejected' ? 'Approve' : 'Resume', 'cp-link'),
+                    c.status === 'active' ? setStatus(c, 'paused', 'Pause this creator', 'cp-link') : setStatus(c, 'active', c.status === 'rejected' ? (c.approved_at ? 'Let back in' : 'Approve') : 'Resume', 'cp-link'),
+                    c.status !== 'rejected' ? kick(c) : h('p', { class: 'cp-small cp-muted' }, c.approved_at ? 'Removed from the program' : 'Application declined'),
                   ),
                 ),
               ),

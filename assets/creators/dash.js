@@ -209,7 +209,7 @@
   function renderWaiting(creator, previewNote) {
     const COPY = {
       pending: ['You are all set', 'Your accounts have gone to the Mindroll team. This page becomes your dashboard as soon as we approve you.'],
-      rejected: ['Not this time', 'Thank you for applying. We are not able to take you on at the moment.'],
+      rejected: ['You are not in the creator program', 'Your application was not accepted, or your place in the program has ended. Email us if you think this is a mistake.'],
       paused: ['Your creator account is paused', 'Email us if you think this is a mistake.'],
     };
     const [title, body] = COPY[creator.status] || COPY.pending;
