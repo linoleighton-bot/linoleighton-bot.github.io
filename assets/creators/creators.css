@@ -1252,3 +1252,8 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-steps__step:not([data-done]) b { color: var(--muted); }
 
 .mr-steps__dot[data-locked] { font-size: 0.75rem; border-color: #E2B007; background: #FFF7DB; }
+
+/* Message a creator by hand: pick the message, open the chat. */
+.mr-dm { display: grid; gap: 0.4rem; margin-top: 0.5rem; }
+.mr-dm__pick { width: auto; max-width: 14rem; min-height: 2.25rem; padding-block: 0.3rem; font-size: 0.875rem; }
+.mr-dm__text { margin: 0; user-select: all; }

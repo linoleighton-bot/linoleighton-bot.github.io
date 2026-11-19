@@ -643,6 +643,36 @@
       const href = platform === 'tiktok' ? `https://www.tiktok.com/@${handle}` : `https://www.instagram.com/${handle}/`;
       return h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, `${platform === 'tiktok' ? 'TikTok' : 'Instagram'} @${handle}`);
     };
+    /*
+     * A message to a creator, sent by hand from the admin's own Instagram.
+     * Instagram lets no website start a conversation, so the button does the
+     * two things it can: it copies a ready message with the creator's name in
+     * it, and opens the chat with them. The admin pastes and sends.
+     */
+    const DASH = 'https://getmindroll.com/creators/';
+    const NOTES = [
+      ['approved', 'You are approved', (n) => `Hey ${n}, this is Mindroll. You're approved for the creator program 🎉 Your dashboard is open here: ${DASH} Your first video earns double if you post it within 24 hours of opening the dashboard. Any questions, just message me here.`],
+      ['talk', 'About your application', (n) => `Hey ${n}, this is Mindroll. Thanks for applying to the creator program. Do you have a minute to talk about it here?`],
+      ['nudge', 'No video yet', (n) => `Hey ${n}, checking in from Mindroll. You're in the creator program but we haven't seen a first video yet. Is anything in the way? Your dashboard is here: ${DASH} Happy to help with ideas.`],
+      ['discord', 'Join the Discord', (n) => `Hey ${n}, this is Mindroll. Join our creator Discord, it's where we post video ideas and pay updates. Open your dashboard and press Connect Discord: ${DASH}`],
+    ];
+    const dm = (c) => {
+      const ig = clean(c.instagram);
+      const tt = clean(c.tiktok);
+      if (!ig && !tt) return null;
+      const first = String(c.display_name || '').trim().split(/\s+/)[0] || 'there';
+      const start = c.status === 'pending' ? 'talk' : !c.stats?.videos ? (c.approved_at && Date.now() - new Date(c.approved_at).getTime() > 3 * 864e5 ? 'nudge' : 'approved') : !c.discord_name ? 'discord' : 'approved';
+      const pick = h('select', { class: 'cp-input mr-dm__pick', 'aria-label': `Message for ${c.display_name}` }, NOTES.map(([id, label]) => h('option', { value: id, selected: id === start }, label)));
+      const send = (label, href, where) =>
+        h('a', { class: 'btn btn--ghost btn--sm', href, target: '_blank', rel: 'noopener noreferrer', onclick: () => {
+          const text = NOTES.find(([id]) => id === pick.value)[2](first);
+          navigator.clipboard.writeText(text).then(() => toast(`Message copied. Paste it into the ${where} chat and send.`), () => toast('Could not copy the message. Copy it from the box under the button.', 'error'));
+          preview.textContent = text;
+          preview.hidden = false;
+        } }, label);
+      const preview = h('p', { class: 'cp-note mr-dm__text', hidden: true });
+      return h('div', { class: 'mr-dm' }, h('div', { class: 'cp-inline' }, pick, ig ? send('Message on Instagram', `https://ig.me/m/${ig}`, 'Instagram') : null, tt ? send(ig ? 'TikTok' : 'Message on TikTok', `https://www.tiktok.com/@${tt}`, 'TikTok') : null), preview);
+    };
     const handles = (c) => h('span', { class: 'cp-small cp-inline' }, profile(c, 'tiktok'), profile(c, 'instagram'), !clean(c.tiktok) && !clean(c.instagram) ? h('span', { class: 'cp-bad' }, 'No account linked') : null);
 
     const handleEditor = (c) => {
@@ -761,7 +791,7 @@
                 h(
                   'li',
                   {},
-                  h('div', {}, cp.person(c, { size: 'lg', badge: h('code', { class: 'cp-mono' }, c.code) }), h('p', { class: 'cp-muted cp-small' }, `${c.country || ''} · applied ${day(c.created_at)}${c.referred_by ? ` · invited by ${(state.creators.find((x) => x.id === c.referred_by) || {}).display_name || 'a creator'}` : ''}`), leadLine(c), c.note ? h('p', { class: 'cp-note' }, c.note) : null),
+                  h('div', {}, cp.person(c, { size: 'lg', badge: h('code', { class: 'cp-mono' }, c.code) }), h('p', { class: 'cp-muted cp-small' }, `${c.country || ''} · applied ${day(c.created_at)}${c.referred_by ? ` · invited by ${(state.creators.find((x) => x.id === c.referred_by) || {}).display_name || 'a creator'}` : ''}`), leadLine(c), c.note ? h('p', { class: 'cp-note' }, c.note) : null, dm(c)),
                   h('div', { class: 'cp-inline' }, setStatus(c, 'active', 'Approve', 'btn btn--primary btn--sm'), setStatus(c, 'rejected', 'Decline')),
                 ),
               ),
@@ -782,6 +812,7 @@
                   h('div', { class: 'mr-rowhead' }, cp.person(c, { size: 'lg', badge: c.status === 'active' ? pill(tierName(c), c.champion ? 'good' : undefined) : statusPill(c.status) }), ' ', c.cashout_requested_at ? pill('Asked to cash out', 'warn') : null, c.payout_hold ? pill('On hold', 'warn') : null, manyDue(c) ? pill('ManyChat eligible', 'good') : null, c.status === 'active' && !c.payout_hold ? odd(c) : null,  c.scan_error ? h('div', { class: 'cp-small cp-bad' }, `Last account check failed (${c.scan_error})`) : null),
                   revenueBar(c),
                   h('div', {}, pay(c)),
+                  dm(c),
                   foldPlain(
                     'Details',
                     h('div', { class: 'cp-inline cp-small' }, h('span', { class: 'cp-muted' }, 'Earns'), rateEditor(c)),
