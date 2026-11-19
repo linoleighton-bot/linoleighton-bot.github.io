@@ -1190,3 +1190,9 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .cp-legal h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -0.03em; margin: 0.5rem 0; }
 .cp-legal h2 { font-size: 1.25rem; letter-spacing: -0.01em; margin: 2rem 0 0.5rem; }
 .cp-legal ul { padding-left: 1.2rem; display: grid; gap: 0.5rem; list-style: disc; }
+
+/* The wallet, before the first video. */
+.mr-lock { display: grid; gap: 0.75rem; justify-items: center; text-align: center; background: var(--surface, #fff); border: 1px dashed var(--line); border-radius: 1.25rem; padding: clamp(2rem, 6vw, 4rem) 1.25rem; }
+.mr-lock__icon { font-size: 2.5rem; line-height: 1; }
+.mr-lock h2 { margin: 0; font-size: clamp(1.375rem, 3.5vw, 2rem); letter-spacing: -0.03em; }
+.mr-lock p { margin: 0; max-width: 30rem; color: var(--muted); }

@@ -341,6 +341,11 @@
     );
   }
 
+  /* The wallet opens once the creator has a video in the program (waiting for review counts). */
+  function walletLock() {
+    return h('section', { class: 'mr-lock' }, h('span', { class: 'mr-lock__icon', 'aria-hidden': 'true' }, '\u{1F512}'), h('h2', {}, 'Post your first video to unlock your wallet'), h('p', {}, 'Your wallet opens as soon as your first video is in. Anything you earn before then is kept safe and shows up here the moment it unlocks.'), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video'));
+  }
+
   /* One screen that says where the creator stands: what to do next, the wallet, and four big numbers. */
   function homeView(data) {
     const { creator, balance, stats } = data;
@@ -454,7 +459,7 @@
       campaigns: () => campaignsView(data),
       videos: () => [briefsCard(data), ironCard(data), videosCard(data), viewsCard(data)],
       links: () => [howCard(data), linksCard(data), section('From click to subscriber', null, cp.hbars([{ label: 'Clicked your link', value: stats.clicks }, { label: 'Signed up', value: stats.signups }, { label: 'Subscribed', value: stats.customers }], num))],
-      wallet: () => [firstVideoBox(data), walletCard(data), section('Earned each week', null, cp.timeChart('columns', weekly(data), (cents) => money(cents).replace(/\.00$/, ''), 'Earned each week')), planCards(data), incentiveCards(data)[1], detailTables(data)],
+      wallet: () => (data.videos || []).length ? [firstVideoBox(data), walletCard(data), section('Earned each week', null, cp.timeChart('columns', weekly(data), (cents) => money(cents).replace(/\.00$/, ''), 'Earned each week')), planCards(data), incentiveCards(data)[1], detailTables(data)] : [firstVideoBox(data), walletLock()],
       pay: () => [...payView(data), ironCard(data), incentiveCards(data)[0], raceStrip(data)],
       race: () => raceView(data),
       invite: () => [...(referralCard(data) || []), manychatCard(data)],
