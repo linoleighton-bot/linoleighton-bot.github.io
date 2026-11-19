@@ -746,13 +746,56 @@
     ];
   }
 
+  /*
+   * Phones: a bar fixed to the bottom with the main pages, and "More", which
+   * opens every page as a sheet. It sits under the root, outside the redrawn
+   * view, and is refreshed on each draw; creators.css shows it on narrow screens
+   * only, and only while the side menu it stands in for is on the page.
+   * items: [id, label, glyph, count, note]; main: the ids on the bar itself.
+   */
+  let tabbarBox = null;
+  let tabbarOpen = false;
+  function tabbar({ label, items, main, current, open, icon }) {
+    if (!tabbarBox) {
+      tabbarBox = root.appendChild(h('div', { class: 'mr-phonenav' }));
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && tabbarOpen) tabbarBox.querySelector('.mr-sheet__close').click(); });
+    }
+    const dots = icon('more');
+    dots.firstChild.setAttribute('d', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z');
+    const badge = (n) => (n ? h('b', {}, n > 99 ? '99+' : String(n)) : null);
+    const pick = (id) => () => { tabbarOpen = false; open(id); window.scrollTo(0, 0); };
+    const toggle = (on) => {
+      tabbarOpen = on;
+      sheet.hidden = !on;
+      more.setAttribute('aria-expanded', String(on));
+      if (on) (sheet.querySelector('[aria-current]') || sheet.querySelector('button')).focus({ preventScroll: true });
+      else more.focus({ preventScroll: true });
+    };
+    const rest = items.filter(([id]) => !main.includes(id));
+    const more = h('button', { class: 'mr-tab', type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': String(tabbarOpen), 'data-on': rest.some(([id]) => id === current) || null, onclick: () => toggle(!tabbarOpen) }, dots, h('span', {}, 'More'), badge(rest.reduce((sum, item) => sum + (item[3] || 0), 0)));
+    const sheet = h(
+      'div',
+      { class: 'mr-sheet', hidden: !tabbarOpen, onclick: (event) => { if (event.target === sheet) toggle(false); } },
+      h(
+        'div',
+        { class: 'mr-sheet__box', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'All pages' },
+        h('div', { class: 'mr-sheet__top' }, h('b', {}, 'All pages'), h('button', { class: 'mr-sheet__close', type: 'button', onclick: () => toggle(false) }, 'Close')),
+        h('div', { class: 'mr-sheet__list' }, items.map(([id, text, glyph, n, note]) => h('button', { class: 'mr-sheet__item', type: 'button', 'aria-current': id === current ? 'page' : null, onclick: pick(id) }, icon(glyph), h('span', {}, text), note ? h('em', {}, note) : badge(n)))),
+      ),
+    );
+    tabbarBox.replaceChildren(
+      h('nav', { class: 'mr-tabbar', 'aria-label': label }, main.map((id) => items.find((item) => item[0] === id)).filter(Boolean).map(([id, text, glyph, n]) => h('button', { class: 'mr-tab', type: 'button', 'aria-current': id === current ? 'page' : null, onclick: pick(id) }, icon(glyph), h('span', {}, text), badge(n))), more),
+      sheet,
+    );
+  }
+
   window.mindrollCreators = {
     root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM,
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
     COLOR, segbar, hbars, timeChart, milestones, ladder, dollars, KINDS, fold, figure,
     /* Where an uploaded reference video is served from. */
     defaultBrief, rich, briefImage, briefVideos,
-    live,
+    live, tabbar,
     avatar, person, handleLinks, teamView,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),
   };

@@ -999,3 +999,119 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-manage__part small { font-size: 0.8125rem; line-height: 1.35; }
 .mr-roster__row > .mr-manage { text-align: left; display: block; }
 .mr-roster__row > .mr-manage::before { content: none; }
+/* ==========================================================================
+   PHONES (up to 640px wide)
+   Everything from here to the end of the file is for narrow screens. The one
+   rule outside the media query keeps the bottom bar off wider screens.
+   The bar and its More sheet are drawn by cp.tabbar() in common.js.
+   ========================================================================== */
+.mr-phonenav { display: none; }
+@media (max-width: 640px) {
+  /* ---- Bottom bar and More sheet, in place of the side menu ---- */
+  [data-creators]:has(.mr-side) { --mr-bar: calc(3.6rem + env(safe-area-inset-bottom, 0px)); }
+  [data-creators]:has(.mr-side) .mr-phonenav { display: block; }
+  [data-creators] .mr-side { display: none; }
+  [data-creators]:has(.mr-side) .cp-foot { padding-bottom: calc(1.25rem + var(--mr-bar)); }
+  .mr-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0.2rem 0.25rem env(safe-area-inset-bottom, 0px); background: #fff; border-top: 1px solid var(--line); box-shadow: 0 -8px 24px -16px rgb(15 17 21 / 0.25); }
+  .mr-tab { position: relative; font: inherit; font-size: 0.6875rem; font-weight: 650; line-height: 1.2; color: var(--muted); background: none; border: 0; border-radius: 0.75rem; margin: 0; padding: 0.35rem 0.1rem 0.3rem; min-height: 3.3rem; display: grid; justify-items: center; align-content: center; gap: 0.2rem; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .mr-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mr-tab svg, .mr-sheet__item svg { width: 1.45rem; height: 1.45rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .mr-tab[aria-current], .mr-tab[data-on], .mr-tab[aria-expanded='true'] { color: var(--mr-accent, var(--ink)); }
+  .mr-tab[aria-current] svg, .mr-tab[data-on] svg { stroke-width: 2.2; }
+  .mr-tab b { position: absolute; top: 0.2rem; left: calc(50% + 0.35rem); min-width: 1.15rem; height: 1.15rem; padding: 0 0.3rem; border-radius: 999px; background: var(--mr-bad, #E5484D); color: #fff; font-size: 0.6875rem; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+  [data-creators]:has(.mr-shell[data-tour]) .mr-tab:is([aria-current], [data-on]) { background: var(--mr-accent-soft, #EAF0FF); }
+
+  html:has(.mr-sheet:not([hidden])) { overflow: hidden; }
+  .mr-sheet { position: fixed; inset: 0; z-index: 90; background: rgb(15 17 21 / 0.5); display: grid; align-items: end; }
+  .mr-sheet[hidden] { display: none; }
+  .mr-sheet__box { background: #fff; border-radius: 1.25rem 1.25rem 0 0; padding: 0 1rem calc(1rem + env(safe-area-inset-bottom, 0px)); max-height: 88vh; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .mr-sheet__top { position: sticky; top: 0; z-index: 1; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.6rem 0.4rem; }
+  .mr-sheet__top b { font-size: 1.125rem; letter-spacing: -0.01em; }
+  .mr-sheet__close { font: inherit; font-size: 0.9375rem; font-weight: 650; color: var(--ink); background: var(--sunk); border: 0; border-radius: 999px; min-height: 2.75rem; padding: 0 1.1rem; cursor: pointer; }
+  .mr-sheet__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .mr-sheet__item { font: inherit; font-size: 0.9375rem; font-weight: 600; line-height: 1.25; color: var(--ink); text-align: left; background: var(--sunk); border: 0; border-radius: 0.9rem; min-height: 3.5rem; padding: 0.55rem 0.75rem; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.15rem 0.6rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mr-sheet__item[aria-current] { background: var(--ink); color: #fff; }
+  .mr-sheet__item b { min-width: 1.4rem; height: 1.4rem; padding: 0 0.4rem; border-radius: 999px; background: var(--mr-bad, #E5484D); color: #fff; font-size: 0.75rem; display: grid; place-items: center; }
+  .mr-sheet__item em { grid-column: 2; font-style: normal; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mr-accent, #2F6BFF); }
+  .mr-sheet__item[aria-current] em { color: rgb(255 255 255 / 0.75); }
+
+  /* ---- Things fixed to the screen keep clear of the bar and of each other ---- */
+  .mr-tour { left: 0.75rem; right: 0.75rem; bottom: calc(var(--mr-bar, 0px) + 0.6rem); width: auto; padding: 0.9rem 1rem 1rem; gap: 0.45rem; max-height: calc(100vh - var(--mr-bar, 0px) - 6rem); overflow-y: auto; }
+  .mr-tour > b { font-size: 1.125rem; }
+  .mr-tour p { font-size: 0.9375rem; line-height: 1.45; }
+  .mr-tour .cp-link { min-height: 2.75rem; padding-inline: 0.5rem; margin: -0.6rem -0.5rem -0.6rem 0; }
+  .mr-shell[data-tour] .mr-main { padding-bottom: 17rem; }
+  .cp-toast { top: 4.4rem; bottom: auto; translate: -50% calc(-100% - 6rem); width: max-content; max-width: calc(100vw - 2rem); }
+  .cp-toast[data-show] { translate: -50% 0; }
+  body:has(.mr-side) .mr-fresh { bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px)); white-space: nowrap; }
+  body:has(.mr-tour) .mr-fresh { bottom: auto; top: 4.4rem; }
+  .mr-modal { z-index: 100; }
+
+  /* ---- Page frame: 16px gutters, a heading that fits, tools that wrap under it ---- */
+  .cp-main { padding-top: 1rem; gap: 1rem; }
+  .mr-main { gap: 1rem; }
+  .mr-main > * { min-width: 0; }
+  .mr-head { flex-wrap: wrap; gap: 0.5rem 0.75rem; padding-top: 0; }
+  .mr-head__who { flex: 1 1 auto; gap: 0.7rem; }
+  .mr-head h1 { font-size: 1.625rem; line-height: 1.1; overflow-wrap: anywhere; }
+  .mr-head__tools { margin-left: auto; gap: 0.5rem; }
+  .mr-tool { min-height: 2.75rem; padding: 0 0.8rem; white-space: nowrap; }
+  .mr-bell { width: 2.75rem; height: 2.75rem; flex: none; }
+
+  /* ---- Tap targets of about 44px, and 16px type in fields so iPhone Safari does not zoom ---- */
+  [data-creators] .btn, .mr-tour .btn, .mr-modal .btn { min-height: 2.75rem; }
+  [data-creators] .cp-link, .mr-modal .cp-link { min-height: 2.75rem; display: inline-flex; align-items: center; }
+  [data-creators] .cp-main :is(input, select, textarea), .mr-modal :is(input, select, textarea) { font-size: 16px; }
+  [data-creators] .cp-main :is(input:not([type='checkbox'], [type='radio'], [type='file'], [type='range']), select), .mr-modal :is(input:not([type='checkbox'], [type='radio']), select) { min-height: 2.75rem; }
+  [data-creators] .cp-main input:is([type='checkbox'], [type='radio']) { width: 1.35rem; height: 1.35rem; flex: none; }
+  [data-creators] .cp-fold summary { padding-block: 0.75rem; }
+  [data-creators] .cp-fold > summary { padding-block: 1rem; }
+  .mr-watch { min-height: 2.75rem; padding: 0 0.95rem 0 0.75rem; }
+  .mr-handle { min-height: 2rem; }
+  .mr-ref__move { min-height: 2.75rem; max-width: 11rem; padding-inline: 0.9rem; }
+  .cp-input--tag { max-width: 100%; width: 100%; }
+  .cp-switch { display: flex; max-width: 100%; overflow-x: auto; }
+  .cp-switch button { flex: 1 1 auto; padding-inline: 0.4rem; font-size: 0.8125rem; }
+  .cp-switch button, [data-creators] .cp-tab { min-height: 2.75rem; white-space: nowrap; }
+
+  /* ---- Rows stack: who it is, then the numbers, then what you can do ---- */
+  .cp-rows > li { grid-template-columns: minmax(0, 1fr); gap: 0.6rem; }
+  .cp-rows > li > .cp-hbars { grid-row: auto; }
+  .cp-rows > li > div:last-of-type { justify-self: stretch; }
+  .cp-rows > li > div > .cp-inline { display: flex; }
+  .cp-rows > li > div > .cp-inline > .btn { flex: 1 1 100%; }
+  .cp-hbars { grid-template-columns: fit-content(48%) minmax(0, 1fr); }
+  .cp-card > *, .mr-panel > * { min-width: 0; }
+  .mr-review__act:not([data-plain]) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .mr-review__act:not([data-plain]) .cp-input { grid-column: 1 / -1; }
+  .mr-review__act[data-plain] > .btn { flex: 1; }
+  .mr-ref__steps { gap: 0.25rem; }
+  .mr-ref__steps li { font-size: 0.6875rem; padding-inline: 0.1rem; display: grid; place-items: center; }
+  .cp-copyrow:has(> .cp-input) { flex-wrap: wrap; }
+  .cp-copyrow > .cp-input { flex: 1 1 100%; }
+  .mr-hit { grid-template-columns: auto minmax(0, 1fr); gap: 0.6rem 0.9rem; }
+  .mr-hit > b { font-size: 2rem; }
+  .mr-hit > .mr-watch { grid-column: 1 / -1; justify-self: start; }
+  [data-creators] .mr-alert { grid-template-columns: auto minmax(0, 1fr); row-gap: 0.5rem; }
+  [data-creators] .mr-alert > .btn { grid-column: 2; justify-self: start; }
+  .cp-fold--plain > .cp-link + .cp-link { margin-left: 1.25rem; }
+  .mr-funnel { flex-wrap: wrap; }
+  .mr-funnel__step { min-width: 0; }
+  .mr-ref__zone { min-width: 0; }
+  .mr-ref__zone > header { flex-wrap: wrap; }
+  .mr-ref__zone > header > div { min-width: 0; overflow-wrap: anywhere; }
+  .cp-copyrow code, .cp-copyrow > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---- Tables drawn by cp.table(): each row becomes a small card of label and value ---- */
+  .cp-tablewrap:has(> .cp-table > tbody > tr > td[data-label]) { overflow-x: visible; margin-inline: 0; padding-inline: 0; }
+  .cp-table:has(> tbody > tr > td[data-label]) { display: block; }
+  .cp-table:has(> tbody > tr > td[data-label]) > thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .cp-table:has(> tbody > tr > td[data-label]) > tbody { display: grid; }
+  .cp-table > tbody > tr:has(> td[data-label]) { display: grid; gap: 0.3rem; padding-block: 0.85rem; border-bottom: 1px solid var(--line); }
+  .cp-table > tbody > tr:has(> td[data-label]):first-child { padding-top: 0.25rem; }
+  .cp-table > tbody > tr:has(> td[data-label]):last-child { border-bottom: 0; padding-bottom: 0; }
+  .cp-table > tbody > tr > td[data-label] { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.25rem 1rem; padding: 0; border: 0; text-align: right; white-space: normal; min-width: 0; overflow-wrap: break-word; }
+  .cp-table > tbody > tr > td[data-label] > * { min-width: 0; }
+  .cp-table > tbody > tr > td[data-label]::before { content: attr(data-label); flex: none; font-size: 0.8125rem; font-weight: 600; color: var(--muted); text-align: left; }
+  .cp-table > tbody > tr > td[data-label]:empty, .cp-table > tbody > tr > td[data-label='']::before { display: none; }
+}

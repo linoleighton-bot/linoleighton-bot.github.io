@@ -466,6 +466,7 @@
     const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
     const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
+    cp.tabbar({ label: 'Your dashboard', items: PANES.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
     cp.live.drawn();
   }
 

@@ -161,6 +161,7 @@
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
     view.replaceChildren(h('div', { class: 'mr-shell' }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))));
+    cp.tabbar({ label: 'Admin', items: TABS.map(([id, label, glyph]) => [id, label, glyph, count[id]]), main: ['overview', 'creators', 'videos', 'payouts'], current: tab, open: (id) => go(id)(), icon });
     cp.live.drawn();
   }
   const go = (id) => () => { tab = id; history.replaceState(null, '', `#${id}`); render(); window.scrollTo(0, 0); };
