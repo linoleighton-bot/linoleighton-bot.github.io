@@ -2074,7 +2074,24 @@
       };
 
       for (const node of offerEl.querySelectorAll('[data-checkout]')) {
-        node.addEventListener('click', openCheckout);
+        /*
+         * The button at the foot of the page. Where the wallet button is
+         * showing, it takes the reader back up to the plans and that button
+         * and does not open the card form.
+         */
+        const again = Boolean(node.closest('.pw2__again'));
+        node.addEventListener('click', () => {
+          if (again && offerEl.hasAttribute('data-wallet') && !tillOpen()) {
+            const plans = offerEl.querySelector('.pw2__plans');
+            try {
+              plans.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            } catch {
+              plans.scrollIntoView();
+            }
+            return;
+          }
+          openCheckout();
+        });
       }
 
       /*
