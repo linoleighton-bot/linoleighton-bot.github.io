@@ -90,10 +90,12 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team, picture, discordName, boost] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null)]);
+      const [data, brief, team, picture, discordName, boost, added] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false)]);
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
       if (data?.creator) { data.creator.avatar_url = picture; data.creator.discord_name = discordName; }
       if (team && !data?.creator) team.discord_name = discordName;
+      /* The team added this email: they are let in as soon as they add their account, even when applications are closed. */
+      if (data && !data.creator && added === true) { data.added = true; data.applications_open = true; if (!applyDraft.added) { applyDraft.added = true; applyDraft.step = 3; } }
       if (data) { data.brief = brief || null; data.team = team || null; data.first_video = keepBoost(boost); }
       const stamp = JSON.stringify(data);
       const apply = () => {
@@ -184,7 +186,7 @@
     /* One application per browser. It is a courtesy lock, not security: the account, the handle and the hourly limit are checked on the server. */
     const APPLIED = 'mindroll.applied';
     const appliedHere = () => { try { return !!localStorage.getItem(APPLIED); } catch { return false; } };
-    if (appliedHere() && !cp.demo) {
+    if (appliedHere() && !cp.demo && !data.added) {
       return show(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'You have already applied'), h('p', { class: 'cp-muted' }, 'An application has already been sent from this device. If you used a different account, sign in with that one to see it.'), h('p', { class: 'cp-muted' }, 'Questions? ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))));
     }
     /*
@@ -211,6 +213,7 @@
           { class: 'cp-card cp-narrow mr-apply' },
           h('div', { class: 'mr-apply__top' }, step > 0 ? h('button', { class: 'cp-link', type: 'button', onclick: () => go(step - 1) }, '← Back') : h('span', {}), h('span', { class: 'cp-muted cp-small' }, `Step ${step + 1} of ${TOTAL}`)),
           h('div', { class: 'mr-apply__bar', role: 'presentation' }, h('i', { style: `width:${((step + 1) / TOTAL) * 100}%` })),
+          data.added ? h('p', { class: 'mr-apply__added' }, 'The Mindroll team added you. Add your account and you are in straight away.') : null,
           h('h1', {}, title),
           lead ? h('p', { class: 'cp-muted' }, lead) : null,
           ...body,

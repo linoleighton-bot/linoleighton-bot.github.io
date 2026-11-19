@@ -1293,3 +1293,10 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-boost[data-discord] { background: linear-gradient(120deg, #1E1F5C 0%, #4752C4 55%, #5865F2 100%); }
 .mr-boost[data-discord] .mr-boost__text small { color: #C9CDFB; }
 .mr-boost[data-discord] .mr-boost__text .btn { font-weight: 700; padding: 0.8rem 1.4rem; font-size: 1.0625rem; }
+
+/* Add a creator by email: one field and the button, then who is still to sign in. */
+.mr-addrow--one { grid-template-columns: minmax(12rem, 28rem) auto; justify-content: start; }
+@media (max-width: 40rem) { .mr-addrow--one { grid-template-columns: 1fr; } }
+.mr-added { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.mr-added li { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.55rem 0.75rem; border: 1px solid var(--line, rgba(0, 0, 0, 0.1)); border-radius: 0.6rem; }
+.mr-apply__added { margin: 0 0 0.75rem; padding: 0.6rem 0.8rem; border-radius: 0.6rem; background: rgba(34, 160, 90, 0.12); font-weight: 600; }

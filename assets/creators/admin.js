@@ -97,7 +97,7 @@
   async function reload(quiet = false) {
     if (cp.demo) return render();
     try {
-      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, managers, briefs, recent, referrals] = await Promise.all([
+      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, managers, briefs, recent, referrals, added] = await Promise.all([
         cp.rpc('creator_admin_overview'),
         cp.rpc('creator_admin_funnel', { p_creator: funnelCreator, p_days: 30 }),
         ok(db.from('creator_videos').select('*').order('created_at', { ascending: false }).limit(500)),
@@ -111,8 +111,9 @@
         ok(db.from('creator_briefs').select('*').order('created_at', { ascending: false })),
         ok(db.from('creator_commissions').select('id, creator_id, kind, plan, store, base_cents, amount_cents, occurred_at').order('occurred_at', { ascending: false }).limit(60)),
         cp.rpc('creator_admin_referrals').catch(() => null),
+        ok(db.from('creator_added').select('email, created_at').order('created_at')).catch(() => []),
       ]);
-      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc, managers, referrals };
+      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc, managers, referrals, added };
       const stamp = JSON.stringify(next);
       const apply = () => {
         const before = quiet && state ? new Set((state.feed || []).map((e) => `${e.at}|${e.kind}|${e.title}`)) : null;
@@ -780,7 +781,42 @@
     const applicants = state.creators.filter((c) => c.status === 'pending').sort((x, y) => lead(y).score - lead(x).score || (lead(y).followers || 0) - (lead(x).followers || 0));
     const rest = state.creators.filter((c) => c.status !== 'pending');
 
+    /*
+     * Add a creator by email, the way a manager is added: they skip the review
+     * and are accepted the moment they sign in with that address and add their
+     * TikTok or Instagram. Nothing is emailed to them.
+     */
+    const waiting = state.added || [];
+    const addEmail = h('input', { class: 'cp-input', type: 'email', placeholder: 'Email they sign in with (Google or Apple)', 'aria-label': 'Creator email', autocapitalize: 'none', spellcheck: 'false' });
+    const addBtn = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Add creator');
+    addBtn.addEventListener('click', act(addBtn, async () => {
+      const email = addEmail.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('That does not look like an email address.');
+      if (cp.demo) { if (!waiting.some((a) => a.email === email)) state.added = [...waiting, { email, created_at: new Date().toISOString() }]; toast('Added. (Sample data: nothing was saved.)'); return render(); }
+      const reply = await cp.rpc('creator_admin_add_creator', { p_email: email });
+      if (reply === 'pending') throw new Error('They have already applied. Press Approve on their application below.');
+      if (reply === 'already') throw new Error('That email is already a creator.');
+      if (reply === 'removed') throw new Error('That email belongs to a creator who was declined or removed. Use "Let back in" on their row.');
+      toast(`${email} is added. Tell them to sign in at getmindroll.com/creators with that email.`);
+      await reload();
+    }));
+    addEmail.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); } });
+    const unAdd = (a) => confirmButton('Remove', 'Confirm: take this email off', 'cp-link', async () => {
+      if (cp.demo) { state.added = waiting.filter((x) => x !== a); toast('Removed. (Sample data: nothing was saved.)'); return render(); }
+      await ok(db.from('creator_added').delete().eq('email', a.email));
+      toast(`${a.email} is off the list.`);
+      await reload();
+    });
+    const addCreator = section(
+      'Add a creator',
+      h('span', { class: 'cp-muted' }, waiting.length ? `${num(waiting.length)} waiting to sign in` : 'skips the review'),
+      h('div', { class: 'mr-addrow mr-addrow--one' }, addEmail, addBtn),
+      h('p', { class: 'cp-muted cp-small' }, 'They are accepted the moment they sign in on the creator page with that email, using Google or Apple, and add their TikTok or Instagram. No email is sent to them, so tell them yourself. Apple\'s "Hide My Email" will not match.'),
+      waiting.length ? h('ul', { class: 'mr-added' }, waiting.map((a) => h('li', {}, h('span', {}, h('b', {}, a.email), h('small', { class: 'cp-muted' }, ` · added ${day(a.created_at)} · has not signed in yet`)), unAdd(a)))) : null,
+    );
+
     return [
+      addCreator,
       applicants.length
         ? section(
             'Applications',
@@ -2300,6 +2336,7 @@
         { id: 'r3', label: '500K views', threshold_views: 500000, amount_cents: 3000, active: true, applies_from: '1970-01-01T00:00:00Z' },
         { id: 'r4', label: '1M views', threshold_views: 1000000, amount_cents: 6000, active: true, applies_from: '1970-01-01T00:00:00Z' },
       ],
+      added: [{ email: 'jordan.reads@example.com', created_at: new Date(Date.now() - 2 * 864e5).toISOString() }],
       referrals: { clicks: [{ kind: 'creator', ref_id: 'c1', n: 148 }, { kind: 'creator', ref_id: 'c2', n: 31 }, { kind: 'creator', ref_id: 'c3', n: 6 }, { kind: 'manager', ref_id: 'm1', n: 64 }, { kind: 'manager', ref_id: 'm2', n: 12 }], signups: [{ kind: 'creator', ref_id: 'c1', n: 9 }, { kind: 'creator', ref_id: 'c2', n: 2 }, { kind: 'manager', ref_id: 'm1', n: 5 }, { kind: 'manager', ref_id: 'm2', n: 1 }], manager_bonuses: [{ manager_id: 'm1', creator_id: 'c7', amount_cents: 10000, created_at: ago(4) }] },
       managers: [
         { manager: { id: 'm1', display_name: 'Alex Rivera', code: 'alex_rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 341200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100, referral_cents: 10000, referral_views: 100000, from_referral_cents: 10000, referrals: [{ id: 'c7', display_name: 'Noor Notes', status: 'active', views: 186000, paid: true }, { id: 'c8', display_name: 'Eli Annotates', status: 'active', views: 38500, paid: false }] } },
