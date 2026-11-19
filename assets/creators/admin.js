@@ -1971,6 +1971,7 @@
     fvOn.checked = s.first_video_on !== false;
     const fvTimes = h('input', { type: 'number', min: '1', max: '10', step: '0.5', value: String(Number(s.first_video_multiplier ?? 2)) });
     const fvHours = h('input', { type: 'number', min: '1', max: '720', step: '1', value: String(s.first_video_hours ?? 24) });
+    const fvDays = h('input', { type: 'number', min: '0', max: '90', step: '1', value: String(s.first_video_sale_days ?? 7) });
     const fvCap = h('input', { type: 'number', min: '0', step: '50', value: String((s.first_video_cap_cents ?? 100000) / 100) });
     const topMin = h('input', { type: 'number', min: '0', step: '1000', value: String(s.top_video_min_views ?? 100000) });
     const topRate = h('input', { type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round((s.top_video_pool_rate ?? 0.05) * 1000) / 10) });
@@ -2000,8 +2001,8 @@
       h('div', { class: 'cp-form__row' }, field('A video counts for views pay from (views)', ironMin), field('First weekly and first yearly sale pay (%)', firstRate)),
       h('small', { class: 'cp-hint' }, 'Views pay: the first step needs only views, and each step after it needs one more subscriber. $0 switches it off. Creator referrals, top-video prizes, views pay, the first-sale bonus and the campaigns you run by hand are paid in full, outside the share above.'),
       h('label', { class: 'cp-check' }, fvOn, 'First video boost: a new creator\'s first video pays more if they post it in time'),
-      h('div', { class: 'cp-form__row' }, field('First video pays (times)', fvTimes), field('if posted within (hours)', fvHours), field('Most extra per creator ($)', fvCap)),
-      h('small', { class: 'cp-hint' }, 'The clock starts the first time a creator opens their dashboard after accepting the terms, and they see it counting down. Whatever that first video earns in views pay is multiplied. With the numbers above, a new creator with no sales yet is paid one extra views-pay step; it only grows past that as they bring in subscribers. Paid in full, outside the share above.'),
+      h('div', { class: 'cp-form__row' }, field('First video pays (times)', fvTimes), field('if posted within (hours)', fvHours), field('Sales count for (days after posting)', fvDays), field('Most extra per creator ($)', fvCap)),
+      h('small', { class: 'cp-hint' }, 'The clock starts the first time a creator opens their dashboard after accepting the terms, and they see it counting down. That first video then pays the multiple: commission on every sale that comes in during the days after it was posted, and every bonus the video itself earns. Paid in full, outside the share above, up to the most per creator.'),
       field('Creator terms', terms, 'Every creator accepts these before their dashboard opens. Have the wording checked before you rely on it.'),
       h('label', { class: 'cp-check' }, again, 'I changed the terms: ask every creator to accept them again'),
       h('label', { class: 'cp-check' }, open, 'Accept new creator applications'),
@@ -2040,6 +2041,7 @@
           first_video_multiplier: Math.min(10, Math.max(1, Number(fvTimes.value) || 1)),
           first_video_hours: Math.min(720, Math.max(1, Math.round(Number(fvHours.value) || 24))),
           first_video_cap_cents: Math.max(0, Math.round(Number(fvCap.value) * 100)),
+          first_video_sale_days: Math.min(90, Math.max(0, Math.round(Number(fvDays.value) || 0))),
           top_video_min_views: Math.max(0, Math.round(Number(topMin.value))),
           top_video_pool_rate: Math.min(1, Math.max(0, Number(topRate.value) / 100)),
         };

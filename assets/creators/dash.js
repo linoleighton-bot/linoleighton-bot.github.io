@@ -947,6 +947,7 @@
     const f = data.first_video;
     if (!f) return null;
     const times = `${Number(f.multiplier)}x`;
+    const what = Number(f.sale_days) > 0 ? `${times} commission on every sale in the ${num(f.sale_days)} days after you post it, and ${times} on every bonus the video earns` : `${times} on every bonus the video earns`;
     const example = Number(f.step_cents) > 0 ? ` For example, ${cp.dollars(f.step_cents)} at ${compact(f.step_views)} views becomes ${cp.dollars(f.step_cents * Number(f.multiplier))}.` : '';
     if (f.state === 'open') {
       const ends = cp.demo ? Date.now() + 23.4 * 36e5 : boostClock?.local || new Date(f.ends_at).getTime();
@@ -954,7 +955,7 @@
       return h(
         'section',
         { class: 'mr-boost', role: 'status' },
-        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, `Your first video pays ${times}`), h('p', {}, `Post your first video before the clock runs out and everything it earns in views pay is multiplied by ${Number(f.multiplier)}.${example}`), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video')),
+        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, `Your first video pays ${times}`), h('p', {}, `Post your first video before the clock runs out and it pays ${times}: ${what}.${example}`), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video')),
         h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Ends in'), h('b', { 'data-boost-ends': String(ends), 'aria-live': 'off' }, clockText(ends - Date.now())), h('span', {}, `${num(f.hours)} hours from when you started`)),
       );
     }
@@ -965,7 +966,7 @@
       return h(
         'section',
         { class: 'mr-boost', 'data-locked': '', role: 'status' },
-        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, waiting ? `Locked in: your first video will pay ${times}` : `Your first video is paying ${times}`), h('p', {}, waiting ? 'You posted in time. It is waiting for review, and the boost starts the moment it is approved.' : `Everything this video earns in views pay is multiplied by ${Number(f.multiplier)}, up to ${cp.dollars(f.cap_cents)} extra.${example}`)),
+        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, waiting ? `Locked in: your first video will pay ${times}` : `Your first video is paying ${times}`), h('p', {}, waiting ? 'You posted in time. It is waiting for review, and the boost starts the moment it is approved.' : `It pays ${times}: ${what}, up to ${cp.dollars(f.cap_cents)} extra.${example}`)),
         h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Boost paid so far'), h('b', {}, cp.dollars(f.earned_cents || 0)), h('span', {}, `${compact(f.video.views || 0)} views on it`)),
       );
     }
@@ -1677,7 +1678,7 @@
           top: [{ place: 1, name: 'Noor', score: 3 }, { place: 2, name: 'Maya', score: 2, you: true }, { place: 3, name: 'Theo Studies', score: 1 }],
           videos: [{ id: 'v4', title: 'POV: you finally remember what you read #Mindroll', views: 3100, approved: true }, { id: 'v5', title: 'Stop highlighting. Do this instead #Mindroll', views: 1840, approved: true }, { id: 'v6', title: 'Day 1 of reading 5 minutes #Mindroll', views: 420, approved: false }], results: [] },
       ],
-      first_video: { state: 'open', started_at: new Date(Date.now() - 0.6 * 36e5).toISOString(), ends_at: new Date(Date.now() + 23.4 * 36e5).toISOString(), hours: 24, multiplier: 2, cap_cents: 100000, step_views: 50000, step_cents: 5000, video: null, earned_cents: 0 },
+      first_video: { state: 'open', started_at: new Date(Date.now() - 0.6 * 36e5).toISOString(), ends_at: new Date(Date.now() + 23.4 * 36e5).toISOString(), hours: 24, multiplier: 2, cap_cents: 100000, sale_days: 7, step_views: 50000, step_cents: 5000, video: null, earned_cents: 0 },
       team: {
         manager: { id: 'm1', display_name: 'Maya\'s team', active: true, cut_rate: 0.5 },
         manage: { rate_cap: 0.25, managers: [{ id: 'm2', name: 'Jordan' }], rates: {} },
