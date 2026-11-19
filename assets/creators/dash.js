@@ -404,22 +404,27 @@
     if (rules.length) {
       const videos = inc.volume.videos || 0;
       /* Each level is a checkpoint on one dotted line, evenly spaced, with what it pays under it. */
-      const done = rules.filter((r) => videos >= r.min_videos).length;
-      const next = rules.find((r) => videos < r.min_videos);
+      /* A level is complete when both its videos and its sales are in. */
+      const sales = Number(inc.volume.sales || 0);
+      const met = (r) => videos >= r.min_videos && sales >= Number(r.min_sales || 0);
+      const done = rules.filter(met).length;
+      const next = rules.find((r) => !met(r));
       const minViews = a?.count_min_views ?? 1000;
       const steps = rules.map((r, k) => {
         const from = k ? rules[k - 1].min_videos : 0;
         const fill = Math.max(0, Math.min(1, (videos - from) / Math.max(1, r.min_videos - from)));
-        const reached = videos >= r.min_videos;
-        return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__line' }, h('span', { style: `width:${Math.round(fill * 100)}%` })), h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true' }, reached ? '✓' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, `${num(r.min_videos)} videos`));
+        const reached = met(r);
+        const locked = !reached && videos >= r.min_videos;
+        const needs = Number(r.min_sales || 0);
+        return h('div', { class: 'mr-steps__step', 'data-done': reached || null }, h('div', { class: 'mr-steps__line' }, h('span', { style: `width:${Math.round(fill * 100)}%` })), h('div', { class: 'mr-steps__dot', 'aria-hidden': 'true', 'data-locked': locked || null }, reached ? '✓' : locked ? '\u{1F512}' : ''), h('b', {}, cp.dollars(r.amount_cents)), h('small', {}, needs ? `${num(r.min_videos)} videos + ${num(needs)} sales` : `${num(r.min_videos)} videos`));
       });
       rows.push(
         h(
           'li',
           { class: 'mr-earn__wide' },
           h('div', { class: 'mr-earn__head' }, h('span', {}, h('b', {}, 'Post videos this month'), h('small', {}, [`A video counts from ${compact(minViews)} views`, (inc.tier_level || 1) === 1 ? 'paid even before your first sale' : null].filter(Boolean).join(' · '))), h('b', { class: 'mr-earn__count' }, `${done} of ${rules.length} complete`)),
-          h('div', { class: 'mr-steps', role: 'img', 'aria-label': `${videos} videos this month. ${done} of ${rules.length} levels complete.`, style: `grid-template-columns:repeat(${rules.length}, 1fr)` }, steps),
-          h('small', { class: 'cp-muted' }, next ? `${num(videos)} video${videos === 1 ? '' : 's'} so far · ${num(next.min_videos - videos)} more for the next ${cp.dollars(next.amount_cents)}` : `${num(videos)} videos · every level earned this month`),
+          h('div', { class: 'mr-steps', role: 'img', 'aria-label': `${videos} videos and ${sales} sales this month. ${done} of ${rules.length} levels complete.`, style: `grid-template-columns:repeat(${rules.length}, 1fr)` }, steps),
+          h('small', { class: 'cp-muted' }, next ? `${num(videos)} video${videos === 1 ? '' : 's'} and ${num(sales)} sale${sales === 1 ? '' : 's'} this month · ${[next.min_videos > videos ? `${num(next.min_videos - videos)} more video${next.min_videos - videos === 1 ? '' : 's'}` : null, Number(next.min_sales || 0) > sales ? `${num(next.min_sales - sales)} more sale${next.min_sales - sales === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ')} for the next ${cp.dollars(next.amount_cents)}` : `${num(videos)} videos · every level earned this month`),
         ),
       );
     }
@@ -1744,7 +1749,7 @@
           { level: 5, name: 'Diamond', min_revenue_cents: 1500000, min_views: 3000000, min_posts: 21, bonus_multiplier: 50, commission_rate: 0.2, rank_up_bonus_cents: 32000, annual_flat_cents: 900, campaign_pool_cents: 1500000, active_day_views: 100000, race_prize_cents: 1000000 },
         ],
         active: { days: 3, min_days: 4, amount_cents: 50000, base_amount_cents: 1000, count_min_views: 1000, day_views: 100000 },
-        volume: { videos: 12, rules: [{ id: 'r1', min_videos: 10, amount_cents: 200000, base_amount_cents: 4000 }, { id: 'r2', min_videos: 15, amount_cents: 400000, base_amount_cents: 8000 }, { id: 'r3', min_videos: 25, amount_cents: 600000, base_amount_cents: 12000 }] },
+        volume: { videos: 16, sales: 1, rules: [{ id: 'r1', min_videos: 10, min_sales: 0, amount_cents: 4000, base_amount_cents: 4000 }, { id: 'r2', min_videos: 15, min_sales: 2, amount_cents: 8000, base_amount_cents: 8000 }, { id: 'r3', min_videos: 25, min_sales: 6, amount_cents: 12000, base_amount_cents: 12000 }] },
         by_kind: { contest: 40000, rank_up: 59500, views: 13000, prize: 3000, top_video: 2500 },
         champion: { is: false, slots: 3, rate: 0.25, daily_cents: 15000, top_tier: 5, place: 4, bar_cents: 2140000 },
         iron: { on: true, eligible: false, step_views: 50000, step_cents: 5000, cap_views: 1000000, video_min_views: 2000, views: 3426000, subs: 214, steps_paid: 20, paid_cents: 100000, steps_by_views: 20, steps_allowed: 20 }, first_sale_rate: 0.5, first_sale_used: [1, 2], race: { prizes: [{ level: 2, name: 'Silver', cents: 100000, winner: 'Noor', you: false }, { level: 3, name: 'Gold', cents: 300000, winner: 'Maya', you: true }, { level: 4, name: 'Platinum', cents: 600000, winner: null, you: false }, { level: 5, name: 'Diamond', cents: 1000000, winner: null, you: false }] },

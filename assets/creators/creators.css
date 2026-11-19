@@ -1250,3 +1250,5 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-steps__step b { grid-area: pay; font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em; }
 .mr-steps__step small { grid-area: need; color: var(--muted); font-size: 0.8125rem; }
 .mr-steps__step:not([data-done]) b { color: var(--muted); }
+
+.mr-steps__dot[data-locked] { font-size: 0.85rem; border-color: #E2B007; background: #FFF7DB; }
