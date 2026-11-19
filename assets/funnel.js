@@ -1333,6 +1333,10 @@
       claimCreator(user);
       showSignedIn();
       if (wasSignedOut && byId[order[index]]?.kind === 'account') render({ push: false });
+      /* The session is read after the first screen is drawn. A reader who lands
+         straight on the plans was a stranger when the checkout was warmed, so
+         it is asked again now that there is somebody to sell to. */
+      if (wasSignedOut && ['offer', 'plan'].includes(byId[order[index]]?.kind)) warmAhead?.();
     };
 
     client.auth.getSession().then(({ data }) => sessionArrived(data.session));
