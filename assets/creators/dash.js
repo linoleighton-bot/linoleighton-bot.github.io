@@ -404,7 +404,7 @@
     if (rules.length) {
       const videos = inc.volume.videos || 0;
       const next = rules.find((r) => videos < r.min_videos);
-      if (next) rows.push(row(`Post ${num(next.min_videos)} videos this month`, cp.dollars(next.amount_cents), videos, next.min_videos, 'videos', rules.length > 1 ? `${rules.length} levels this month, up to ${cp.dollars(rules[rules.length - 1].amount_cents)}` : 'Paid once a month'));
+      if (next) rows.push(row(`Post ${num(next.min_videos)} videos this month`, cp.dollars(next.amount_cents), videos, next.min_videos, 'videos', [`A video counts from ${compact(a?.count_min_views ?? 1000)} views`, rules.length > 1 ? `${rules.length} levels, up to ${cp.dollars(rules[rules.length - 1].amount_cents)}` : null, (inc.tier_level || 1) === 1 ? 'paid even before your first sale' : null].filter(Boolean).join(' · ')));
       else rows.push(h('li', {}, h('div', { class: 'mr-earn__head' }, h('span', {}, h('b', {}, 'Monthly posting bonuses'), h('small', {}, `All ${rules.length} earned this month`)), h('b', { class: 'mr-earn__pay' }, 'Done'))));
     }
     if (!rows.length) return null;

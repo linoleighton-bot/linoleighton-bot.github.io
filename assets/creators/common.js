@@ -490,7 +490,7 @@
     ladder(views, rules.map((rule) => ({ at: rule.threshold_views, label: dollars(rule.amount_cents), tip: [money(rule.amount_cents), `at ${num(rule.threshold_views)} views`] })), { live, unit: 'views' });
 
   /** The four kinds of bonus, in the order every chart lists them. */
-  const KINDS = [['views', 'View bonuses'], ['active', 'Active creator'], ['volume', 'Posting volume'], ['rank_up', 'Rank-up'], ['prize', 'Tier campaign prizes'], ['contest', 'Campaign wins'], ['top_video', 'Top videos'], ['referral', 'Creator referrals'], ['iron_views', 'Views pay (Iron)'], ['first_sale', 'First-sale bonus'], ['first_video', 'First video boost'], ['first_top', 'Race to the podium'], ['daily', 'Champion pay'], ['manual', 'One-off']];
+  const KINDS = [['views', 'View bonuses'], ['active', 'Active creator'], ['volume', 'Posting volume'], ['rank_up', 'Rank-up'], ['prize', 'Tier campaign prizes'], ['contest', 'Campaign wins'], ['top_video', 'Top videos'], ['referral', 'Creator referrals'], ['iron_views', 'Views pay (Iron)'], ['iron_volume', 'Posting volume (Iron)'], ['first_sale', 'First-sale bonus'], ['first_video', 'First video boost'], ['first_top', 'Race to the podium'], ['daily', 'Champion pay'], ['manual', 'One-off']];
 
   /** The detail tables, folded away until somebody wants them. */
   const fold = (label, ...body) => h('details', { class: 'cp-fold' }, h('summary', {}, label), ...body);
