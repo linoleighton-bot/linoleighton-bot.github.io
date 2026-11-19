@@ -97,7 +97,7 @@
   async function reload(quiet = false) {
     if (cp.demo) return render();
     try {
-      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, managers, briefs, recent] = await Promise.all([
+      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, managers, briefs, recent, referrals] = await Promise.all([
         cp.rpc('creator_admin_overview'),
         cp.rpc('creator_admin_funnel', { p_creator: funnelCreator, p_days: 30 }),
         ok(db.from('creator_videos').select('*').order('created_at', { ascending: false }).limit(500)),
@@ -110,8 +110,9 @@
         cp.rpc('creator_admin_managers').catch(() => []),
         ok(db.from('creator_briefs').select('*').order('created_at', { ascending: false })),
         ok(db.from('creator_commissions').select('id, creator_id, kind, plan, store, base_cents, amount_cents, occurred_at').order('occurred_at', { ascending: false }).limit(60)),
+        cp.rpc('creator_admin_referrals').catch(() => null),
       ]);
-      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc, managers };
+      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc, managers, referrals };
       const stamp = JSON.stringify(next);
       const apply = () => {
         const before = quiet && state ? new Set((state.feed || []).map((e) => `${e.at}|${e.kind}|${e.title}`)) : null;
@@ -1059,83 +1060,124 @@
   /* -------------------------------------------------------------- referrals */
 
   /*
-   * Who brought in whom. A creator who joins on another creator's invite link
-   * sits under them; when the new creator is accepted and their videos reach
-   * the view goal between them, the one who invited them is paid the bonus.
-   * Drag a creator onto someone else to change who referred them.
+   * Who brings creators in. Every creator and every manager has an invite
+   * link; the ladder lists them all, best first, with how far their link gets:
+   * opened, signed in, applied, accepted. Open a row to see the creators they
+   * brought in and how close each one is to the views that pay the reward.
    */
-  let dragging = null;
   function referralsTab() {
     const s = state.settings || {};
     const goal = Number(s.referral_views || 100000);
     const bonus = Number(s.referral_bonus_cents || 0);
-    const all = state.creators.filter((c) => c.status !== 'rejected');
-    const byId = new Map(all.map((c) => [c.id, c]));
+    const mgrBonus = Number(s.manager_referral_cents ?? 10000);
+    const counts = state.referrals || {};
+    const everyone = state.creators;
+    const all = everyone.filter((c) => c.status !== 'rejected');
+    const byId = new Map(everyone.map((c) => [c.id, c]));
+    const managers = (state.managers || []).map((m) => m.manager).filter((m) => m && m.active !== false);
+    const mgrIds = new Set(managers.map((m) => m.id));
+    const countOf = (list, kind, id) => Number(((list || []).find((x) => x.kind === kind && x.ref_id === id) || {}).n || 0);
     const paidFor = new Set((state.bonuses || []).filter((b) => b.kind === 'referral' && b.ref).map((b) => b.ref));
+    const mgrPaid = new Map((counts.manager_bonuses || []).map((b) => [b.creator_id, b]));
     const viewsOf = (c) => Number(c.stats?.views || 0);
-    const kids = (id) => all.filter((c) => (c.referred_by || null) === id && c.id !== id).sort((x, y) => viewsOf(y) - viewsOf(x));
-    const referred = all.filter((c) => c.referred_by && byId.has(c.referred_by));
-    const stageOf = (c) => (paidFor.has(c.id) ? ['Paid', 'good'] : c.status !== 'active' ? [c.status === 'pending' ? 'Waiting for approval' : 'Paused', 'warn'] : viewsOf(c) >= goal ? ['Reached the goal', 'good'] : ['Posting', 'muted']);
+    /* A creator's own referrer comes first; a manager is credited only when no creator is. */
+    const byCreator = (c) => (c.referred_by && byId.has(c.referred_by) && c.referred_by !== c.id ? c.referred_by : null);
+    const byManager = (c) => (!byCreator(c) && c.referred_manager && mgrIds.has(c.referred_manager) ? c.referred_manager : null);
+    const accepted = (c) => c.status === 'active' || c.status === 'paused';
+    const isPaid = (c) => paidFor.has(c.id) || mgrPaid.has(c.id);
+    const stageOf = (c) => (isPaid(c) ? ['Reward paid', 'good'] : c.status === 'rejected' ? ['Declined', 'muted'] : c.status === 'pending' ? ['Waiting for approval', 'warn'] : c.status === 'paused' ? ['Paused', 'warn'] : viewsOf(c) >= goal ? ['Reached the goal', 'good'] : ['Posting', 'muted']);
 
     const move = async (creatorId, referrerId) => {
-     try {
-      const c = byId.get(creatorId);
-      if (!c || creatorId === referrerId || (c.referred_by || null) === (referrerId || null)) return;
-      // Nobody can sit under someone who is already under them.
-      for (let up = referrerId, n = 0; up && n < 50; up = byId.get(up)?.referred_by, n++) if (up === creatorId) throw new Error(`${byId.get(referrerId).display_name} was referred by ${c.display_name}, so it cannot go the other way round.`);
-      if (cp.demo) { c.referred_by = referrerId || null; toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}. (Sample data: nothing was saved.)` : `${c.display_name} has no referrer now. (Sample data: nothing was saved.)`); return render(); }
-      await cp.rpc('creator_admin_set_referrer', { p_creator: creatorId, p_referrer: referrerId || null });
-      toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}.` : `${c.display_name} has no referrer now.`);
-      await reload();
-     } catch (error) { toast(error.message || 'Something went wrong.', 'error'); }
+      try {
+        const c = byId.get(creatorId);
+        if (!c || creatorId === referrerId || (c.referred_by || null) === (referrerId || null)) return;
+        // Nobody can sit under someone who is already under them.
+        for (let up = referrerId, n = 0; up && n < 50; up = byId.get(up)?.referred_by, n++) if (up === creatorId) throw new Error(`${byId.get(referrerId).display_name} was referred by ${c.display_name}, so it cannot go the other way round.`);
+        if (cp.demo) { c.referred_by = referrerId || null; toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}. (Sample data: nothing was saved.)` : `${c.display_name} has no referrer now. (Sample data: nothing was saved.)`); return render(); }
+        await cp.rpc('creator_admin_set_referrer', { p_creator: creatorId, p_referrer: referrerId || null });
+        toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}.` : `${c.display_name} has no referrer now.`);
+        await reload();
+      } catch (error) { toast(error.message || 'Something went wrong.', 'error'); }
     };
 
-    const chip = (c) => {
+    /* One creator somebody brought in: where they are, and how far from the reward. */
+    const recruit = (c, reward, canMove) => {
       const [label, tone] = stageOf(c);
-      const share = Math.max(0, Math.min(1, viewsOf(c) / goal));
-      const picker = h('select', { class: 'mr-ref__move', 'aria-label': `Move ${c.display_name} under` }, h('option', { value: '' }, 'Move to…'), h('option', { value: 'none' }, 'No referrer'), all.filter((o) => o.status === 'active' && o.id !== c.id && o.id !== c.referred_by).map((o) => h('option', { value: o.id }, o.display_name)));
-      picker.addEventListener('change', () => { const v = picker.value; picker.value = ''; if (v) move(c.id, v === 'none' ? null : v); });
-      const el = h(
-        'div',
-        { class: 'mr-ref__chip', draggable: 'true', 'data-tone': tone },
-        h('div', { class: 'mr-ref__who' }, cp.person(c), c.referred_by || c.status !== 'active' ? pill(label, tone) : null),
+      const share = isPaid(c) ? 1 : Math.max(0, Math.min(1, viewsOf(c) / (goal || 1)));
+      const picker = canMove && c.status !== 'rejected'
+        ? h('select', { class: 'mr-ref__move', 'aria-label': `Move ${c.display_name} under` }, h('option', { value: '' }, 'Move to…'), h('option', { value: 'none' }, 'No referrer'), all.filter((o) => o.status === 'active' && o.id !== c.id && o.id !== c.referred_by).map((o) => h('option', { value: o.id }, o.display_name)))
+        : null;
+      if (picker) picker.addEventListener('change', () => { const v = picker.value; picker.value = ''; if (v) move(c.id, v === 'none' ? null : v); });
+      return h(
+        'li',
+        { class: 'mr-lad__kid', 'data-done': isPaid(c) ? '' : null },
+        h('div', { class: 'mr-ref__who' }, cp.person(c), pill(label, tone === 'muted' ? undefined : tone)),
         h('div', { class: 'mr-ref__bar', role: 'img', 'aria-label': `${compact(viewsOf(c))} of ${compact(goal)} views` }, h('i', { style: `width:${(share * 100).toFixed(1)}%` })),
-        h('div', { class: 'mr-ref__foot' }, h('span', {}, `${compact(viewsOf(c))} / ${compact(goal)} views`), picker),
+        h('div', { class: 'mr-ref__foot' }, h('span', {}, `${compact(viewsOf(c))} / ${compact(goal)} views · ${isPaid(c) ? `${cp.dollars(reward)} paid` : reward > 0 ? `${cp.dollars(reward)} when they get there` : 'no reward set'}`), picker),
       );
-      el.addEventListener('dragstart', (e) => { dragging = c.id; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', c.id); } catch { /* some browsers refuse; the id is kept in memory too */ } el.dataset.dragging = ''; });
-      el.addEventListener('dragend', () => { dragging = null; delete el.dataset.dragging; view.querySelectorAll('[data-over]').forEach((z) => delete z.dataset.over); });
-      return el;
     };
-    const zone = (referrer) => {
-      const list = kids(referrer ? referrer.id : null).filter((c) => (referrer ? true : !c.referred_by || !byId.has(c.referred_by)));
-      const paid = list.filter((c) => paidFor.has(c.id)).length;
-      const el = h(
-        'section',
-        { class: 'mr-ref__zone', 'data-empty': list.length ? null : '' },
+
+    const rows = [
+      ...all.filter((c) => c.status === 'active').map((c) => {
+        const kids = everyone.filter((k) => byCreator(k) === c.id);
+        return { kind: 'creator', id: c.id, who: c, name: c.display_name, badge: pill(tierName(c), c.champion ? 'good' : undefined), link: `getmindroll.com/creators/?invite=${c.code}`, kids, reward: bonus,
+          earned: (state.bonuses || []).filter((b) => b.kind === 'referral' && b.creator_id === c.id).reduce((sum, b) => sum + Number(b.amount_cents || 0), 0) };
+      }),
+      ...managers.map((m) => {
+        const kids = everyone.filter((k) => byManager(k) === m.id);
+        return { kind: 'manager', id: m.id, who: { display_name: m.display_name, tier_level: 5 }, name: m.display_name, badge: pill('Manager', 'good'), link: m.code ? `getmindroll.com/creators/?team=${m.code}` : null, kids, reward: mgrBonus,
+          earned: (counts.manager_bonuses || []).filter((b) => b.manager_id === m.id).reduce((sum, b) => sum + Number(b.amount_cents || 0), 0) };
+      }),
+    ].map((r) => {
+      const applied = r.kids.length;
+      return { ...r, kids: [...r.kids].sort((x, y) => viewsOf(y) - viewsOf(x)), referred: applied, clicks: countOf(counts.clicks, r.kind, r.id), signups: Math.max(countOf(counts.signups, r.kind, r.id), applied), accepted: r.kids.filter(accepted).length };
+    }).sort((x, y) => y.referred - x.referred || y.accepted - x.accepted || y.signups - x.signups || y.clicks - x.clicks || x.name.localeCompare(y.name));
+
+    const stat = (label, value, big) => h('span', { class: 'mr-lad__stat', 'data-big': big ? '' : null }, h('b', {}, value), h('small', {}, label));
+    const row = (r, i) =>
+      h(
+        'li',
+        {},
         h(
-          'header',
-          {},
-          referrer ? h('div', { class: 'mr-ref__owner' }, cp.avatar(referrer), h('div', {}, h('b', {}, referrer.display_name), h('span', { class: 'cp-muted cp-small' }, `${num(list.length)} referred${paid ? ` · ${cp.dollars(paid * bonus)} paid` : ''}`))) : h('div', {}, h('b', {}, 'No referrer'), h('span', { class: 'cp-muted cp-small' }, 'Joined without an invite link')),
+          'details',
+          { class: 'mr-lad__row' },
+          h(
+            'summary',
+            {},
+            h('i', { class: 'mr-lad__rank' }, String(i + 1)),
+            h('span', { class: 'mr-lad__who' }, cp.avatar(r.who), h('span', {}, h('b', {}, r.name), r.badge)),
+            h('span', { class: 'mr-lad__stats' }, stat('referred', num(r.referred), true), stat('link clicks', num(r.clicks)), stat('signed up', num(r.signups)), stat('accepted', num(r.accepted)), stat('earned', cp.dollars(r.earned))),
+          ),
+          h(
+            'div',
+            { class: 'mr-lad__body' },
+            r.link ? h('p', { class: 'cp-small cp-muted' }, 'Invite link: ', h('code', { class: 'cp-mono' }, r.link)) : null,
+            r.kids.length ? h('ul', { class: 'mr-lad__kids' }, r.kids.map((c) => recruit(c, r.reward, r.kind === 'creator'))) : h('p', { class: 'cp-muted cp-small' }, 'Nobody has applied on this link yet.'),
+          ),
         ),
-        h('div', { class: 'mr-ref__drop' }, list.length ? list.map(chip) : h('p', { class: 'cp-muted cp-small' }, referrer ? 'Drop a creator here to put them under this person.' : 'Drop a creator here to remove their referrer.')),
       );
-      el.addEventListener('dragover', (e) => { if (!dragging || dragging === referrer?.id) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.dataset.over = ''; });
-      el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) delete el.dataset.over; });
-      el.addEventListener('drop', (e) => { e.preventDefault(); delete el.dataset.over; const id = dragging || e.dataTransfer.getData('text/plain'); dragging = null; if (id) move(id, referrer ? referrer.id : null); });
-      return el;
-    };
+
+    const loose = all.filter((c) => !byCreator(c) && !byManager(c)).sort((x, y) => x.display_name.localeCompare(y.display_name));
+    const sum = (key) => rows.reduce((n, r) => n + r[key], 0);
+    const paidOut = rows.reduce((n, r) => n + r.earned, 0);
     const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
-    const referrers = all.filter((c) => c.status === 'active').sort((x, y) => kids(y.id).length - kids(x.id).length || x.display_name.localeCompare(y.display_name));
-    const reached = referred.filter((c) => c.status === 'active' && viewsOf(c) >= goal).length;
 
     return [
       h(
         'section',
         { class: 'mr-panel mr-ref__how' },
-        h('ol', {}, h('li', {}, h('b', {}, '1'), h('span', {}, 'A creator shares their invite link')), h('li', {}, h('b', {}, '2'), h('span', {}, 'Someone applies on it and you accept them')), h('li', {}, h('b', {}, '3'), h('span', {}, `Their videos reach ${compact(goal)} views in total`)), h('li', { 'data-pay': '' }, h('b', {}, cp.dollars(bonus)), h('span', {}, 'goes to the creator who invited them'))),
+        h('ol', {}, h('li', {}, h('b', {}, '1'), h('span', {}, 'A creator or a manager shares their invite link')), h('li', {}, h('b', {}, '2'), h('span', {}, 'Someone applies on it and you accept them')), h('li', {}, h('b', {}, '3'), h('span', {}, `Their videos reach ${compact(goal)} views in total`)), h('li', { 'data-pay': '' }, h('b', {}, bonus === mgrBonus ? cp.dollars(bonus) : `${cp.dollars(bonus)} / ${cp.dollars(mgrBonus)}`), h('span', {}, bonus === mgrBonus ? 'goes straight to whoever invited them' : 'to the creator / the manager who invited them'))),
       ),
-      h('div', { class: 'mr-grid' }, tile('paper', 'Referred creators', num(referred.length), 'joined on an invite link'), tile('paper', 'Accepted', num(referred.filter((c) => c.status === 'active').length), 'approved into the program'), tile('paper', `Reached ${compact(goal)} views`, num(reached), 'the goal that pays'), tile('amber', 'Paid to referrers', cp.dollars(paidFor.size * bonus), `${num(paidFor.size)} × ${cp.dollars(bonus)}`)),
-      section('Who referred whom', h('span', { class: 'cp-muted' }, 'Drag a creator onto someone else to move them'), h('div', { class: 'mr-ref__board' }, zone(null), referrers.map(zone))),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Invite link clicks', num(sum('clicks')), 'counted from the day this went live'), tile('paper', 'Signed up', num(sum('signups')), 'signed in on an invite link'), tile('paper', 'Accepted', num(sum('accepted')), `of ${num(sum('referred'))} who applied`), tile('amber', 'Paid to referrers', cp.dollars(paidOut), 'added the moment the goal is reached')),
+      section(
+        'Referral ladder',
+        h('span', { class: 'cp-muted' }, `${num(rows.length)} creators and managers · most referred first`),
+        h('ol', { class: 'mr-lad' }, rows.map(row)),
+        h('p', { class: 'cp-muted cp-small' }, 'Referred: applied on the link. Signed up: signed in on the link, whether or not they finished applying. Accepted: approved into the program. Open a row for the creators and their progress.'),
+      ),
+      loose.length
+        ? h('section', { class: 'cp-card' }, h('details', { class: 'mr-lad__row mr-lad__row--plain' }, h('summary', {}, h('span', { class: 'mr-lad__who' }, h('span', {}, h('b', {}, 'Joined without an invite link'))), h('span', { class: 'mr-lad__stats' }, stat('creators', num(loose.length), true))), h('div', { class: 'mr-lad__body' }, h('p', { class: 'cp-small cp-muted' }, 'Use "Move to…" to put a creator under whoever really brought them in.'), h('ul', { class: 'mr-lad__kids' }, loose.map((c) => recruit(c, bonus, true))))))
+        : null,
     ];
   }
 
@@ -2031,6 +2073,7 @@
     const inFull = h('input', { type: 'checkbox', checked: !!s.fund_pay_in_full });
     const refPay = h('input', { type: 'number', min: '0', step: '5', value: String((s.referral_bonus_cents ?? 10000) / 100) });
     const refViews = h('input', { type: 'number', min: '0', step: '1000', value: String(s.referral_views ?? 100000) });
+    const mgrRefPay = h('input', { type: 'number', min: '0', step: '5', value: String((s.manager_referral_cents ?? 10000) / 100) });
     const ironPay = h('input', { type: 'number', min: '0', step: '5', value: String((s.iron_step_cents ?? 5000) / 100) });
     const ironStep = h('input', { type: 'number', min: '1000', step: '1000', value: String(s.iron_step_views ?? 50000) });
     const ironCap = h('input', { type: 'number', min: '0', step: '10000', value: String(s.iron_cap_views ?? 1000000) });
@@ -2065,6 +2108,7 @@
       h('label', { class: 'cp-check' }, inFull, 'Pay campaign prizes and Champion pay in full, even when that takes us below the share above'),
       h('small', { class: 'cp-hint' }, 'Off: they are paid from the prize fund and scaled down when it is short, so the share you keep never drops below the floor.'),
       h('div', { class: 'cp-form__row' }, field('Pay for inviting a creator ($)', refPay), field('Once the new creator has this many views', refViews)),
+      h('div', { class: 'cp-form__row' }, field('Pay a manager for bringing in a creator ($)', mgrRefPay)),
       h('div', { class: 'cp-form__row' }, field('Top videos: views in the week to qualify', topMin), field('Prize pool, % of the winners\' sales', topRate)),
       h('div', { class: 'cp-form__row' }, field('Views pay for the first rank ($)', ironPay), field('for every (views)', ironStep), field('up to (views)', ironCap)),
       h('div', { class: 'cp-form__row' }, field('A video counts for views pay from (views)', ironMin), field('First weekly and first yearly sale pay (%)', firstRate)),
@@ -2101,6 +2145,7 @@
           ...(again.checked ? { terms_version: (s.terms_version || 1) + 1 } : {}),
           referral_bonus_cents: Math.max(0, Math.round(Number(refPay.value) * 100)),
           referral_views: Math.max(0, Math.round(Number(refViews.value))),
+          ...('manager_referral_cents' in s ? { manager_referral_cents: Math.max(0, Math.round(Number(mgrRefPay.value) * 100)) } : {}),
           iron_step_cents: Math.max(0, Math.round(Number(ironPay.value) * 100)),
           iron_step_views: Math.max(1000, Math.round(Number(ironStep.value))),
           iron_cap_views: Math.max(0, Math.round(Number(ironCap.value))),
@@ -2141,7 +2186,7 @@
       stats: { clicks: o.clicks ?? 0, signups: o.signups ?? 0, customers: o.subs ?? 0, revenue_cents: o.rev ?? 0, videos: o.videos ?? 0, views: o.views ?? 0 },
     });
     return {
-      settings: { default_commission_rate: 0.1, commission_base: 'net', hold_days: 30, min_payout_cents: 2500, track_days: 60, applications_open: true, min_margin_rate: 0.7, manychat_commission_cents: 7500, active_min_days: 4, active_bonus_cents: 1000, hashtag: 'mindroll', scan_minutes: 60, count_min_views: 1000, annual_bonus_cents: 500, app_store_fee_rate: 0.15, web_fee_rate: 0.025, terms_version: 1, terms_text: 'By using the Mindroll creator panel you agree to the following.\n\n1. Your content. You give Mindroll a free licence to use your Mindroll videos, including as paid advertising.\n\n2. Fair play. No fake views, clicks or sales. If cheating is suspected, payouts are held.', referral_bonus_cents: 10000, referral_views: 100000, top_video_min_views: 100000, top_video_pool_rate: 0.05, champion_slots: 3, champion_rate: 0.25, champion_daily_cents: 15000, campaign_min_creators: 5, campaign_split: [50, 30, 20], fund_pay_in_full: false },
+      settings: { default_commission_rate: 0.1, manager_referral_cents: 10000, commission_base: 'net', hold_days: 30, min_payout_cents: 2500, track_days: 60, applications_open: true, min_margin_rate: 0.7, manychat_commission_cents: 7500, active_min_days: 4, active_bonus_cents: 1000, hashtag: 'mindroll', scan_minutes: 60, count_min_views: 1000, annual_bonus_cents: 500, app_store_fee_rate: 0.15, web_fee_rate: 0.025, terms_version: 1, terms_text: 'By using the Mindroll creator panel you agree to the following.\n\n1. Your content. You give Mindroll a free licence to use your Mindroll videos, including as paid advertising.\n\n2. Fair play. No fake views, clicks or sales. If cheating is suspected, payouts are held.', referral_bonus_cents: 10000, referral_views: 100000, top_video_min_views: 100000, top_video_pool_rate: 0.05, champion_slots: 3, champion_rate: 0.25, champion_daily_cents: 15000, campaign_min_creators: 5, campaign_split: [50, 30, 20], fund_pay_in_full: false },
       tiers: [
         { level: 1, name: 'Iron', min_revenue_cents: 0, min_views: 0, min_posts: 0, bonus_multiplier: 1, commission_rate: 0.1, rank_up_bonus_cents: 0, annual_flat_cents: 500, campaign_pool_cents: 0, active_day_views: 1000, race_prize_cents: 0 },
         { level: 2, name: 'Silver', min_revenue_cents: 150000, min_views: 100000, min_posts: 4, bonus_multiplier: 5, commission_rate: 0.12, rank_up_bonus_cents: 2500, annual_flat_cents: 600, campaign_pool_cents: 150000, active_day_views: 2000, race_prize_cents: 100000 },
@@ -2156,6 +2201,8 @@
         c('c1', 'Maya', 'maya', 'active', { mgr: 'm1', ready: 16160, pending: 5744, paid: 14200, comm: 20604, bonus: 15500, clicks: 6240, signups: 388, subs: 41, rev: 173354, videos: 4, views: 718400, ig: true, tier: 2, cashout: true, kinds: { views: 5000, rank_up: 2500 }, month: { views: 4000, rank_up: 2500 } }),
         c('c2', 'Theo Studies', 'theo', 'active', { by: 'c1', mgr: 'm1', ready: 3400, pending: 2800, paid: 2000, comm: 6200, bonus: 2000, clicks: 2210, signups: 142, subs: 16, rev: 62000, videos: 6, views: 264000, tier: 1, kinds: { views: 1000, manual: 1000 }, month: { views: 1000 } }),
         c('c3', 'Bookish Lina', 'lina', 'active', { by: 'c1', mgr: 'm2', verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),
+        Object.assign(c('c7', 'Noor Notes', 'noor', 'active', { mgr: 'm1', clicks: 980, signups: 51, subs: 7, rev: 21000, comm: 2100, videos: 5, views: 186000 }), { referred_manager: 'm1' }),
+        Object.assign(c('c8', 'Eli Annotates', 'eli', 'active', { mgr: 'm1', clicks: 120, signups: 4, videos: 2, views: 38500 }), { referred_manager: 'm1' }),
         c('c4', 'Sam', 'sam', 'paused', { by: 'c2', clicks: 210, signups: 9, subs: 1, rev: 1699, comm: 170, pending: 170, videos: 1, views: 4100 }),
       ],
       pulse: { sales_today_cents: 21400, sales_7d_cents: 98200, sales_prev_7d_cents: 71400, subs_today: 6, subs_7d: 31, views_today: 61300, views_7d: 412000, videos_7d: 14, daily: Array.from({ length: 90 }, (_, i) => { const cents = Math.round((1800 + i * 190) * (1 + 0.45 * Math.sin(i * 1.7)) * (i % 7 === 5 ? 1.6 : 1)); return { day: ago(89 - i).slice(0, 10), sales_cents: cents, paid_cents: Math.round(cents * 0.14), subs: Math.round(cents / 2600), views: cents * 4 }; }) },
@@ -2229,9 +2276,10 @@
         { id: 'r3', label: '500K views', threshold_views: 500000, amount_cents: 3000, active: true, applies_from: '1970-01-01T00:00:00Z' },
         { id: 'r4', label: '1M views', threshold_views: 1000000, amount_cents: 6000, active: true, applies_from: '1970-01-01T00:00:00Z' },
       ],
+      referrals: { clicks: [{ kind: 'creator', ref_id: 'c1', n: 148 }, { kind: 'creator', ref_id: 'c2', n: 31 }, { kind: 'creator', ref_id: 'c3', n: 6 }, { kind: 'manager', ref_id: 'm1', n: 64 }, { kind: 'manager', ref_id: 'm2', n: 12 }], signups: [{ kind: 'creator', ref_id: 'c1', n: 9 }, { kind: 'creator', ref_id: 'c2', n: 2 }, { kind: 'manager', ref_id: 'm1', n: 5 }, { kind: 'manager', ref_id: 'm2', n: 1 }], manager_bonuses: [{ manager_id: 'm1', creator_id: 'c7', amount_cents: 10000, created_at: ago(4) }] },
       managers: [
-        { manager: { id: 'm1', display_name: 'Alex Rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 331200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100 } },
-        { manager: { id: 'm2', display_name: 'Dana Cho', active: true }, email: 'dana@example.com', signed_in: false, creators: [], totals: {}, pay: { total_cents: 4100 } },
+        { manager: { id: 'm1', display_name: 'Alex Rivera', code: 'alex_rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 331200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100 } },
+        { manager: { id: 'm2', display_name: 'Dana Cho', code: 'dana_cho', active: true }, email: 'dana@example.com', signed_in: false, creators: [], totals: {}, pay: { total_cents: 4100 } },
       ],
       bonuses: [
         { id: 'br1', creator_id: 'c1', kind: 'referral', amount_cents: 10000, label: 'Referred Theo Studies', ref: 'c2', created_at: ago(6) },

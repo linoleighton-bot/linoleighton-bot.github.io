@@ -742,13 +742,20 @@
       h(
         'section',
         { class: 'mr-panel' },
-        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Bonuses, on top of your cut'), h('b', {}, dollars0(Number(pay.from_rankup_cents || 0) + Number(pay.from_active_cents || 0) + Number(pay.from_views_cents || 0)))),
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Bonuses, on top of your cut'), h('b', {}, dollars0(Number(pay.from_rankup_cents || 0) + Number(pay.from_active_cents || 0) + Number(pay.from_views_cents || 0) + Number(pay.from_referral_cents || 0)))),
         h(
           'ul',
           { class: 'mr-team__parts' },
           h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Rank-up bonus'), h('small', {}, `${share(pay.rankup_rate)} of the rank-up bonus, every time one of your creators ranks up. Tap to see every rank.`)), h('b', {}, dollars0(pay.from_rankup_cents))), h('ul', { class: 'mr-rankups' }, (pay.rankups || []).map((r) => h('li', {}, h('b', {}, r.name), h('span', {}, `Creator gets ${dollars(r.bonus_cents)}`), h('span', { 'data-yours': '' }, `You get ${dollars(r.yours_cents)}`), h('small', {}, Number(r.count_30d) > 0 ? `${num(r.count_30d)} in the last 30 days` : 'none yet'))), (pay.rankups || []).length ? null : h('li', { class: 'cp-muted' }, 'No rank-up bonuses are set.')))),
           h('li', {}, h('span', {}, h('b', {}, 'Activeness'), h('small', {}, `${dollars0(pay.active_cents)} for every active week a creator completes`)), h('b', {}, dollars0(pay.from_active_cents))),
           h('li', {}, h('span', {}, h('b', {}, 'Views'), h('small', {}, `${dollars0(pay.views_cents)} for every 100K views your team gains`)), h('b', {}, dollars0(pay.from_views_cents))),
+          pay.referral_cents > 0 && team.manager?.code
+            ? h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Creators you bring in'), h('small', {}, `${dollars0(pay.referral_cents)} for each creator who joins on your link and reaches ${compact(pay.referral_views)} views. Added the moment they get there. Tap for your link.`)), h('b', {}, dollars0(pay.from_referral_cents))),
+                h('p', { class: 'cp-small' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, `getmindroll.com/creators/?team=${team.manager.code}`)),
+                (pay.referrals || []).length
+                  ? h('ul', { class: 'mr-rankups' }, pay.referrals.map((r) => h('li', {}, h('span', {}, h('b', {}, r.display_name), h('small', {}, r.paid ? 'Reached the goal' : r.status === 'pending' ? 'Waiting for approval' : `${compact(r.views)} of ${compact(pay.referral_views)} views`)), h('b', {}, r.paid ? dollars0(pay.referral_cents) : '–'))))
+                  : h('p', { class: 'cp-small cp-muted' }, 'Nobody has joined on your link yet.')))
+            : null,
         ),
       ),
       h(

@@ -28,6 +28,36 @@
     }
   })();
 
+  /* ?team=code on a manager's link: the same, for a manager bringing a creator in. */
+  const TEAM = (() => {
+    const fromUrl = (new URLSearchParams(location.search).get('team') || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+    try {
+      if (fromUrl) localStorage.setItem('mindroll.team', fromUrl);
+      return fromUrl || localStorage.getItem('mindroll.team') || null;
+    } catch {
+      return fromUrl || null;
+    }
+  })();
+  /* An invite link being opened is counted once per browser, and only when the link itself was opened. */
+  if (!cp.demo) {
+    const asked = new URLSearchParams(location.search);
+    for (const [param, kind] of [['invite', 'creator'], ['team', 'manager']]) {
+      const code = (asked.get(param) || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+      if (!code) continue;
+      const key = `mindroll.invite.seen.${kind}.${code}`;
+      let seen = false;
+      try { seen = Boolean(localStorage.getItem(key)); localStorage.setItem(key, '1'); } catch { /* private window: counted each time */ }
+      if (!seen) cp.rpc('creator_invite_click', { p_code: code, p_kind: kind }).catch(() => {});
+    }
+  }
+  /* Once they have signed in, the invite they came on is recorded, whether or not they finish applying. */
+  let inviteNoted = false;
+  const noteInvite = async () => {
+    if (inviteNoted || cp.demo || (!INVITE && !TEAM)) return;
+    inviteNoted = true;
+    await cp.rpc('creator_invite_signup', INVITE ? { p_code: INVITE, p_kind: 'creator' } : { p_code: TEAM, p_kind: 'manager' }).catch(() => { inviteNoted = false; });
+  };
+
   const COUNTRIES = [
     ['US', 'United States'], ['GB', 'United Kingdom'], ['CA', 'Canada'], ['AU', 'Australia'], ['IE', 'Ireland'],
     ['NZ', 'New Zealand'], ['DE', 'Germany'], ['FR', 'France'], ['ES', 'Spain'], ['IT', 'Italy'], ['NL', 'Netherlands'],
@@ -71,7 +101,7 @@
         lastStamp = stamp;
         liveData = data;
         if (!data.creator && data.team && !wantsToApply) renderManager(data);
-        else if (!data.creator) renderApply(data);
+        else if (!data.creator) { noteInvite(); renderApply(data); }
         else if (data.creator.status !== 'active') renderWaiting(data.creator);
         else if (data.creator.terms_accepted === false) renderTerms(data);
         else renderDashboard(data);
@@ -235,6 +265,7 @@
         if (trap.value) return renderWaiting({ status: 'pending' });
         if (cp.demo) return renderWaiting({ status: 'pending' }, 'This is a preview, so nothing was saved or emailed.');
         const note = yes.checked ? `Talked with a representative: ${repName.value.trim()}` : 'Has not talked with a representative';
+        await noteInvite();
         const reply = await cp.rpc('creator_apply', { p_tiktok: tiktok.value, p_instagram: instagram.value, p_note: note, p_invite: INVITE });
         if (reply === 'applied' || reply === 'exists') {
           try { localStorage.setItem(APPLIED, String(Date.now())); } catch { /* private window */ }
