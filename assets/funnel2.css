@@ -4261,3 +4261,23 @@ body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta 
   padding-block: 0.4rem;
 }
 body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta::after { display: none; }
+
+/* ==========================================================================
+ * Sign-up is Apple or Google, nothing else.
+ *
+ * The email and password form was the only place in the whole flow, after the
+ * optional name, where a reader on a phone had to type. It is hidden rather
+ * than removed, so the script that wires it still finds what it expects.
+ * ========================================================================== */
+body.page-funnel2 #step-account .signin__email,
+body.page-funnel2 #step-account .signin__emailform {
+  display: none !important;
+}
+
+/* "Skip this" under the name box: easier to see and to hit with a thumb. */
+body.page-funnel2 #step-name .fs__skip {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  min-height: 3rem;
+  padding: 0.75rem 1.25rem;
+}
