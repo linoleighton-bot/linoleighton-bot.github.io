@@ -141,7 +141,7 @@
   /* A manager who is not (yet) a creator themselves: their team, and a way to apply. */
   let wantsToApply = false;
   function renderManager(data) {
-    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok) }))));
+    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }))));
   }
 
   function renderApply(data) {
@@ -448,7 +448,7 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
-      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok) }),
+      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
@@ -675,6 +675,36 @@
   }
 
   /* A manager approves or declines the accounts one of their creators added. */
+  /* A manager's changes to their own team. The server refuses anything outside their team or the allowed range. */
+  function teamActions(data) {
+    const redraw = () => (data.creator ? renderDashboard(data) : renderManager(data));
+    const info = () => (data.team.manage ||= { rate_cap: 0.25, managers: [], rates: {} });
+    const WHY = { not_yours: 'That creator is not on your team any more.', too_low: 'That is below what their rank already pays.', too_high: 'That is above the most a manager can give.', no_manager: 'That manager is not available.' };
+    return {
+      setRate: async (c, rate) => {
+        if (cp.demo) { const r = (info().rates[c.id] ||= { rate: 0.1, rank_rate: 0.1, custom: false }); Object.assign(r, rate == null ? { rate: r.rank_rate, custom: false } : { rate, custom: true }); toast('Saved. (Sample data: nothing was saved.)'); return redraw(); }
+        const reply = await cp.rpc('creator_manager_set_rate', { p_creator: c.id, p_rate: rate });
+        if (reply !== 'saved' && reply !== 'cleared') throw new Error(WHY[reply] || 'That did not save.');
+        toast(reply === 'saved' ? `${c.display_name} now earns ${Math.round(rate * 1000) / 10}% on every sale.` : `${c.display_name} is back on their rank rate.`);
+        await load();
+      },
+      move: async (c, to, name) => {
+        if (cp.demo) { data.team.creators = data.team.creators.filter((x) => x !== c); toast('Moved. (Sample data: nothing was saved.)'); return redraw(); }
+        const reply = await cp.rpc('creator_manager_move', { p_creator: c.id, p_to: to });
+        if (reply !== 'moved') throw new Error(WHY[reply] || 'That did not go through.');
+        toast(`${c.display_name} moved to ${name}'s team.`);
+        await load();
+      },
+      remove: async (c) => {
+        if (cp.demo) { data.team.creators = data.team.creators.filter((x) => x !== c); toast('Removed. (Sample data: nothing was saved.)'); return redraw(); }
+        const reply = await cp.rpc('creator_manager_remove', { p_creator: c.id });
+        if (reply !== 'removed') throw new Error(WHY[reply] || 'That did not go through.');
+        toast(`${c.display_name} was removed from the program.`);
+        await load();
+      },
+    };
+  }
+
   async function reviewAccounts(data, c, approve) {
     if (cp.demo) { if (approve) c.handle_verified = true; else Object.assign(c, { tiktok: null, instagram: null, handle_verified: false }); toast(`${approve ? 'Approved' : 'Declined'}. (Sample data: nothing was saved.)`); return data.creator ? renderDashboard(data) : renderManager(data); }
     await cp.rpc('creator_review_accounts', { p_creator: c.id, p_approve: approve });
@@ -1608,6 +1638,7 @@
       ],
       team: {
         manager: { id: 'm1', display_name: 'Maya\'s team', active: true },
+        manage: { rate_cap: 0.25, managers: [{ id: 'm2', name: 'Jordan' }], rates: {} },
         tiers: [{ level: 1, name: 'Iron' }, { level: 2, name: 'Silver' }, { level: 3, name: 'Gold' }, { level: 4, name: 'Platinum' }, { level: 5, name: 'Diamond' }],
         totals: { creators: 5, pending: 1, active_7d: 4, views_30d: 2184000, videos_30d: 61, sales_30d: 812400, commission_30d: 112300, active_weeks_30d: 11, subscribers: 187 },
         pay: { commission_rate: 0.1, active_cents: 500, views_cents: 100, from_commission_cents: 11230, from_active_cents: 5500, from_views_cents: 2100, total_cents: 18830 },

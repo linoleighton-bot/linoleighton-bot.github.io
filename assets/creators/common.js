@@ -664,6 +664,38 @@
       decline.addEventListener('click', act(decline, () => o.review(v, false, why.value.trim())));
       return h('li', { class: 'mr-review__row' }, person(v.creator || {}), h('div', { class: 'mr-review__video' }, safeUrl(v.url) ? h('a', { class: 'btn btn--ghost btn--sm', href: safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, `Watch on ${v.platform === 'tiktok' ? 'TikTok' : v.platform === 'instagram' ? 'Instagram' : 'YouTube'}`) : null, h('span', { class: 'cp-muted cp-small' }, v.source === 'creator' ? 'Sent by the creator' : 'Found on their account')), h('div', { class: 'mr-review__act' }, why, approve, decline));
     };
+    /*
+     * What a manager can change for a creator on their own team. The database checks every one of
+     * these again (their team only, the rate between the rank's rate and the admins' cap).
+     */
+    const info = team.manage || { rate_cap: 0.25, managers: [], rates: {} };
+    const pctOf = (rate) => Math.round(Number(rate || 0) * 1000) / 10;
+    const manageRow = (c) => {
+      const r = info.rates?.[c.id] || { rate: 0.1, rank_rate: 0.1, custom: false };
+      const cap = Math.max(Number(info.rate_cap || 0), Number(r.rank_rate || 0));
+      const parts = [];
+      if (c.status === 'active') {
+        const input = h('input', { class: 'cp-input cp-input--num', type: 'number', inputmode: 'decimal', min: String(pctOf(r.rank_rate)), max: String(pctOf(cap)), step: '0.5', value: String(pctOf(r.rate)), 'aria-label': `Commission percent for ${c.display_name}` });
+        const save = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Save');
+        save.addEventListener('click', act(save, () => {
+          const value = Number(input.value);
+          if (!Number.isFinite(value) || value < pctOf(r.rank_rate) || value > pctOf(cap)) throw new Error(`Choose between ${pctOf(r.rank_rate)}% (their rank) and ${pctOf(cap)}% (the most you can give).`);
+          return o.manage.setRate(c, value / 100);
+        }));
+        const back = r.custom ? confirmButton('Back to rank rate', `Confirm: back to ${pctOf(r.rank_rate)}%`, 'cp-link', () => o.manage.setRate(c, null)) : null;
+        parts.push(h('div', { class: 'mr-manage__part' }, h('b', {}, 'Commission'), h('span', { class: 'cp-inline' }, input, '%', save, back), h('small', { class: 'cp-muted' }, `Their rank pays ${pctOf(r.rank_rate)}%. You can give up to ${pctOf(cap)}%. ${r.custom ? 'This creator is on a rate you set.' : 'They are on their rank rate.'}`)));
+      }
+      if ((info.managers || []).length) {
+        const to = h('select', { class: 'cp-input', 'aria-label': `Move ${c.display_name} to` }, h('option', { value: '' }, 'Choose a manager'), info.managers.map((m) => h('option', { value: m.id }, m.name)));
+        const move = confirmButton('Move', 'Confirm: move them', 'btn btn--ghost btn--sm', async () => {
+          if (!to.value) throw new Error('Choose which manager to move them to.');
+          await o.manage.move(c, to.value, to.selectedOptions[0].textContent);
+        });
+        parts.push(h('div', { class: 'mr-manage__part' }, h('b', {}, 'Move to another team'), h('span', { class: 'cp-inline' }, to, move), h('small', { class: 'cp-muted' }, 'They leave your team and stop counting toward your pay.')));
+      }
+      parts.push(h('div', { class: 'mr-manage__part' }, h('b', {}, 'Remove'), h('span', { class: 'cp-inline' }, confirmButton('Remove from the program', `Confirm: remove ${c.display_name}`, 'btn btn--ghost btn--sm', () => o.manage.remove(c))), h('small', { class: 'cp-muted' }, 'Their link stops earning and their videos stop counting. Only Mindroll can let them back in.')));
+      return h('details', { class: 'mr-manage' }, h('summary', {}, 'Manage'), h('div', { class: 'mr-manage__body' }, parts));
+    };
     const toApprove = list.filter((c) => c.status === 'active' && c.handle_verified === false && (cleanHandle(c.tiktok) || cleanHandle(c.instagram)));
     const accountRow = (c) => {
       const approve = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Approve');
@@ -706,7 +738,7 @@
               'div',
               { class: 'mr-roster', role: 'table' },
               h('div', { class: 'mr-roster__head', role: 'row' }, ['Creator', 'Activity', 'Videos', 'Views', 'Subs', 'Earned'].map((x) => h('span', { role: 'columnheader' }, x))),
-              list.map((c) => { const [label, tone] = activity(c); return h('div', { class: 'mr-roster__row', role: 'row' }, person(c, { badge: pill(tierName(c), c.champion ? 'good' : 'muted') }), h('span', { class: 'mr-dot', 'data-tone': tone }, label), h('span', { 'data-label': 'Videos' }, num(c.videos_30d || 0)), h('span', { 'data-label': 'Views' }, compact(c.views_30d || 0)), h('span', { 'data-label': 'Subs' }, num(c.subscribers || 0)), h('b', { 'data-label': 'Earned' }, dollars0(c.commission_30d))); }),
+              list.map((c) => { const [label, tone] = activity(c); return h('div', { class: 'mr-roster__row', role: 'row' }, person(c, { badge: pill(tierName(c), c.champion ? 'good' : 'muted') }), h('span', { class: 'mr-dot', 'data-tone': tone }, label), h('span', { 'data-label': 'Videos' }, num(c.videos_30d || 0)), h('span', { 'data-label': 'Views' }, compact(c.views_30d || 0)), h('span', { 'data-label': 'Subs' }, num(c.subscribers || 0)), h('b', { 'data-label': 'Earned' }, dollars0(c.commission_30d)), o.manage ? manageRow(c) : null); }),
             )
           : h('p', { class: 'cp-muted' }, 'No creators on this team yet.'),
         h('p', { class: 'cp-muted cp-small' }, 'Videos, views and earnings are the last 30 days.'),

@@ -926,6 +926,21 @@
     const pct = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_commission_rate ?? 0.1) * 1000) / 10), 'aria-label': 'Manager commission percent' });
     const perActive = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_active_cents ?? 500) / 100)), 'aria-label': 'Dollars per active week' });
     const perViews = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_views_cents ?? 100) / 100)), 'aria-label': 'Dollars per 100K views' });
+    const rateCap = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_rate_cap ?? 0.25) * 1000) / 10), 'aria-label': 'Highest commission a manager can give' });
+    const saveCap = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save');
+    saveCap.addEventListener('click', act(saveCap, async () => {
+      const patch = { manager_rate_cap: Math.max(0, Math.min(100, Number(rateCap.value) || 0)) / 100 };
+      if (cp.demo) { Object.assign(state.settings, patch); toast('Saved. (Sample data: nothing was saved.)'); return render(); }
+      await ok(db.from('creator_settings').update(patch).eq('id', true));
+      toast('Saved. Managers cannot give a creator more than that.');
+      await reload();
+    }));
+    const changes = h('ul', { class: 'cp-rows' }, h('li', { class: 'cp-muted' }, cp.demo ? 'Nothing yet.' : 'Loading…'));
+    if (!cp.demo) {
+      db.from('creator_manager_log').select('*').order('created_at', { ascending: false }).limit(40).then(({ data: rows }) => {
+        changes.replaceChildren(...((rows || []).length ? rows.map((r) => h('li', {}, h('b', {}, r.manager_name), ` · ${r.creator_name}: ${r.detail} `, h('span', { class: 'cp-muted cp-small' }, day(r.created_at)))) : [h('li', { class: 'cp-muted' }, 'No manager has changed anything yet.')]));
+      });
+    }
     const savePay = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save pay rules');
     savePay.addEventListener('click', act(savePay, async () => {
       const patch = { manager_commission_rate: Math.max(0, Math.min(100, Number(pct.value) || 0)) / 100, manager_active_cents: Math.max(0, Math.round((Number(perActive.value) || 0) * 100)), manager_views_cents: Math.max(0, Math.round((Number(perViews.value) || 0) * 100)) };
@@ -938,6 +953,14 @@
     return [
       section('Add a manager', h('span', { class: 'cp-muted' }, `${num(managers.length)} manager${managers.length === 1 ? '' : 's'}`), h('div', { class: 'mr-addrow' }, name, email, add), h('p', { class: 'cp-muted cp-small' }, 'They sign in on the creator page with that email, using Google or Apple, and get a "My team" dashboard. A password sign-in is not accepted for managers.')),
       section('Teams', h('span', { class: 'cp-muted' }, 'Drag a creator onto a manager to move them'), h('div', { class: 'mr-ref__board' }, managers.map(zone), zone(null))),
+      section(
+        'What managers can do',
+        h('span', { class: 'cp-muted' }, 'On their own team only'),
+        h('p', { class: 'cp-muted cp-small' }, 'A manager can raise a creator\'s commission above their rank rate, move a creator to another manager, and remove a creator from the program. You can undo any of it from Creators.'),
+        h('div', { class: 'mr-payrules' }, h('label', {}, h('span', {}, 'The highest commission a manager can give a creator'), h('span', { class: 'cp-inline' }, rateCap, '%', saveCap))),
+        h('h3', { class: 'cp-small' }, 'What managers changed'),
+        changes,
+      ),
       section(
         'What managers are paid',
         h('span', { class: 'cp-muted' }, 'Shown to managers as an estimate'),

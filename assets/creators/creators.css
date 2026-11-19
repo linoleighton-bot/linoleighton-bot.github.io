@@ -988,3 +988,14 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-connect__aside b { font-size: 0.9375rem; line-height: 1.3; }
 .mr-connect__aside span { font-size: 0.8125rem; line-height: 1.45; color: rgb(255 255 255 / 0.72); }
 @media (max-width: 64rem) { .mr-connect__layout { grid-template-columns: 1fr; } .mr-connect__aside { position: static; order: -1; } }
+
+/* A manager's controls for one creator on their team: sits under the creator's row. */
+.mr-manage { grid-column: 1 / -1; text-align: left; }
+.mr-manage > summary { cursor: pointer; width: max-content; padding: 0.35rem 0.75rem; border: 1px solid var(--line); border-radius: 999px; font-size: 0.8125rem; font-weight: 700; color: var(--ink); list-style: none; }
+.mr-manage > summary::-webkit-details-marker { display: none; }
+.mr-manage[open] > summary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.mr-manage__body { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin-top: 0.75rem; padding: 1rem; border-radius: 0.875rem; background: var(--tint, #F4F5F7); }
+.mr-manage__part { display: grid; gap: 0.4rem; align-content: start; text-align: left; }
+.mr-manage__part small { font-size: 0.8125rem; line-height: 1.35; }
+.mr-roster__row > .mr-manage { text-align: left; display: block; }
+.mr-roster__row > .mr-manage::before { content: none; }
