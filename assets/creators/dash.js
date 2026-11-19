@@ -735,8 +735,22 @@
       toast('Sent for review. You will see it here once it is approved.');
       await load();
     }));
+    const rule = (mark, title, text) => h('li', {}, h('i', { 'aria-hidden': 'true' }, mark), h('div', {}, h('b', {}, title), h('span', {}, text)));
+    const aside = h(
+      'aside',
+      { class: 'mr-connect__aside', 'aria-label': 'How your videos are counted' },
+      h('h2', {}, 'How your videos are counted'),
+      h(
+        'ul',
+        {},
+        rule('#', `Connected: use #${tag}`, `Put #${tag} in the caption. We pick the video up by itself and update its views every hour.`),
+        rule('!', `No #${tag}, no automatic stats`, 'A video without the hashtag is not picked up from your account, and its views are not counted.'),
+        rule('+', 'Not connected, or forgot the hashtag', 'Send each video\'s link yourself for review. It counts once it is approved.'),
+      ),
+    );
     return [
       h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Add your TikTok or Instagram username. Once it is approved, every video you post with #${tag} in the caption shows up here by itself, with its views. Only videos with #${tag} count. No password and no sign-in: we only read what is public.`)),
+      h('div', { class: 'mr-connect__layout' }, h('div', { class: 'mr-connect__main' },
       h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your accounts'), h('span', { class: 'cp-muted' }, !tracked ? 'Not tracking yet' : approved ? 'Automatic' : 'Waiting for approval')), h('div', { class: 'mr-connect__grid' }, tt.card, ig.card), h('div', { class: 'mr-connect__save' }, save, h('p', { class: 'cp-muted cp-small' }, when)), h('p', { class: 'cp-muted cp-small' }, 'Your account has to be public for us to see your videos.')),
       h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Or send one video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${tag} in the caption and your link in your bio before you send it.`)),
       h(
@@ -746,7 +760,8 @@
         mine.length
           ? h('ul', { class: 'mr-connect__list' }, mine.map((v) => { const [label, tone] = STATUS[v.status] || [v.status, 'muted']; return h('li', {}, h('div', {}, cp.safeUrl(v.url) ? h('a', { href: cp.safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, v.title || v.url.replace(/^https:\/\/(www\.)?/, '').slice(0, 60)) : h('span', {}, v.title || 'Video'), v.status === 'rejected' && v.reject_reason ? h('p', { class: 'cp-small cp-bad' }, `Why: ${v.reject_reason}`) : null), pill(label, tone)); }))
           : h('p', { class: 'cp-muted' }, 'Nothing sent yet.'),
-      ),
+      )
+      ), aside),
     ];
   }
 

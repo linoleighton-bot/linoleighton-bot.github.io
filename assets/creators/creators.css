@@ -975,3 +975,15 @@ a.mr-handle:hover { color: var(--mr-accent); }
 @media (max-width: 56rem) { .mr-review__row { grid-template-columns: 1fr; } .mr-connect__send { grid-template-columns: 1fr; } }
 
 .mr-review__act[data-plain] { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.mr-connect__layout { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 1rem; align-items: start; }
+.mr-connect__main { display: grid; gap: 1rem; min-width: 0; }
+.mr-connect__aside { position: sticky; top: 1rem; background: var(--ink); color: #fff; border-radius: 1.25rem; padding: 1.25rem; }
+.mr-connect__aside h2 { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(255 255 255 / 0.6); margin: 0 0 1rem; }
+.mr-connect__aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1rem; }
+.mr-connect__aside li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.75rem; align-items: start; }
+.mr-connect__aside i { font-style: normal; font-weight: 800; width: 2rem; height: 2rem; border-radius: 0.6rem; display: grid; place-items: center; background: rgb(255 255 255 / 0.12); }
+.mr-connect__aside li:first-child i { background: #12A150; }
+.mr-connect__aside li > div { display: grid; gap: 0.25rem; }
+.mr-connect__aside b { font-size: 0.9375rem; line-height: 1.3; }
+.mr-connect__aside span { font-size: 0.8125rem; line-height: 1.45; color: rgb(255 255 255 / 0.72); }
+@media (max-width: 64rem) { .mr-connect__layout { grid-template-columns: 1fr; } .mr-connect__aside { position: static; order: -1; } }
