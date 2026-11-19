@@ -221,6 +221,7 @@
     if (step.kind === 'insight') fillInsight(id);
     if (step.kind === 'note') fillNote(id);
     if (step.kind === 'books') showShelf(id);
+    if (step.kind === 'single' && stepEls.get(id).querySelector('[data-art]')) matchPortraits(id);
     if (step.kind === 'build') runBuild();
     /* Last chance: a reader who signed up by email reaches the offer without
        passing through the branch above, so the warm-up is asked for here too.
@@ -327,9 +328,33 @@
            * reader presses and the screen is simply gone, which reads as the
            * page jumping rather than as an answer being taken. A variant may
            * set its own in `data-confirm`; 180ms is funnel 1's.
+           *
+           * Unless the step has a Continue of its own. The age cards do: four
+           * photographs do not read as controls, so that screen asks for a
+           * deliberate press and must not move under one.
            */
           const confirm = Number(root.dataset.confirm) || 180;
-          if (step.kind === 'single' || step.kind === 'scale') window.setTimeout(next, confirm);
+          const waits = Boolean(cta);
+          if (!waits && (step.kind === 'single' || step.kind === 'scale')) {
+            /*
+             * Saying yes to a book is worth watching.
+             *
+             * On the taste screens the cover lifts away as the answer is
+             * taken — filed, rather than dismissed — and the screen waits for
+             * it. `data-taste` carries the answer so the stylesheet can send
+             * a yes and a no different ways, and it is cleared on the way out
+             * so coming back by Back does not replay it.
+             */
+            let hold = confirm;
+            if (el.querySelector('.ftaste')) {
+              el.dataset.taste = value;
+              hold = value === 'yes' ? 620 : 320;
+            }
+            window.setTimeout(() => {
+              el.removeAttribute('data-taste');
+              next();
+            }, hold);
+          }
         });
       }
 
@@ -697,6 +722,36 @@
     }
   }
 
+  /**
+   * The age cards show somebody the reader might be.
+   *
+   * Two sets of portraits, `m_` and `f_`, one per age band. The page ships the
+   * mixed set — two men and two women — and this swaps it for the matching one
+   * once the gender question has an answer, which is the screen immediately
+   * before. Answering "rather not say", or going back and clearing it, leaves
+   * the mixed set alone rather than picking for them.
+   *
+   * A missing file would be a hole where a face was, so the swap is done by
+   * loading the new picture first and only then putting it on screen. The
+   * worst case is the mixed set staying, which is a complete screen.
+   */
+  function matchPortraits(id) {
+    const held = answers.gender;
+    const gender = Array.isArray(held) ? held[0] : held;
+    const set = gender === 'male' ? 'm' : gender === 'female' ? 'f' : null;
+    if (!set) return;
+
+    for (const img of stepEls.get(id).querySelectorAll('[data-art]')) {
+      const wanted = `/assets/img/funnel2/cards/${set}_${img.dataset.art}.webp`;
+      if (img.getAttribute('src') === wanted) continue;
+      const probe = new Image();
+      probe.onload = () => {
+        img.src = wanted;
+      };
+      probe.src = wanted;
+    }
+  }
+
   /* ------------------------------------------------- the plan, said back */
 
   /** Every label a step offered, so an answer id can be read as English. */
@@ -756,11 +811,42 @@
     const ideas = boot.commitment?.[commitment] ?? 5;
     const minutes = boot.minutes?.[commitment] ?? 5;
 
-    set('owner', name ? `${name}’s reading plan` : 'Your reading plan');
+    /*
+     * The promise, assembled from what they chose.
+     *
+     * Three pieces, each of them theirs: how long they said they had, what
+     * they said they wanted to get better at, and when they said they would
+     * do it. Said as one sentence about them rather than as four settings in
+     * a table, which is the difference between a plan and a preferences page.
+     * Every clause drops out cleanly if its answer is missing, so somebody
+     * who skipped everything still gets a true sentence rather than a gap.
+     */
+    /*
+     * The time of day, as a phrase rather than as its own label.
+     *
+     * The labels are written to sit on a button — "Morning coffee", "Lunch
+     * break" — and lowercasing one into a sentence gave "over lunch break",
+     * which nobody says. Each one gets the preposition it actually takes.
+     */
+    const WHEN_PHRASE = {
+      morning: 'over your morning coffee',
+      commute: 'on the commute',
+      lunch: 'on your lunch break',
+      night: 'before bed',
+    };
+    const topicsNow = chosenLabels('topics').map((t) => t.toLowerCase());
+    const whenNow = WHEN_PHRASE[chosenIds('when')[0]];
+    const focus =
+      topicsNow.length === 0
+        ? 'the ideas worth keeping'
+        : andList(topicsNow.slice(0, 3));
     set(
-      'made',
-      new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }),
+      'vow',
+      `${minutes} minutes a day on ${focus}` +
+        (whenNow ? `, ${whenNow}` : '') +
+        ' — and the ones that matter come back until they stick.',
     );
+
     set('daily', `${ideas} ideas · about ${minutes} minutes`);
     set('when', chosenLabels('when')[0] || 'Whenever suits you');
 
@@ -817,26 +903,84 @@
      * are the ones where they told us something, and those are the ones the
      * plan answers.
      */
+    /*
+     * One line per agreement row, written for the reader who said yes to it.
+     *
+     * Keyed by the step's own id rather than by matching on its text, so a
+     * reworded question keeps its promise and a new one simply has none until
+     * somebody writes it — which is the right failure: a plan that invents a
+     * promise is worse than a plan with one fewer line on it.
+     */
+    const ANSWERED = {
+      'q-left-out': 'You stop sitting out of the conversation',
+      'q-motivation': 'Short enough that losing steam stops being the problem',
+      'q-know-want': 'Built around what you already know you are after',
+      'q-doubt': 'Something steady to read on the days you got it wrong',
+      'q-decisions': 'Ways of deciding that do not take all evening',
+      'q-understand': 'Chosen to show you something about yourself',
+    };
+
     const heard = [];
     for (const [id, scale] of Object.entries(boot.scales || {})) {
       const value = chosenIds(id)[0];
       if (value !== '4' && value !== '5') continue;
       const word = (scale.words?.[value] || '').toLowerCase();
-      heard.push({
-        word: value === '5' ? 'Always' : 'Often',
-        line: scale.title,
-        note: word,
-      });
+      /*
+       * Their own sentence, turned round to face them.
+       *
+       * Agreeing that you feel left out of conversations is a complaint, and
+       * reading it back unchanged is a receipt. Said as the thing that stops
+       * being true, it is the plan making a promise — which is what this
+       * screen is for, and the same move the struggles above make.
+       */
+      if (ANSWERED[id]) heard.push({ line: ANSWERED[id] });
+      void word;
+      void scale;
     }
 
-    const struggles = chosenLabels('struggles');
-    const reasons = chosenLabels('reason');
+    /*
+     * Their answers turned round to face them.
+     *
+     * A struggle is the most useful thing a reader hands over, and reading it
+     * back to them unchanged — "in the way: forgetting what I read" — is a
+     * receipt. Said as what stops being true, it is the plan making a
+     * promise, which is what this screen is for. The map is small and
+     * explicit rather than clever: a struggle with no line written for it is
+     * simply not claimed about.
+     */
+    const RELIEF = {
+      overload: 'The noise gets filtered before it reaches you',
+      notifications: 'Five minutes that out-pull the notifications',
+      no_time: 'Short enough to finish, every single day',
+      forgetting: 'What you read comes back before you lose it',
+      unclear: 'You stop deciding what to learn — we decide',
+      books_long: 'The whole idea, without the whole book',
+    };
+    /*
+     * The same again for what is driving it.
+     *
+     * These labels are button copy too — "Getting a promotion", "Starting
+     * something of my own" — and dropping three of them into the middle of a
+     * sentence gave "Getting a promotion, Starting something of my own and A
+     * relationship". Each is written once more as the thing it points at.
+     */
+    const TOWARD = {
+      promotion: 'a promotion',
+      business: 'something of your own',
+      relationship: 'a relationship',
+      parenthood: 'becoming a parent',
+      transition: 'a change that is coming',
+      financial: 'a number you want to hit',
+      later_life: 'the part of life after this one',
+      loss: 'finding your feet again',
+    };
     const extras = [];
-    if (struggles.length) {
-      extras.push({ word: 'In the way', line: andList(struggles), note: '' });
+    for (const id of chosenIds('struggles')) {
+      if (RELIEF[id]) extras.push({ line: RELIEF[id] });
     }
-    if (reasons.length) {
-      extras.push({ word: 'Driving it', line: andList(reasons), note: '' });
+    const toward = chosenIds('reason').map((id) => TOWARD[id]).filter(Boolean);
+    if (toward.length) {
+      extras.push({ line: `All of it pointed at ${andList(toward.slice(0, 3))}` });
     }
 
     const heardBox = el.querySelector('[data-plan2-heard]');
@@ -847,11 +991,9 @@
       heardList.replaceChildren(
         ...rows.map((row) => {
           const li = document.createElement('li');
-          const tag = document.createElement('b');
-          tag.textContent = row.word;
           const text = document.createElement('span');
           text.textContent = row.line;
-          li.append(tag, text);
+          li.append(text);
           return li;
         }),
       );

@@ -3092,3 +3092,752 @@ body.page-funnel2 .fq--two .fq__option[data-chosen] {
 body.page-funnel2 .fq--two .fq__tick {
   display: none;
 }
+
+/* ==========================================================================
+ * The first two screens, to the pixel.
+ *
+ * Measured off their running page at the same widths: the wordmark 16px in
+ * from the top-left corner rather than centred, answers with the label hard
+ * left and a chevron in a disc hard right, a four-node stepper in place of
+ * three bars, and square age cards with the caption across the foot.
+ * ====================================================================== */
+
+/* ------------------------------------------------- the chevron in its disc */
+
+body.page-funnel2 .fgo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  /* The disc is the surface the button sits on, so the mark inside it reads
+     as a hole punched through rather than as a second colour. */
+  background: #fff;
+  color: var(--f2-ink);
+}
+
+body.page-funnel2 .fgo svg {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* ----------------------------------------------- the wordmark, top left */
+
+body.page-funnel2 .fstep[data-step='hook'] .fs__brand {
+  display: inline-flex;
+  align-self: flex-start;
+  justify-content: flex-start;
+  margin-bottom: 1.75rem;
+  font-size: 1.125rem;
+}
+
+/* --------------------------------------------- the two answers underneath */
+
+body.page-funnel2 .fq--two .fq__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+body.page-funnel2 .fq--two .fq__text {
+  display: block;
+  min-width: 0;
+}
+
+body.page-funnel2 .fq--two .fq__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+/* The third answer is quieter, so its disc is too. */
+body.page-funnel2 .fq--two .fq__option:nth-child(n + 3) .fgo {
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  color: var(--f2-muted);
+}
+
+body.page-funnel2 .fq--two .fq__option[data-chosen] .fgo {
+  background: #fff;
+  color: var(--f2-accent);
+}
+
+/* ==================================================== the progress stepper */
+
+/*
+ * Four nodes on one line, not three bars.
+ *
+ * The data behind it has not changed — three phases, each filling as its own
+ * questions are answered, which is what `paintProgress` already writes as
+ * `[data-section-fill]`, `[data-done]` and `[data-current]`. Only the drawing
+ * has: a dot where the flow starts, then a ring for each phase at the end of
+ * its own segment, and the line into a ring filling as that phase is
+ * answered. Nothing in the script knows or needs to.
+ */
+body.page-funnel2 .funnel__sections {
+  position: relative;
+  align-items: center;
+  gap: 0;
+  /* Room for the start dot, which sits outside the first segment. */
+  padding-left: 0.75rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Where the flow starts. Always filled: you are past it by definition. */
+body.page-funnel2 .funnel__sections::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.25rem;
+  border-radius: 50%;
+  background: var(--f2-accent);
+}
+
+body.page-funnel2 .funnel__section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* The ring at the end of the segment needs the room, or the last one is
+     clipped by the column's edge. */
+  padding-right: 0.75rem;
+}
+
+/* The segment: a 2px line that fills from the left. */
+body.page-funnel2 .funnel__track {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--f2-track);
+}
+
+body.page-funnel2 .funnel__track > span {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--f2-accent);
+}
+
+/* The phase's own node, at the end of its segment. */
+body.page-funnel2 .funnel__section::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-top: -0.3125rem;
+  box-sizing: border-box;
+  border: 2px solid var(--f2-track);
+  border-radius: 50%;
+  background: var(--f2-bg);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* The phase being answered: an open ring in the accent. */
+body.page-funnel2 .funnel__section[data-current]::after {
+  border-color: var(--f2-accent);
+}
+
+/* A phase that is finished: filled. */
+body.page-funnel2 .funnel__section[data-done]::after {
+  border-color: var(--f2-accent);
+  background: var(--f2-accent);
+}
+
+/* The tick this flow used to draw after each finished bar belongs to the
+   three-bar version and has nothing to sit beside now. */
+body.page-funnel2 .funnel__section[data-done] .funnel__track span {
+  background: var(--f2-accent);
+}
+
+/* ======================================================== the age cards */
+
+/*
+ * Square, with the label across the foot.
+ *
+ * Theirs are 260 wide and 260 tall inside a 540 column — the same proportion
+ * as 163 inside our 343 — with an 18px gutter and a 32px caption bar carrying
+ * the label hard left and the chevron hard right. The portrait fills the
+ * square rather than being letterboxed, because ours are drawn square.
+ */
+body.page-funnel2 .fq--cards {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 1.25rem;
+}
+
+body.page-funnel2 .fcard {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--f2-card);
+  overflow: hidden;
+}
+
+body.page-funnel2 .fcard__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.page-funnel2 .fcard__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--f2-ink);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+  text-align: left;
+}
+
+body.page-funnel2 .fcard[data-chosen] {
+  box-shadow: inset 0 0 0 3px var(--f2-accent);
+}
+
+body.page-funnel2 .fcard[data-chosen] .fcard__bar {
+  background: var(--f2-accent);
+}
+
+body.page-funnel2 .fcard .fgo {
+  background: #fff;
+  color: var(--f2-ink);
+}
+
+body.page-funnel2 .fcard[data-chosen] .fgo {
+  color: var(--f2-accent);
+}
+
+/* On a narrow phone the label and the chevron both have to fit. */
+@media (max-width: 22.5rem) {
+  body.page-funnel2 .fcard__bar {
+    padding-inline: 0.5rem;
+    font-size: 0.9375rem;
+  }
+}
+
+/* The Back pill, at the size theirs is: 72 x 29, rounded 8. */
+body.page-funnel2 .funnel__back {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* ==========================================================================
+ * Corrections, second pass.
+ * ====================================================================== */
+
+/* ---------------------------------- every question starts at the same height */
+
+/*
+ * The 1–5 screens were centred; every other question starts at the top.
+ *
+ * Centring them was a fix for a different problem — five short rows left a
+ * third of the screen empty underneath — and it bought that at the cost of
+ * the thing a questionnaire most needs, which is that the question is in the
+ * same place every time. Running the flow, the heading jumping down the
+ * screen on the agreement rows and back up on the next question is the most
+ * visible fault in it. They start where everything else starts now, and the
+ * slack goes to the bottom like everywhere else.
+ */
+body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
+  margin-top: 0;
+}
+
+body.page-funnel2 .fstep[data-kind='scale'] .fscale--worded {
+  margin-top: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* The same rule, stated for every kind, so nothing drifts again: the question
+   is at the top, the answers under it, and whatever is left over is at the
+   foot of the screen. */
+body.page-funnel2 .fstep[data-kind='single'] > .fs__title,
+body.page-funnel2 .fstep[data-kind='multi'] > .fs__title,
+body.page-funnel2 .fstep[data-kind='scale'] > .fs__title,
+body.page-funnel2 .fstep[data-kind='text'] > .fs__title {
+  margin-top: 0;
+}
+
+/* ------------------------------------------------------- the age cards */
+
+/*
+ * One treatment for all four, and an unmistakable chosen state.
+ *
+ * The bar used to turn clay on the card you picked, which made the chosen
+ * card the only one with a different coloured label — read at a glance, that
+ * is four cards where one of them is just orange. The bar stays ink on all
+ * four. What changes is a clay ring around the card and a filled clay disc
+ * with a tick in the corner, which is the one convention nobody has to be
+ * taught and which cannot be mistaken for decoration.
+ */
+body.page-funnel2 .fcard[data-chosen] .fcard__bar {
+  background: var(--f2-ink);
+}
+
+body.page-funnel2 .fcard__bar {
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+}
+
+body.page-funnel2 .fcard__tick {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--f2-card);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 18%, transparent);
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* The tick itself, drawn rather than typed, so it never picks up a font. */
+body.page-funnel2 .fcard__tick::after {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 0.4rem;
+  width: 0.35rem;
+  height: 0.6rem;
+  border: solid transparent;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  transition: border-color 0.12s ease;
+}
+
+body.page-funnel2 .fcard[data-chosen] .fcard__tick {
+  background: var(--f2-accent);
+  box-shadow: inset 0 0 0 2px var(--f2-accent);
+}
+
+body.page-funnel2 .fcard[data-chosen] .fcard__tick::after {
+  border-color: #fff;
+}
+
+body.page-funnel2 .fcard[data-chosen] {
+  box-shadow: inset 0 0 0 3px var(--f2-accent);
+}
+
+/* ------------------------------------------------------ the thinkers grid */
+
+/*
+ * Nine faces, three across, the name under each.
+ *
+ * A face is recognised before it is read, which is the entire reason this
+ * screen is faces and not the nine grey rows of names it used to be.
+ */
+body.page-funnel2 .fq--faces {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem 0.75rem;
+  margin-top: 1.5rem;
+}
+
+body.page-funnel2 .fface {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+body.page-funnel2 .fface__ring {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--f2-track);
+  box-shadow: inset 0 0 0 0 var(--f2-accent);
+  transition: box-shadow 0.12s ease;
+}
+
+body.page-funnel2 .fface__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.page-funnel2 .fface__img--blank {
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--clay) 18%, #fff), var(--f2-track));
+}
+
+body.page-funnel2 .fface__name {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--f2-ink);
+}
+
+/* The tick sits on the rim of the portrait, so the chosen face is marked
+   without the name moving. */
+body.page-funnel2 .fface__tick {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: var(--f2-accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+body.page-funnel2 .fface__tick::after {
+  content: '';
+  position: absolute;
+  left: 0.47rem;
+  top: 0.34rem;
+  width: 0.32rem;
+  height: 0.55rem;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+body.page-funnel2 .fface[data-chosen] .fface__ring {
+  box-shadow: inset 0 0 0 3px var(--f2-accent);
+}
+
+body.page-funnel2 .fface[data-chosen] .fface__tick {
+  opacity: 1;
+  transform: none;
+}
+
+body.page-funnel2 .fface[data-chosen] .fface__name {
+  font-weight: 650;
+}
+
+@media (max-width: 22.5rem) {
+  body.page-funnel2 .fq--faces { gap: 1rem 0.5rem; }
+  body.page-funnel2 .fface__name { font-size: 0.7rem; }
+}
+
+/* ================================================= the book, yes or no */
+
+/*
+ * Solid, not tinted.
+ *
+ * These were a 10% wash of red and green behind coloured text, which at a
+ * glance is two pale cards — the colour was doing none of the work it was put
+ * there to do. Filled, the answer is readable from across the room and from
+ * the corner of an eye, which is the point: five of these run in a row and
+ * nobody should have to read either word after the first one.
+ */
+body.page-funnel2 .fq--pair .fq__option {
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: none;
+}
+
+body.page-funnel2 .fq--pair .fq__option:first-child {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: none;
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child {
+  background: var(--moss);
+  color: #fff;
+  box-shadow: none;
+}
+
+body.page-funnel2 .fq--pair .fq__option:first-child:hover {
+  background: color-mix(in srgb, var(--danger) 86%, #000);
+}
+
+body.page-funnel2 .fq--pair .fq__option:last-child:hover {
+  background: color-mix(in srgb, var(--moss) 86%, #000);
+}
+
+/* Pressed: the chosen one swells for a beat while the screen waits. */
+body.page-funnel2 .fq--pair .fq__option:first-child[data-chosen],
+body.page-funnel2 .fq--pair .fq__option:last-child[data-chosen] {
+  color: #fff;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.page-funnel2 .fstep[data-taste] .fq--pair .fq__option[data-chosen] {
+    animation: f2-answer-pop 0.42s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  }
+}
+
+@keyframes f2-answer-pop {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+/*
+ * Saying yes files the book away.
+ *
+ * The cover lifts off the page, tips, shrinks and flies up and to the right —
+ * the direction a thing goes when it is put on a shelf rather than thrown
+ * out — and the screen holds for the length of it before moving on. Saying no
+ * is the shorter gesture it should be: the card simply drops away.
+ *
+ * `data-taste` is written on the step by `funnel.js` and removed on the way
+ * out, so coming back with Back shows the card where it belongs rather than
+ * mid-flight.
+ */
+/*
+ * The cover flies, not the figure.
+ *
+ * `.ftaste` is a direct child of the step, and the step's entry animation
+ * claims every direct child through a selector with seven `:not()`s in it —
+ * about as specific as this stylesheet gets. Rather than build a bigger one
+ * to beat it, the flight moves the cover itself, which is a grandchild and
+ * nothing else touches. It is the better picture anyway: the book leaves and
+ * its title stays long enough to read.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  body.page-funnel2 .fstep[data-taste='yes'] .ftaste__cover {
+    animation: f2-book-shelve 0.56s cubic-bezier(0.45, 0, 0.7, 0.2) both;
+  }
+
+  body.page-funnel2 .fstep[data-taste='yes'] .ftaste__text {
+    animation: f2-book-fade 0.4s ease-in 0.12s both;
+  }
+
+  body.page-funnel2 .fstep[data-taste='no'] .ftaste__cover {
+    animation: f2-book-drop 0.3s ease-in both;
+  }
+}
+
+@keyframes f2-book-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes f2-book-shelve {
+  0% { transform: none; opacity: 1; }
+  20% { transform: translateY(8px) scale(1.06) rotate(-2deg); opacity: 1; }
+  100% { transform: translate(44vw, -56vh) scale(0.22) rotate(16deg); opacity: 0; }
+}
+
+@keyframes f2-book-drop {
+  from { transform: none; opacity: 1; }
+  to { transform: translateY(14px) scale(0.96); opacity: 0; }
+}
+
+/* ===================================================== the plan, in daylight */
+
+/*
+ * The one sentence this screen exists to say.
+ *
+ * It replaces a black card of four settings. Light, so it belongs to the page
+ * rather than interrupting it, with the accent carrying the weight instead of
+ * a slab of ink — and what it says is a promise built from their own answers,
+ * not a preferences summary.
+ */
+body.page-funnel2 .fvow {
+  margin: 0 0 2rem;
+  padding: 1.25rem 1.15rem 1.15rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--clay) 8%, var(--f2-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--clay) 22%, transparent);
+  text-align: left;
+}
+
+body.page-funnel2 .fvow__line {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.65rem;
+  font-weight: 600;
+  text-wrap: pretty;
+  color: var(--f2-ink);
+}
+
+body.page-funnel2 .fvow__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.page-funnel2 .fvow__chips:empty {
+  display: none;
+}
+
+body.page-funnel2 .fvow__chips li {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--f2-card);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--clay) 28%, transparent);
+  color: var(--clay);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* "What changes" reads as promises now, so the tag leads in clay and the
+   line carries the weight. */
+body.page-funnel2 .fheard li {
+  grid-template-columns: 1.1rem 1fr;
+  align-items: start;
+  gap: 0.65rem;
+  background: none;
+  box-shadow: none;
+  padding: 0.35rem 0;
+}
+
+body.page-funnel2 .fheard b {
+  display: none;
+}
+
+/*
+ * A tick before each, so the list reads as things that are now true.
+ *
+ * The check is a background image on the disc rather than a second
+ * pseudo-element positioned over it: two boxes aligned by hand is how it
+ * ended up sitting half outside its own circle, and a drawn mark inside the
+ * disc cannot come apart from it at any size or line height.
+ */
+body.page-funnel2 .fheard li::before {
+  content: '';
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.12rem;
+  border-radius: 50%;
+  background: var(--f2-accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.6 6.3 4.9 8.6 9.4 3.7' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 0.72rem 0.72rem no-repeat;
+}
+
+body.page-funnel2 .fheard span {
+  font-size: 0.975rem;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+/* ---- the settings, kept but folded away */
+
+/*
+ * Nobody opened this screen to read a settings table — but the settings are
+ * real, they are theirs, and a plan that cannot show its own workings is a
+ * slogan. So they stay, one tap down, under a line that says what they are.
+ */
+body.page-funnel2 .fsettings {
+  margin: 0 0 1.5rem;
+  text-align: left;
+}
+
+body.page-funnel2 .fsettings > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.7rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f2-muted);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+body.page-funnel2 .fsettings > summary::-webkit-details-marker {
+  display: none;
+}
+
+body.page-funnel2 .fsettings > summary::after {
+  content: '+';
+  float: right;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+body.page-funnel2 .fsettings[open] > summary::after {
+  content: '–';
+}
+
+body.page-funnel2 .fsettings__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+body.page-funnel2 .fsettings__grid dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f2-muted);
+}
+
+body.page-funnel2 .fsettings__grid dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* ---- the ring, with the figure back in the middle of it */
+
+/*
+ * The figure, centred in the ring.
+ *
+ * `align-self: flex-start` on the per-cent sign was written when this sat
+ * under the ring and wanted a superscript; stretched across the ring it sent
+ * the sign to the very top of the circle, a third of the dial away from its
+ * own number. Baseline alignment keeps the pair together wherever the box is.
+ */
+body.page-funnel2 .fbuild__pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  /* The baseline row has to be centred vertically itself, which a baseline
+     cross-axis cannot do — so the box is centred and the row sits in it. */
+  align-content: center;
+  flex-wrap: wrap;
+  gap: 0.1rem;
+  margin: 0;
+  pointer-events: none;
+}
+
+body.page-funnel2 .fbuild__pct b {
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+body.page-funnel2 .fbuild__pct i {
+  align-self: baseline;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
