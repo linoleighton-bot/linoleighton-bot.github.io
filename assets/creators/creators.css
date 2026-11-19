@@ -1226,3 +1226,13 @@ a.mr-handle:hover { color: var(--mr-accent); }
   .cp-pitch__panel { order: 4; }
   .cp-pitch .cp-steps { order: 5; margin: 0.5rem 0 0; }
 }
+
+/* Home: what posting pays this week and this month, at the creator's rank. */
+.mr-earn__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.mr-earn__list li { display: grid; gap: 0.5rem; background: var(--sunk); border-radius: 0.9rem; padding: 0.9rem 1rem; }
+.mr-earn__head { display: flex; gap: 1rem; justify-content: space-between; align-items: start; }
+.mr-earn__head > span { display: grid; gap: 0.15rem; }
+.mr-earn__head small { color: var(--muted); font-size: 0.8125rem; }
+.mr-earn__pay { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
+.mr-earn .cp-progress__bar { height: 8px; border-radius: 99px; background: var(--surface, #fff); }
+.mr-earn .cp-progress__bar span { background: var(--mr-accent, #2F6BFF); border-radius: 99px; }

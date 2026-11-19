@@ -381,6 +381,37 @@
     );
   }
 
+  /*
+   * What posting pays this week and this month, at the creator's own rank. The
+   * amounts already carry the rank's multiplier, and the rank above is shown
+   * beside them so there is a reason to climb.
+   */
+  function homeBonusCard(data) {
+    const inc = data.incentives;
+    if (!inc) return null;
+    const tiers = inc.tiers || [];
+    const tier = tiers.find((t) => t.level === inc.tier_level) || tiers[0];
+    const above = tiers.find((t) => t.level === (inc.tier_level || 1) + 1);
+    const times = (t) => Number(t?.bonus_multiplier ?? 1);
+    const rows = [];
+    const row = (title, pays, have, need, unit, foot) => h('li', {}, h('div', { class: 'mr-earn__head' }, h('span', {}, h('b', {}, title), h('small', {}, foot)), h('b', { class: 'mr-earn__pay' }, pays)), h('div', { class: 'cp-progress__bar', role: 'img', 'aria-label': `${have} of ${need} ${unit}` }, h('span', { style: `width:${Math.min(100, Math.round((have / Math.max(1, need)) * 100))}%` })), h('small', { class: 'cp-muted' }, have >= need ? 'Done' : `${num(have)} of ${num(need)} ${unit} · ${num(need - have)} to go`));
+    const a = inc.active;
+    if (a && a.amount_cents > 0 && !data.creator.champion) {
+      const dayViews = a.day_views ?? a.count_min_views ?? 0;
+      rows.push(row(`Post on ${num(a.min_days)} days this week`, cp.dollars(a.amount_cents), Math.min(a.days, a.min_days), a.min_days, 'days', dayViews > 0 ? `A day counts when that day's videos reach ${compact(dayViews)} views` : 'Paid every week you do it'));
+    }
+    const rules = inc.volume?.rules || [];
+    if (rules.length) {
+      const videos = inc.volume.videos || 0;
+      const next = rules.find((r) => videos < r.min_videos);
+      if (next) rows.push(row(`Post ${num(next.min_videos)} videos this month`, cp.dollars(next.amount_cents), videos, next.min_videos, 'videos', rules.length > 1 ? `${rules.length} levels this month, up to ${cp.dollars(rules[rules.length - 1].amount_cents)}` : 'Paid once a month'));
+      else rows.push(h('li', {}, h('div', { class: 'mr-earn__head' }, h('span', {}, h('b', {}, 'Monthly posting bonuses'), h('small', {}, `All ${rules.length} earned this month`)), h('b', { class: 'mr-earn__pay' }, 'Done'))));
+    }
+    if (!rows.length) return null;
+    const climb = above && a && a.base_amount_cents > 0 && times(above) > times(tier) ? `At ${above.name} the weekly bonus is ${cp.dollars(Math.round(a.base_amount_cents * times(above)))}.` : null;
+    return h('section', { class: 'mr-panel mr-earn' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Bonuses you can earn'), h('span', {}, pill(`${data.creator.champion ? 'Champion' : tier?.name || 'Iron'} rates`, 'good'))), h('ul', { class: 'mr-earn__list' }, rows), h('p', { class: 'cp-muted cp-small' }, climb ? `${climb} ` : '', h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('pay') }, 'See what every rank pays')));
+  }
+
   /* The wallet opens once the creator has a video in the program (waiting for review counts). */
   function walletLock() {
     return h('section', { class: 'mr-lock' }, h('span', { class: 'mr-lock__icon', 'aria-hidden': 'true' }, '\u{1F512}'), h('h2', {}, 'Post your first video to unlock your wallet'), h('p', {}, 'Your wallet opens as soon as your first video is in. Anything you earn before then is kept safe and shows up here the moment it unlocks.'), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video'));
@@ -408,6 +439,7 @@
         tile('paper', 'Views', compact(stats.views || 0), `${num(stats.videos || 0)} video${stats.videos === 1 ? '' : 's'}`, 'videos'),
         tile('amber', 'Earned this week', big(weeks[weeks.length - 1].value), 'See your wallet', 'wallet'),
       ),
+      homeBonusCard(data),
       ironCard(data),
       h('div', { class: 'mr-two' }, tierCard(data, tier), h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('campaigns') }, 'Campaigns')), live.length ? h('ul', { class: 'mr-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `Win up to ${cp.dollars(k.prizes[0] || 0)}${k.joined ? (k.place ? ` · you are ${ordinal(k.place)}` : ' · you are in') : ''}`)), h('b', {}, k.joined ? 'Joined' : 'Join')))) : h('p', { class: 'mr-quiet' }, 'No campaign running right now.'))),
       topVideosCard(data),
@@ -1698,7 +1730,7 @@
           { level: 5, name: 'Diamond', min_revenue_cents: 1500000, min_views: 3000000, min_posts: 21, bonus_multiplier: 50, commission_rate: 0.2, rank_up_bonus_cents: 32000, annual_flat_cents: 900, campaign_pool_cents: 1500000, active_day_views: 100000, race_prize_cents: 1000000 },
         ],
         active: { days: 3, min_days: 4, amount_cents: 50000, base_amount_cents: 1000, count_min_views: 1000, day_views: 100000 },
-        volume: { videos: 12, rules: [] },
+        volume: { videos: 12, rules: [{ id: 'r1', min_videos: 10, amount_cents: 100000, base_amount_cents: 2000 }, { id: 'r2', min_videos: 20, amount_cents: 250000, base_amount_cents: 5000 }, { id: 'r3', min_videos: 30, amount_cents: 500000, base_amount_cents: 10000 }] },
         by_kind: { contest: 40000, rank_up: 59500, views: 13000, prize: 3000, top_video: 2500 },
         champion: { is: false, slots: 3, rate: 0.25, daily_cents: 15000, top_tier: 5, place: 4, bar_cents: 2140000 },
         iron: { on: true, eligible: false, step_views: 50000, step_cents: 5000, cap_views: 1000000, video_min_views: 2000, views: 3426000, subs: 214, steps_paid: 20, paid_cents: 100000, steps_by_views: 20, steps_allowed: 20 }, first_sale_rate: 0.5, first_sale_used: [1, 2], race: { prizes: [{ level: 2, name: 'Silver', cents: 100000, winner: 'Noor', you: false }, { level: 3, name: 'Gold', cents: 300000, winner: 'Maya', you: true }, { level: 4, name: 'Platinum', cents: 600000, winner: null, you: false }, { level: 5, name: 'Diamond', cents: 1000000, winner: null, you: false }] },
