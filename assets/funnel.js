@@ -226,7 +226,10 @@
     /* Last chance: a reader who signed up by email reaches the offer without
        passing through the branch above, so the warm-up is asked for here too.
        It caches, so asking three times costs nothing. */
-    if (step.kind === 'offer') warmAhead?.();
+    if (step.kind === 'offer') {
+      fillOffer();
+      warmAhead?.();
+    }
     if (step.kind === 'plan') {
       fillPlan();
       /*
@@ -791,6 +794,82 @@
    * behind it hides itself, because a shorter plan is honest and a padded one
    * is the thing that makes a reader stop believing the rest of it.
    */
+  /*
+   * Everything on the till that is about this reader.
+   *
+   * This used to run inside the offer's setup block, which executes once
+   * when the page is built — before a single question has been answered. So
+   * `readerName()` was empty, `answers` was empty, and every personal touch
+   * on the most important screen in the funnel quietly did nothing. It is a
+   * fill now, called when the step is shown, like the plan's.
+   */
+  function fillOffer() {
+    const offerEl = stepEls.get('offer');
+    if (!offerEl) return;
+
+      /*
+       * The headline and the plan line, as the app writes them.
+       *
+       * `personalTitle` in src/features/paywall/config.ts puts the reader's name
+       * in front of the headline and lowercases what follows; `planSubtitle`
+       * names the goals they picked. This is the same moment on the web, so it
+       * says the same thing rather than inventing a second voice for it.
+       */
+      (() => {
+        const head = offerEl.querySelector('[data-fill="title"]');
+        const step = byId['offer'];
+        const name = readerName();
+        if (head && name && step?.greeting) head.textContent = `${name}, ${step.greeting}`;
+
+        const sub = offerEl.querySelector('[data-plan-subtitle]');
+        if (!sub) return;
+        const held = answers.goals;
+        const picked = Array.isArray(held) ? held : held == null ? [] : [held];
+        const phrases = picked
+          .map((id) => boot.goals?.[id]?.phrase)
+          .filter(Boolean)
+          .slice(0, 2);
+        if (!phrases.length) return;
+        sub.textContent = `Your plan to ${phrases.join(' and ')} is ready.`;
+        sub.hidden = false;
+      })();
+
+      /*
+       * The moment, matched to the answer they gave.
+       *
+       * Four drawings, one per answer to "when would you fit it in?". The
+       * drawing is swapped by preloading first, exactly as the age portraits
+       * are: if the file is not there the page keeps the one the build shipped
+       * rather than blanking the section. The phrase is the same map the plan
+       * uses, so the two screens describe their day the same way.
+       */
+      (() => {
+        const art = offerEl.querySelector('[data-moment-art]');
+        const when = offerEl.querySelector('[data-moment-when]');
+        const chosen = (() => {
+          const held = answers.when;
+          return Array.isArray(held) ? held[0] : held;
+        })();
+        if (!chosen) return;
+
+        const PHRASE = {
+          morning: 'over your morning coffee',
+          commute: 'on the commute',
+          lunch: 'on your lunch break',
+          night: 'before bed',
+        };
+        if (when && PHRASE[chosen]) when.textContent = PHRASE[chosen];
+
+        if (!art) return;
+        const next = `/assets/img/funnel2/when-${chosen}.svg`;
+        if (art.getAttribute('src') === next) return;
+        const probe = new Image();
+        probe.onload = () => { art.src = next; };
+        probe.src = next;
+      })();
+
+  }
+
   function fillPlan2() {
     const el = stepEls.get('plan');
     if (!el) return;
@@ -1647,33 +1726,6 @@
       });
     }
     paint();
-
-    /*
-     * The headline and the plan line, as the app writes them.
-     *
-     * `personalTitle` in src/features/paywall/config.ts puts the reader's name
-     * in front of the headline and lowercases what follows; `planSubtitle`
-     * names the goals they picked. This is the same moment on the web, so it
-     * says the same thing rather than inventing a second voice for it.
-     */
-    (() => {
-      const head = offerEl.querySelector('[data-fill="title"]');
-      const step = byId['offer'];
-      const name = readerName();
-      if (head && name && step?.greeting) head.textContent = `${name}, ${step.greeting}`;
-
-      const sub = offerEl.querySelector('[data-plan-subtitle]');
-      if (!sub) return;
-      const held = answers.goals;
-      const picked = Array.isArray(held) ? held : held == null ? [] : [held];
-      const phrases = picked
-        .map((id) => boot.goals?.[id]?.phrase)
-        .filter(Boolean)
-        .slice(0, 2);
-      if (!phrases.length) return;
-      sub.textContent = `Your plan to ${phrases.join(' and ')} is ready.`;
-      sub.hidden = false;
-    })();
 
     const checkout = offerEl.querySelector('[data-checkout]');
     const till = offerEl.querySelector('[data-till]');

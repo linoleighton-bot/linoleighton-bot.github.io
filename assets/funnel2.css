@@ -1364,43 +1364,48 @@ body.page-funnel2 .pw2__faq dd {
 
 body.page-funnel2 .pw2__fine { margin-top: 2rem; }
 
-/* ---- the product, shown rather than described */
-body.page-funnel2 .pw2__shots {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 62%;
-  gap: 0.85rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  margin-inline: -1rem;
-  padding: 0.25rem 1rem 0.9rem;
-  scrollbar-width: none;
+/*
+ * ---- the moment, drawn
+ *
+ * Replaces a horizontal scroller of app screenshots. The drawing's own
+ * ground is `--f2-bg`, so it is not given a card: it meets the page with no
+ * seam, which is the whole reason to draw it rather than photograph it. The
+ * square is cropped to a band because the subject sits in the middle third
+ * and the rest is air.
+ */
+body.page-funnel2 .pw2__moment {
+  margin: 0.25rem 0 0.5rem;
+  text-align: center;
 }
-body.page-funnel2 .pw2__shots::-webkit-scrollbar { display: none; }
 
-body.page-funnel2 .pw2__shot {
-  margin: 0;
-  scroll-snap-align: center;
-  min-width: 0;
-}
-body.page-funnel2 .pw2__shot img {
+body.page-funnel2 .pw2__momentart {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 0.9rem;
-  border: 1px solid var(--f2-edge, #e3ded3);
-  background: var(--f2-card, #fff);
-}
-body.page-funnel2 .pw2__shot figcaption { margin-top: 0.6rem; }
-body.page-funnel2 .pw2__shot figcaption b { display: block; font-size: 0.95rem; }
-body.page-funnel2 .pw2__shot figcaption span {
-  color: var(--f2-ink-soft, #7a736a);
-  font-size: 0.86rem;
+  /* The drawings are square with the figure in the middle third, so the
+     band crops most of the air without reaching the head or the feet in any
+     of the four. Checked against all of them, not just the default. */
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: 50% 47%;
 }
 
-@media (min-width: 40rem) {
-  body.page-funnel2 .pw2__shots { grid-auto-columns: 30%; }
+body.page-funnel2 .pw2__momenth {
+  margin: 0.35rem 0 0;
+  text-wrap: balance;
+}
+
+/* The half of the headline that is their own answer. */
+body.page-funnel2 .pw2__momenth [data-moment-when] {
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .pw2__momentline {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+  color: var(--f2-muted);
 }
 
 /* ---- the price against things they already buy */
@@ -2915,16 +2920,6 @@ body.page-funnel2 .fstep[data-kind='offer']:has(.pw__till:not([hidden])) .pw2__m
 
 body.page-funnel2 .pw__till:not([hidden]) {
   min-height: 18rem;
-}
-
-/* Two shots and a hint of the third, so the cut reads as "keep going" rather
-   than as a picture that failed to fit. */
-body.page-funnel2 .pw2__shots {
-  grid-auto-columns: 56%;
-}
-
-body.page-funnel2 .pw2__shot figcaption span {
-  text-wrap: balance;
 }
 
 /* ==========================================================================
