@@ -1157,24 +1157,35 @@ body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__word {
 }
 
 /*
- * A short question and a single row of answers belong together.
+ * A short question and its answers belong together — without moving the
+ * question to do it.
  *
  * This flow pushes its option lists to the bottom so they fall under the
  * thumb, which is right for a six-item list that fills the space on its way
- * down. A one-line scale leaves a question stranded at the top of the screen
- * and its answers 700px below, with nothing in between — the reader reads,
- * then hunts. Letting the heading take the slack instead puts the pair low
- * together, so the empty space is above them where it reads as room rather
- * than as a missing section.
+ * down. Five stacked scale rows do not fill it, so left alone they sank to
+ * the floor and stranded the question 700px above them. The first fix for
+ * that let the heading take the slack, which closed the gap but put this
+ * screen's title 40px below the title on the screens either side of it: in
+ * a run of six such questions the heading jumped down and back up again,
+ * and that is the part a reader notices. So the title holds the one height
+ * it has everywhere else and the rows centre underneath it instead.
  */
 body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
-  margin-top: auto;
+  margin-top: 0;
 }
 
+/*
+ * The rows centre in the space under the title, exactly as `.fq` does.
+ *
+ * `.fscale` is given `margin-top: auto` higher up but never the matching
+ * bottom margin, so on its own it sank to the floor and left the question
+ * stranded 700px above it. The pair below is what every other answer block
+ * in this funnel uses: title at the top at one fixed height, answers
+ * centred in what is left. Five rows then sit a little above the middle,
+ * which is where the thumb is, with the title where the eye expects it.
+ */
 body.page-funnel2 .fscale--worded {
   margin-top: 1.4rem;
-  /* With the heading's auto margin above, this splits the slack evenly and
-     the pair sits in the middle of the screen rather than on its floor. */
   margin-bottom: auto;
 }
 
@@ -2698,19 +2709,20 @@ body.page-funnel2 .fscale--worded .fscale__word {
 }
 
 /*
- * The question and its five answers sit together in the middle.
+ * The question starts where every other question starts.
  *
- * Five rows is a short screen, and left at the top of a 844px phone they
- * leave a third of the display empty underneath — which reads as a section
- * that failed to load. Letting the slack fall above the heading and below the
- * last row puts the pair where the eye and the thumb already are.
+ * This block used to centre the pair vertically — `margin-top: auto` on the
+ * heading, `margin-bottom: auto` on the rows — to stop five short rows
+ * leaving the foot of a 844px phone empty. It bought that with a heading
+ * 40px lower than the heading on every screen either side of it, so moving
+ * through the run the question jumped down and back up again on six screens.
+ * An empty strip at the foot is calm; a title that will not hold still is
+ * the thing that reads as broken, and it is what a reader actually noticed.
+ *
+ * The emptiness underneath is handled by giving the five rows a taller box
+ * below, not by moving the question. Two screens in this funnel already
+ * answer with two options and leave more space than this.
  */
-body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
-  margin-top: auto;
-}
-body.page-funnel2 .fstep[data-kind='scale'] .fscale--worded {
-  margin-bottom: auto;
-}
 
 /* ---------------------------------------------------- the build screen, sized */
 
