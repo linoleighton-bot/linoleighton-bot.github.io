@@ -805,6 +805,25 @@
       if (node) node.textContent = value;
     };
 
+    /*
+     * Whose plan it is, and when it was made.
+     *
+     * The card carries a name because that is most of what makes it theirs
+     * rather than a summary of a questionnaire. Without one it says "Your
+     * plan", which is still true — the name step is skippable on purpose and
+     * a card that reads "undefined's plan" would undo the whole point of it.
+     * The date is the day they answered, written out, so the card reads as a
+     * thing that was issued to them.
+     */
+    set('owner', name ? `${name}\u2019s plan` : 'Your plan');
+    set(
+      'made',
+      `Built from your answers \u00b7 ${new Date().toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+      })}`,
+    );
+
     /* ---- the four decisions */
 
     const commitment = chosenIds('commitment')[0];
