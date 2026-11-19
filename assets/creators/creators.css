@@ -956,6 +956,7 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-connect__card[data-platform='instagram'] .mr-connect__top i { background: #C13584; }
 .mr-connect__card .cp-input { width: 100%; box-sizing: border-box; padding-block: 0.75rem; }
 .mr-connect__card[data-on] .mr-connect__top span { color: #12A150; font-weight: 600; }
+.mr-connect__card[data-wait] .mr-connect__top span { color: #B26A00; font-weight: 600; }
 .mr-connect__save { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; margin-top: 0.9rem; }
 .mr-connect__save p { margin: 0; }
 .mr-connect__send { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; }
@@ -972,3 +973,5 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-review__act { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.5rem; align-items: center; }
 .mr-review__act .cp-input { width: 100%; box-sizing: border-box; }
 @media (max-width: 56rem) { .mr-review__row { grid-template-columns: 1fr; } .mr-connect__send { grid-template-columns: 1fr; } }
+
+.mr-review__act[data-plain] { display: flex; gap: 0.5rem; justify-content: flex-end; }

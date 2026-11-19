@@ -136,7 +136,7 @@
   /* A manager who is not (yet) a creator themselves: their team, and a way to apply. */
   let wantsToApply = false;
   function renderManager(data) {
-    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason) }))));
+    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok) }))));
   }
 
   function renderApply(data) {
@@ -443,7 +443,7 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
-      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason) }),
+      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok) }),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
@@ -669,6 +669,14 @@
     await load();
   }
 
+  /* A manager approves or declines the accounts one of their creators added. */
+  async function reviewAccounts(data, c, approve) {
+    if (cp.demo) { if (approve) c.handle_verified = true; else Object.assign(c, { tiktok: null, instagram: null, handle_verified: false }); toast(`${approve ? 'Approved' : 'Declined'}. (Sample data: nothing was saved.)`); return data.creator ? renderDashboard(data) : renderManager(data); }
+    await cp.rpc('creator_review_accounts', { p_creator: c.id, p_approve: approve });
+    toast(approve ? 'Approved. Their videos are tracked from the next hour.' : 'Declined. They can add the right usernames.');
+    await load();
+  }
+
   /*
    * How a creator's videos reach us: they name their TikTok or Instagram account,
    * and every #mindroll video on it is found by itself with its views (read from
@@ -682,12 +690,13 @@
     const STATUS = { pending: ['Waiting for review', 'warn'], approved: ['Approved', 'good'], rejected: ['Declined', 'bad'] };
     const tag = data.settings?.hashtag || 'mindroll';
     const every = Number(data.settings?.scan_minutes) || 60;
+    const approved = creator.handle_verified !== false;
     const field = (platform, label, handle) => {
       const input = h('input', { class: 'cp-input', type: 'text', value: handle ? `@${handle}` : '', placeholder: '@username', 'aria-label': `${label} username`, autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false', maxlength: '80' });
       const card = h(
         'div',
-        { class: 'mr-connect__card', 'data-platform': platform, 'data-on': handle ? '' : null },
-        h('div', { class: 'mr-connect__top' }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), h('div', {}, h('b', {}, label), h('span', { class: 'cp-muted cp-small' }, handle ? 'Tracking on' : 'Not added yet'))),
+        { class: 'mr-connect__card', 'data-platform': platform, 'data-on': handle && approved ? '' : null, 'data-wait': handle && !approved ? '' : null },
+        h('div', { class: 'mr-connect__top' }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), h('div', {}, h('b', {}, label), h('span', { class: 'cp-muted cp-small' }, !handle ? 'Not added yet' : approved ? 'Tracking on' : 'Waiting for approval'))),
         input,
       );
       return { card, input };
@@ -698,18 +707,20 @@
     const tracked = Boolean(ttHandle || igHandle);
     const checked = creator.last_scanned_at ? new Date(creator.last_scanned_at).getTime() : 0;
     const mins = checked ? Math.max(0, Math.round((Date.now() - checked) / 6e4)) : null;
-    const when = !tracked ? 'Add a username and your videos start showing up by themselves.'
-      : mins === null ? 'First check runs within 15 minutes.'
-      : `Last checked ${mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 2880 ? `${Math.round(mins / 60)} hr ago` : `${Math.round(mins / 1440)} days ago`}. Views update about every ${every < 60 ? `${every} minutes` : every === 60 ? 'hour' : `${Math.round(every / 60)} hours`}.`;
-    const save = h('button', { class: 'btn btn--primary', type: 'button' }, tracked ? 'Save accounts' : 'Start tracking');
+    const ago = mins === null ? '' : mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 2880 ? `${Math.round(mins / 60)} hr ago` : `${Math.round(mins / 1440)} days ago`;
+    const when = !tracked ? 'Add a username and send it for approval.'
+      : !approved ? 'Waiting for your manager or Mindroll to approve these accounts. Tracking starts as soon as they do.'
+      : mins === null ? 'Approved. The first check runs at the top of the hour.'
+      : `Last checked ${ago}. Views update ${every === 60 ? 'every hour, on the hour' : `about every ${every < 60 ? `${every} minutes` : `${Math.round(every / 60)} hours`}`}.`;
+    const save = h('button', { class: 'btn btn--primary', type: 'button' }, tracked ? 'Save accounts' : 'Send for approval');
     const SAVED = { no_handle: 'Add at least one username.', bad_handle: 'That username is too long.', handle_taken: 'Another creator has already added that account. Check the spelling, or message your manager.', not_creator: 'Your account has to be accepted first.', same: 'Those are the accounts we already track.' };
     save.addEventListener('click', act(save, async () => {
       const t = tt.input.value.trim(), i = ig.input.value.trim();
       if (!t && !i) throw new Error(SAVED.no_handle);
-      if (cp.demo) { Object.assign(creator, { tiktok: t || null, instagram: i || null, tiktok_handle: clean(t) || null, instagram_handle: clean(i) || null, last_scanned_at: null }); toast('Saved. (Sample data: nothing was saved.)'); return renderDashboard(data); }
+      if (cp.demo) { Object.assign(creator, { tiktok: t || null, instagram: i || null, tiktok_handle: clean(t) || null, instagram_handle: clean(i) || null, last_scanned_at: null, handle_verified: false }); toast('Sent for approval. (Sample data: nothing was saved.)'); return renderDashboard(data); }
       const reply = await cp.rpc('creator_set_accounts', { p_tiktok: t || null, p_instagram: i || null });
       if (reply !== 'saved') throw new Error(SAVED[reply] || 'That did not save.');
-      toast('Saved. Your videos will start showing up within 15 minutes.');
+      toast('Sent for approval. Tracking starts once your accounts are approved.');
       await load();
     }));
     const url = h('input', { class: 'cp-input', type: 'url', inputmode: 'url', placeholder: 'Paste the TikTok or Instagram link to your video', 'aria-label': 'Video link', autocapitalize: 'none', spellcheck: 'false' });
@@ -725,8 +736,8 @@
       await load();
     }));
     return [
-      h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Add your TikTok or Instagram username and every video you post with #${tag} shows up here by itself, with its views. No password and no sign-in: we only read what is public. A video counts once it is approved.`)),
-      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your accounts'), h('span', { class: 'cp-muted' }, tracked ? 'Automatic' : 'Not tracking yet')), h('div', { class: 'mr-connect__grid' }, tt.card, ig.card), h('div', { class: 'mr-connect__save' }, save, h('p', { class: 'cp-muted cp-small' }, when)), h('p', { class: 'cp-muted cp-small' }, 'Your account has to be public for us to see your videos.')),
+      h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Add your TikTok or Instagram username. Once it is approved, every video you post with #${tag} in the caption shows up here by itself, with its views. Only videos with #${tag} count. No password and no sign-in: we only read what is public.`)),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your accounts'), h('span', { class: 'cp-muted' }, !tracked ? 'Not tracking yet' : approved ? 'Automatic' : 'Waiting for approval')), h('div', { class: 'mr-connect__grid' }, tt.card, ig.card), h('div', { class: 'mr-connect__save' }, save, h('p', { class: 'cp-muted cp-small' }, when)), h('p', { class: 'cp-muted cp-small' }, 'Your account has to be public for us to see your videos.')),
       h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Or send one video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${tag} in the caption and your link in your bio before you send it.`)),
       h(
         'section',
@@ -1529,7 +1540,7 @@
         ],
         creators: [
           { id: 't1', display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', status: 'active', tier_level: 3, videos_30d: 22, views_30d: 1204000, subscribers: 96, commission_30d: 61200, last_posted_at: new Date(Date.now() - 0.2 * 864e5).toISOString() },
-          { id: 't2', display_name: 'Theo Studies', tiktok: '@theostudies', status: 'active', tier_level: 2, videos_30d: 17, views_30d: 612000, subscribers: 51, commission_30d: 31400, last_posted_at: new Date(Date.now() - 1.3 * 864e5).toISOString() },
+          { id: 't2', display_name: 'Theo Studies', tiktok: '@theostudies', handle_verified: false, status: 'active', tier_level: 2, videos_30d: 17, views_30d: 612000, subscribers: 51, commission_30d: 31400, last_posted_at: new Date(Date.now() - 1.3 * 864e5).toISOString() },
           { id: 't3', display_name: 'Bookish Lina', instagram: '@bookish.lina', status: 'active', tier_level: 1, videos_30d: 14, views_30d: 298000, subscribers: 29, commission_30d: 14900, last_posted_at: new Date(Date.now() - 5.5 * 864e5).toISOString() },
           { id: 't4', display_name: 'Sam', tiktok: '@samwrites', status: 'active', tier_level: 1, videos_30d: 8, views_30d: 70000, subscribers: 11, commission_30d: 4800, last_posted_at: new Date(Date.now() - 12 * 864e5).toISOString() },
           { id: 't5', display_name: 'Jonah Reads', tiktok: '@jonahreads', status: 'active', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, last_posted_at: null },

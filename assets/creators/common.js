@@ -664,7 +664,17 @@
       decline.addEventListener('click', act(decline, () => o.review(v, false, why.value.trim())));
       return h('li', { class: 'mr-review__row' }, person(v.creator || {}), h('div', { class: 'mr-review__video' }, safeUrl(v.url) ? h('a', { class: 'btn btn--ghost btn--sm', href: safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, `Watch on ${v.platform === 'tiktok' ? 'TikTok' : v.platform === 'instagram' ? 'Instagram' : 'YouTube'}`) : null, h('span', { class: 'cp-muted cp-small' }, v.source === 'creator' ? 'Sent by the creator' : 'Found on their account')), h('div', { class: 'mr-review__act' }, why, approve, decline));
     };
+    const toApprove = list.filter((c) => c.status === 'active' && c.handle_verified === false && (cleanHandle(c.tiktok) || cleanHandle(c.instagram)));
+    const accountRow = (c) => {
+      const approve = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Approve');
+      const decline = confirmButton('Decline', 'Confirm: clear these usernames', 'btn btn--ghost btn--sm', () => o.accounts(c, false));
+      approve.addEventListener('click', act(approve, () => o.accounts(c, true)));
+      return h('li', { class: 'mr-review__row' }, person(c), h('div', { class: 'mr-review__video' }, h('span', { class: 'cp-muted cp-small' }, 'Open each account and check it is really theirs.')), h('div', { class: 'mr-review__act', 'data-plain': '' }, approve, decline));
+    };
     return [
+      o.accounts && toApprove.length
+        ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Accounts to approve'), h('b', {}, num(toApprove.length))), h('ul', { class: 'mr-review__list' }, toApprove.map(accountRow)), h('p', { class: 'cp-muted cp-small' }, 'Videos and views are only counted from accounts you have approved.'))
+        : null,
       o.review && waiting.length
         ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Videos to review'), h('b', {}, num(waiting.length))), h('ul', { class: 'mr-review__list' }, waiting.map(reviewRow)), h('p', { class: 'cp-muted cp-small' }, 'A video only counts for the creator once it is approved.'))
         : null,

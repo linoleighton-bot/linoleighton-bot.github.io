@@ -303,7 +303,7 @@
       ['Cash-outs', state.creators.filter((c) => c.cashout_requested_at).length, 'creators'],
       ['Videos to check', toCheck, 'campaigns'],
       ['Campaigns to pay', payable.length, 'campaigns'],
-      ['Accounts to check', active.filter((c) => c.handle_verified === false).length, 'creators'],
+      ['Accounts to approve', active.filter((c) => c.handle_verified === false && (c.tiktok || c.instagram)).length, 'creators'],
       ['ManyChat', manyNeed ? active.filter((c) => !c.manychat_at && (c.balance.commission_cents || 0) >= manyNeed).length : 0, 'creators'],
       ['On hold', state.creators.filter((c) => c.payout_hold).length, 'creators'],
     ].filter(([, count]) => count > 0);
@@ -673,10 +673,19 @@
       const hold = confirmButton('Hold payouts', 'Confirm: stop all money to this creator', 'cp-link', async () => { await ok(db.from('program_creators').update({ payout_hold: true, hold_reason: why.value.trim() || null }).eq('id', c.id)); toast(`${c.display_name} is on hold. Nothing will be paid or released.`); await reload(); });
       return h('span', { class: 'cp-inline' }, why, hold);
     };
+    /* Videos and views are only read from accounts that have been approved here or by the creator's manager. */
     const verifyControl = (c) => {
-      const button = h('button', { class: 'cp-link', type: 'button' }, c.handle_verified ? 'Mark as not checked' : 'Mark account as checked');
-      button.addEventListener('click', act(button, async () => { await ok(db.from('program_creators').update({ handle_verified: !c.handle_verified }).eq('id', c.id)); await reload(); }));
-      return h('span', { class: 'cp-inline' }, c.handle_verified ? pill('Account checked', 'good') : h('span', { class: 'cp-muted' }, 'Look for ', h('code', { class: 'cp-mono' }, `mindroll-${c.code}`), ' in their bio'), button);
+      const has = Boolean(c.tiktok || c.instagram);
+      if (!has) return h('span', { class: 'cp-muted' }, 'No username added yet');
+      const review = (approve) => async () => { await cp.rpc('creator_review_accounts', { p_creator: c.id, p_approve: approve }); toast(approve ? `${c.display_name}'s accounts are approved. Tracking starts on the hour.` : `Declined. ${c.display_name} can add the right usernames.`); await reload(); };
+      if (c.handle_verified) {
+        const undo = h('button', { class: 'cp-link', type: 'button' }, 'Stop tracking');
+        undo.addEventListener('click', act(undo, async () => { await ok(db.from('program_creators').update({ handle_verified: false }).eq('id', c.id)); await reload(); }));
+        return h('span', { class: 'cp-inline' }, pill('Approved, tracking', 'good'), undo);
+      }
+      const approve = h('button', { class: 'cp-link', type: 'button' }, 'Approve accounts');
+      approve.addEventListener('click', act(approve, review(true)));
+      return h('span', { class: 'cp-inline' }, pill('Waiting for approval', 'warn'), approve, confirmButton('Decline', 'Confirm: clear their usernames', 'cp-link', review(false)));
     };
     /* ManyChat: flagged once they have earned enough commission; you set it up and mark it done. */
     const manyNeed = state.settings.manychat_commission_cents || 0;
