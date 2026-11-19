@@ -60,9 +60,9 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team, picture] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null)]);
+      const [data, brief, team, picture, discordName] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null)]);
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
-      if (data?.creator) data.creator.avatar_url = picture;
+      if (data?.creator) { data.creator.avatar_url = picture; data.creator.discord_name = discordName; }
       if (data) { data.brief = brief || null; data.team = team || null; }
       const stamp = JSON.stringify(data);
       const apply = () => {
@@ -85,7 +85,10 @@
         return apply();
       }
       apply();
-      if (data.creator?.status === 'active' && data.creator.terms_accepted !== false) void settleStripeReturn(data);
+      if (data.creator?.status === 'active' && data.creator.terms_accepted !== false) {
+        void settleStripeReturn(data);
+        void finishDiscord().then((linked) => linked && load());
+      }
     } catch (error) {
       if (quiet) return;
       show(h('div', { class: 'cp-card' }, h('h2', {}, 'We could not load your dashboard'), h('p', { class: 'cp-muted' }, error.message), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: load }, 'Try again')));
@@ -685,6 +688,61 @@
    * the public account, no sign-in), or they send each video's link. Either way
    * a video is reviewed before it counts.
    */
+  /*
+   * Connect to Discord. The creator approves the link on Discord's own page and comes back through
+   * /creators/discord/, which leaves Discord's answer in sessionStorage for finishDiscord() below.
+   * Once linked, their rank and account roles in the Mindroll server follow the program by themselves.
+   */
+  const DISCORD_APP = '1572701230185058336';
+  const DISCORD_SERVER = 'https://discord.com/channels/1572693376145293373';
+  function discordPanel(data) {
+    const creator = data.creator;
+    const name = creator.discord_name;
+    const connect = h('button', { class: 'btn btn--primary', type: 'button' }, 'Connect to Discord');
+    connect.addEventListener('click', () => {
+      if (cp.demo) { creator.discord_name = creator.display_name; toast('Connected. (Sample data: nothing was saved.)'); return renderDashboard(data); }
+      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+      try { sessionStorage.setItem('mindroll.discord.state', state); } catch { /* the return is refused without it */ }
+      location.assign(`https://discord.com/oauth2/authorize?${new URLSearchParams({ client_id: DISCORD_APP, response_type: 'token', redirect_uri: `${location.origin}/creators/discord/`, scope: 'identify guilds.join', state, prompt: 'consent' })}`);
+    });
+    const off = cp.confirmButton('Disconnect', 'Confirm: disconnect Discord', 'cp-link', async () => {
+      if (cp.demo) { creator.discord_name = null; return renderDashboard(data); }
+      await cp.fn('creator-discord', { action: 'unlink' });
+      toast('Discord disconnected. Your Mindroll roles there were removed.');
+      await load();
+    });
+    return h(
+      'section',
+      { class: 'mr-panel' },
+      h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Discord'), h('span', { class: 'cp-muted' }, name ? 'Connected' : 'Not connected')),
+      name
+        ? h('div', {}, h('p', {}, 'Connected as ', h('b', {}, name), '. Your rank role in the Mindroll Discord updates by itself when your rank changes.'), h('div', { class: 'mr-connect__save' }, h('a', { class: 'btn btn--ghost', href: DISCORD_SERVER, target: '_blank', rel: 'noopener noreferrer' }, 'Open the Mindroll Discord'), off))
+        : h('div', {}, h('p', { class: 'cp-muted' }, 'Join the Mindroll creator Discord in one tap. You get your rank role straight away, and it updates by itself as you rank up. Campaigns and winners are posted there first.'), h('div', { class: 'mr-connect__save' }, connect)),
+    );
+  }
+
+  /* Back from Discord: hand its answer to the server once, then show the result. */
+  async function finishDiscord() {
+    let back = null, state = null;
+    try {
+      back = JSON.parse(sessionStorage.getItem('mindroll.discord') || 'null');
+      state = sessionStorage.getItem('mindroll.discord.state');
+      sessionStorage.removeItem('mindroll.discord');
+      sessionStorage.removeItem('mindroll.discord.state');
+    } catch { return false; }
+    if (!back) return false;
+    if (back.error) { toast(back.error === 'access_denied' ? 'Discord was not connected.' : 'Discord did not finish connecting. Try again.'); return false; }
+    if (!back.token || !state || back.state !== state) { toast('Discord did not finish connecting. Try again.'); return false; }
+    try {
+      const out = await cp.fn('creator-discord', { action: 'link', access_token: back.token });
+      toast(out.in_server ? `Discord connected as ${out.name}. Your roles are set.` : `Discord connected as ${out.name}. Join the server to get your roles.`);
+      return true;
+    } catch (cause) {
+      toast(cause.message || 'Discord did not finish connecting. Try again.');
+      return false;
+    }
+  }
+
   function connectView(data) {
     const creator = data.creator;
     const clean = (v) => String(v || '').trim().replace(/^@/, '');
@@ -738,6 +796,7 @@
       await load();
     }));
     const rule = (mark, title, text) => h('li', {}, h('i', { 'aria-hidden': 'true' }, mark), h('div', {}, h('b', {}, title), h('span', {}, text)));
+    const discord = discordPanel(data);
     const aside = h(
       'aside',
       { class: 'mr-connect__aside', 'aria-label': 'How your videos are counted' },
@@ -754,6 +813,7 @@
       h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Add your TikTok or Instagram username. Once it is approved, every video you post with #${tag} in the caption shows up here by itself, with its views. Only videos with #${tag} count. No password and no sign-in: we only read what is public.`)),
       h('div', { class: 'mr-connect__layout' }, h('div', { class: 'mr-connect__main' },
       h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your accounts'), h('span', { class: 'cp-muted' }, !tracked ? 'Not tracking yet' : approved ? 'Automatic' : 'Waiting for approval')), h('div', { class: 'mr-connect__grid' }, tt.card, ig.card), h('div', { class: 'mr-connect__save' }, save, h('p', { class: 'cp-muted cp-small' }, when)), h('p', { class: 'cp-muted cp-small' }, 'Your account has to be public for us to see your videos.')),
+      discord,
       h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Or send one video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${tag} in the caption and your link in your bio before you send it.`)),
       h(
         'section',

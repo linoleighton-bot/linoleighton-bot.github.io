@@ -751,6 +751,7 @@
                     manyControl(c),
                     h('div', { class: 'cp-inline cp-small' }, h('span', { class: 'cp-muted' }, 'Suspected cheating'), holdControl(c)),
                     h('p', { class: 'cp-small cp-muted' }, c.terms_accepted_at ? `Accepted the terms ${day(c.terms_accepted_at)}` : 'Has not accepted the terms yet'),
+                    h('p', { class: 'cp-small cp-muted' }, c.discord_name ? `Discord: ${c.discord_name} (roles follow their rank)` : 'Discord not connected'),
                     h('p', { class: 'cp-small cp-muted' }, `Code ${c.code} · ${num(c.stats.clicks)} clicks · ${num(c.stats.signups)} sign-ups · ${money(c.balance.pending_cents)} still clearing · ${money(c.balance.paid_cents)} paid so far`),
                     c.status === 'active' ? setStatus(c, 'paused', 'Pause this creator', 'cp-link') : setStatus(c, 'active', c.status === 'rejected' ? (c.approved_at ? 'Let back in' : 'Approve') : 'Resume', 'cp-link'),
                     c.status !== 'rejected' ? kick(c) : h('p', { class: 'cp-small cp-muted' }, c.approved_at ? 'Removed from the program' : 'Application declined'),

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<meta name="referrer" content="no-referrer" />
+<title>Connecting Discord · Mindroll</title>
+<body style="margin:0;display:grid;place-items:center;min-height:100vh;font:16px -apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;color:#3B4250;background:#F4F5F7">
+<p>Connecting Discord…</p>
+<script>
+  /*
+   * Discord sends the creator back here after they approve the link. This page only carries the
+   * answer to the dashboard: it sits on its own address so the dashboard's sign-in code never
+   * mistakes Discord's answer for its own, and so the token leaves the address bar at once.
+   */
+  (function () {
+    var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    var query = new URLSearchParams(location.search);
+    try {
+      sessionStorage.setItem('mindroll.discord', JSON.stringify({
+        token: hash.get('access_token') || '',
+        state: hash.get('state') || query.get('state') || '',
+        error: hash.get('error') || query.get('error') || '',
+      }));
+    } catch (e) {}
+    location.replace('/creators/#connect');
+  })();
+</script>
+</body>
+</html>
