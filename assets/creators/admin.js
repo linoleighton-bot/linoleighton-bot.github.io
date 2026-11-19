@@ -708,14 +708,52 @@
     /* Lots of views and almost nobody clicking is the usual sign of bought views. */
     const odd = (c) => (c.stats.views >= 50000 && c.stats.clicks * 5000 < c.stats.views ? pill(`Check: ${compact(c.stats.views)} views, ${num(c.stats.clicks)} clicks`, 'warn') : null);
 
-    const applicants = state.creators.filter((c) => c.status === 'pending');
+    /*
+     * Who to call first. Followers count for half: the number read from the
+     * account when we have it, otherwise what the applicant said. The rest is
+     * how close their videos are to ours, how often they post, and whether
+     * they have made paid videos before.
+     */
+    const NICHE = { books: ['Books and reading', 25], self_improvement: ['Self-improvement', 25], productivity: ['Productivity and study', 25], philosophy: ['Philosophy and psychology', 25], business: ['Business and money', 20], lifestyle: ['Lifestyle', 12], comedy: ['Comedy and entertainment', 5], other: ['Something else', 5] };
+    const SAID = { under_1k: ['under 1K', 0], '1k_10k': ['1K to 10K', 1000], '10k_50k': ['10K to 50K', 10000], '50k_250k': ['50K to 250K', 50000], over_250k: ['over 250K', 250000] };
+    const FREQ = { daily: ['Posts daily', 15], few_week: ['Posts a few times a week', 10], weekly: ['Posts weekly', 5], less: ['Posts rarely', 0] };
+    const lead = (c) => {
+      const found = [c.tiktok_followers, c.instagram_followers].filter((n) => n != null);
+      const checked = found.length > 0;
+      const followers = checked ? Math.max(...found) : SAID[c.followers_said]?.[1] ?? null;
+      const size = followers == null ? 0 : followers >= 250000 ? 50 : followers >= 50000 ? 45 : followers >= 10000 ? 35 : followers >= 1000 ? 20 : 0;
+      const score = size + (NICHE[c.niche]?.[1] ?? 0) + (FREQ[c.post_freq]?.[1] ?? 0) + (c.made_ugc ? 10 : 0);
+      const answered = Boolean(c.niche || c.followers_said || c.post_freq || checked);
+      /* Said one thing, the account shows far less. */
+      const overstated = checked && c.followers_said && SAID[c.followers_said][1] > 0 && Math.max(...found) < SAID[c.followers_said][1] / 2;
+      return { score, followers, checked, answered, overstated, grade: !answered ? ['Not rated', 'muted'] : score >= 60 ? ['High quality', 'good'] : score >= 35 ? ['Medium', 'warn'] : ['Low', 'muted'] };
+    };
+    const leadLine = (c) => {
+      const l = lead(c);
+      const check = h('button', { class: 'cp-link', type: 'button' }, c.followers_checked_at ? 'Check followers again' : 'Check followers');
+      check.addEventListener('click', act(check, async () => {
+        if (cp.demo) return toast('Sample data: nothing was checked.');
+        const out = await cp.fn('creator-lead', { creator: c.id });
+        toast(out?.skipped ? 'The follower check is not set up yet.' : out?.missed?.length ? `Could not read ${out.missed.join(' or ')}.` : 'Followers updated.');
+        await reload();
+      }));
+      const counts = [c.tiktok_followers != null ? `${compact(c.tiktok_followers)} on TikTok` : null, c.instagram_followers != null ? `${compact(c.instagram_followers)} on Instagram` : null].filter(Boolean);
+      return h(
+        'div',
+        { class: 'mr-lead' },
+        h('div', { class: 'cp-inline' }, pill(l.grade[0], l.grade[1] === 'muted' ? undefined : l.grade[1]), l.answered ? h('b', {}, `${l.score}/100`) : null, l.overstated ? pill(`Said ${SAID[c.followers_said][0]}, account shows less`, 'warn') : null),
+        h('p', { class: 'cp-small' }, counts.length ? h('b', {}, counts.join(' · ')) : c.followers_said ? `Says ${SAID[c.followers_said][0]} followers (not checked yet)` : 'Followers not known', c.followers_error ? h('span', { class: 'cp-bad' }, ` · ${c.followers_error}`) : null, ' · ', check),
+        l.answered ? h('p', { class: 'cp-muted cp-small' }, [NICHE[c.niche]?.[0], FREQ[c.post_freq]?.[0], c.made_ugc == null ? null : c.made_ugc ? 'Has made brand videos' : 'No brand videos yet'].filter(Boolean).join(' · ')) : h('p', { class: 'cp-muted cp-small' }, 'Applied before the questions were added.'),
+      );
+    };
+    const applicants = state.creators.filter((c) => c.status === 'pending').sort((x, y) => lead(y).score - lead(x).score || (lead(y).followers || 0) - (lead(x).followers || 0));
     const rest = state.creators.filter((c) => c.status !== 'pending');
 
     return [
       applicants.length
         ? section(
             'Applications',
-            h('span', { class: 'cp-muted' }, `${applicants.length} waiting`),
+            h('span', { class: 'cp-muted' }, `${applicants.length} waiting · best leads first`),
             h(
               'ul',
               { class: 'cp-apps' },
@@ -723,7 +761,7 @@
                 h(
                   'li',
                   {},
-                  h('div', {}, cp.person(c, { size: 'lg', badge: h('code', { class: 'cp-mono' }, c.code) }), h('p', { class: 'cp-muted cp-small' }, `${c.country || ''} · applied ${day(c.created_at)}${c.referred_by ? ` · invited by ${(state.creators.find((x) => x.id === c.referred_by) || {}).display_name || 'a creator'}` : ''}`), c.note ? h('p', { class: 'cp-note' }, c.note) : null),
+                  h('div', {}, cp.person(c, { size: 'lg', badge: h('code', { class: 'cp-mono' }, c.code) }), h('p', { class: 'cp-muted cp-small' }, `${c.country || ''} · applied ${day(c.created_at)}${c.referred_by ? ` · invited by ${(state.creators.find((x) => x.id === c.referred_by) || {}).display_name || 'a creator'}` : ''}`), leadLine(c), c.note ? h('p', { class: 'cp-note' }, c.note) : null),
                   h('div', { class: 'cp-inline' }, setStatus(c, 'active', 'Approve', 'btn btn--primary btn--sm'), setStatus(c, 'rejected', 'Decline')),
                 ),
               ),
@@ -2082,8 +2120,8 @@
       ],
       volume: [],
       creators: [
-        c('c5', 'Jonah Reads', 'jonah', 'pending', { by: 'c1', age: 1, ig: true, note: '48K on TikTok, mostly book and study content. Posting three times a week.' }),
-        c('c6', 'Priya', 'priya', 'pending', { age: 2 }),
+        Object.assign(c('c5', 'Jonah Reads', 'jonah', 'pending', { by: 'c1', age: 1, ig: true, note: '48K on TikTok, mostly book and study content. Posting three times a week.' }), { niche: 'books', followers_said: '50k_250k', post_freq: 'few_week', made_ugc: true, tiktok_followers: 48200, instagram_followers: 6100, followers_checked_at: ago(1) }),
+        Object.assign(c('c6', 'Priya', 'priya', 'pending', { age: 2 }), { niche: 'comedy', followers_said: '10k_50k', post_freq: 'less', made_ugc: false, tiktok_followers: 640, followers_checked_at: ago(2) }),
         c('c1', 'Maya', 'maya', 'active', { mgr: 'm1', ready: 16160, pending: 5744, paid: 14200, comm: 20604, bonus: 15500, clicks: 6240, signups: 388, subs: 41, rev: 173354, videos: 4, views: 718400, ig: true, tier: 2, cashout: true, kinds: { views: 5000, rank_up: 2500 }, month: { views: 4000, rank_up: 2500 } }),
         c('c2', 'Theo Studies', 'theo', 'active', { by: 'c1', mgr: 'm1', ready: 3400, pending: 2800, paid: 2000, comm: 6200, bonus: 2000, clicks: 2210, signups: 142, subs: 16, rev: 62000, videos: 6, views: 264000, tier: 1, kinds: { views: 1000, manual: 1000 }, month: { views: 1000 } }),
         c('c3', 'Bookish Lina', 'lina', 'active', { by: 'c1', mgr: 'm2', verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),

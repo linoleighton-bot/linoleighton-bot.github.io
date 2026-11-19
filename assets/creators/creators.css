@@ -1196,3 +1196,33 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-lock__icon { font-size: 2.5rem; line-height: 1; }
 .mr-lock h2 { margin: 0; font-size: clamp(1.375rem, 3.5vw, 2rem); letter-spacing: -0.03em; }
 .mr-lock p { margin: 0; max-width: 30rem; color: var(--muted); }
+
+/* The application: one question a screen, answers as big tap targets. */
+.mr-apply { display: grid; gap: 0.9rem; }
+.mr-apply h1 { margin: 0.25rem 0 0; }
+.mr-apply__top { display: flex; justify-content: space-between; align-items: center; min-height: 1.75rem; }
+.mr-apply__bar { height: 6px; border-radius: 99px; background: var(--sunk); overflow: hidden; }
+.mr-apply__bar i { display: block; height: 100%; border-radius: inherit; background: var(--mr-accent, #2F6BFF); transition: width 0.25s ease; }
+.mr-apply__opts { display: grid; gap: 0.6rem; }
+.mr-apply__opts--two { grid-template-columns: 1fr 1fr; }
+.mr-apply__opt { font: inherit; font-weight: 600; text-align: left; min-height: 3.25rem; padding: 0.85rem 1.1rem; border-radius: 0.9rem; border: 1.5px solid var(--line); background: var(--surface, #fff); color: inherit; cursor: pointer; }
+.mr-apply__opt:hover { border-color: var(--mr-accent, #2F6BFF); }
+.mr-apply__opt[aria-checked='true'] { border-color: var(--mr-accent, #2F6BFF); background: var(--mr-accent-soft, #EEF3FF); }
+.mr-apply__opts--two .mr-apply__opt { text-align: center; }
+.mr-apply__q { font-size: 1.125rem; margin: 0.75rem 0 0; }
+.mr-apply .btn { width: 100%; justify-content: center; }
+
+/* A lead's rating in the admin's list of applications. */
+.mr-lead { display: grid; gap: 0.2rem; margin-top: 0.5rem; padding: 0.6rem 0.8rem; background: var(--sunk); border-radius: 0.8rem; }
+.mr-lead p { margin: 0; }
+
+/* The signed-out page on a phone: the sign-in comes straight after the headline. */
+@media (max-width: 640px) {
+  .cp-pitch { display: flex; flex-direction: column; gap: 1.25rem; }
+  .cp-pitch__copy { display: contents; }
+  .cp-pitch .cp-eyebrow { order: 1; margin: 0; }
+  .cp-pitch h1 { order: 2; margin: 0; font-size: 2rem; line-height: 1.08; }
+  .cp-pitch .cp-lead { order: 3; margin: 0; font-size: 1.0625rem; }
+  .cp-pitch__panel { order: 4; }
+  .cp-pitch .cp-steps { order: 5; margin: 0.5rem 0 0; }
+}

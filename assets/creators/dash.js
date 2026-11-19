@@ -116,11 +116,11 @@
           { class: 'cp-pitch__copy' },
           h('p', { class: 'cp-eyebrow' }, 'Mindroll creator program'),
           h('h1', {}, 'Make videos about ideas. Earn on every reader you bring.'),
-          h('p', { class: 'cp-lead' }, 'You earn a share of every sale made to the people who subscribe through you, for as long as they stay, plus a flat amount for each new yearly subscriber. Sell more, post more and reach more people and you move up a tier, and every tier pays more on all of it.'),
+          h('p', { class: 'cp-lead' }, 'Commission on every subscriber you bring in, for as long as they stay, plus cash bonuses as you grow.'),
           h(
             'ol',
             { class: 'cp-steps' },
-            h('li', {}, h('b', {}, 'Join'), 'Link your TikTok or Instagram. We approve you and your dashboard opens.'),
+            h('li', {}, h('b', {}, 'Join'), 'Four quick questions and your TikTok or Instagram. Takes a minute.'),
             h('li', {}, h('b', {}, 'Post'), 'Put #Mindroll in the caption and your link in your bio. Your videos show up here by themselves.'),
             h('li', {}, h('b', {}, 'Get paid'), 'Commission and bonuses are paid to you by PayPal, Venmo or Zelle.'),
           ),
@@ -140,6 +140,8 @@
    */
   /* A manager who is not (yet) a creator themselves: their team, and a way to apply. */
   let wantsToApply = false;
+  /* What the applicant has answered so far; kept while they move between the steps. */
+  const applyDraft = { step: 0 };
   function renderManager(data) {
     show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }))));
   }
@@ -154,8 +156,43 @@
     if (appliedHere() && !cp.demo) {
       return show(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'You have already applied'), h('p', { class: 'cp-muted' }, 'An application has already been sent from this device. If you used a different account, sign in with that one to see it.'), h('p', { class: 'cp-muted' }, 'Questions? ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))));
     }
+    /*
+     * Four short screens, one question each, so it reads as a few taps on a
+     * phone and not as a form: what they post about, how big their audience is,
+     * how often they post, then the accounts. The first three are what the team
+     * uses to decide who to call first.
+     */
+    const NICHES = [['books', '📚 Books and reading'], ['self_improvement', '🌱 Self-improvement'], ['productivity', '⏱️ Productivity and study'], ['business', '💼 Business and money'], ['philosophy', '🧠 Philosophy and psychology'], ['lifestyle', '✨ Lifestyle'], ['comedy', '😂 Comedy and entertainment'], ['other', 'Something else']];
+    const SIZES = [['under_1k', 'Under 1,000'], ['1k_10k', '1,000 to 10,000'], ['10k_50k', '10,000 to 50,000'], ['50k_250k', '50,000 to 250,000'], ['over_250k', 'More than 250,000']];
+    const FREQS = [['daily', 'Every day'], ['few_week', 'A few times a week'], ['weekly', 'About once a week'], ['less', 'Less than that']];
+    const answers = applyDraft;
     const field = (label, input) => h('label', { class: 'auth-field' }, h('span', {}, label), input);
-    const handle = (name) => h('input', { name, maxlength: '80', placeholder: '@yourhandle', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false' });
+    const handle = (name) => h('input', { name, maxlength: '80', placeholder: '@yourhandle', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false', value: answers[name] || '' });
+    const REPLY = { no_handle: 'Add your TikTok or your Instagram.', handle_taken: 'That account is already linked to another creator. Check the spelling, or email us.', closed: 'Applications are closed at the moment.', busy: 'We are getting a lot of applications right now. Please try again in an hour.' };
+    const TOTAL = 4;
+    const go = (n) => { answers.step = Math.max(0, Math.min(TOTAL - 1, n)); renderApply(data); };
+    const choices = (key, list, then) => h('div', { class: 'mr-apply__opts', role: 'radiogroup' }, list.map(([value, label]) => h('button', { class: 'mr-apply__opt', type: 'button', role: 'radio', 'aria-checked': String(answers[key] === value), onclick: () => { answers[key] = value; then ? then() : renderApply(data); } }, label)));
+    const step = answers.step || 0;
+    const frame = (title, lead, ...body) =>
+      show(
+        h(
+          'div',
+          { class: 'cp-card cp-narrow mr-apply' },
+          h('div', { class: 'mr-apply__top' }, step > 0 ? h('button', { class: 'cp-link', type: 'button', onclick: () => go(step - 1) }, '← Back') : h('span', {}), h('span', { class: 'cp-muted cp-small' }, `Step ${step + 1} of ${TOTAL}`)),
+          h('div', { class: 'mr-apply__bar', role: 'presentation' }, h('i', { style: `width:${((step + 1) / TOTAL) * 100}%` })),
+          h('h1', {}, title),
+          lead ? h('p', { class: 'cp-muted' }, lead) : null,
+          ...body,
+        ),
+      );
+
+    if (step === 0) return frame('What do you post about?', 'Pick the one closest to your videos.', choices('niche', NICHES, () => go(1)));
+    if (step === 1) return frame('How many followers does your biggest account have?', 'A rough number is fine. We check the account anyway.', choices('followers', SIZES, () => go(2)));
+    if (step === 2) {
+      const next = h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (answers.freq && answers.ugc != null) go(3); else toast('Answer both to continue.', 'error'); } }, 'Continue');
+      return frame('How often do you post?', null, choices('freq', FREQS), h('h2', { class: 'mr-apply__q' }, 'Have you made videos for a brand before?'), h('div', { class: 'mr-apply__opts mr-apply__opts--two', role: 'radiogroup' }, [[true, 'Yes'], [false, 'Not yet']].map(([value, label]) => h('button', { class: 'mr-apply__opt', type: 'button', role: 'radio', 'aria-checked': String(answers.ugc === value), onclick: () => { answers.ugc = value; renderApply(data); } }, label))), next);
+    }
+
     const tiktok = handle('tiktok');
     const instagram = handle('instagram');
     const yes = h('input', { type: 'radio', name: 'spoke', value: 'yes' });
@@ -166,6 +203,7 @@
     const syncRep = () => { repField.hidden = !yes.checked; };
     yes.addEventListener('change', syncRep);
     no.addEventListener('change', syncRep);
+    for (const input of [tiktok, instagram]) input.addEventListener('input', () => { answers[input.name] = input.value; });
     /* Left empty by people; filled in by scripts that fill every field. */
     const trap = h('input', { name: 'website', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true', class: 'cp-trap' });
     const status = h('p', { class: 'auth-status', role: 'alert', hidden: true });
@@ -175,16 +213,14 @@
       status.dataset.kind = 'error';
       status.hidden = false;
     };
-    const REPLY = { no_handle: 'Add your TikTok or your Instagram.', handle_taken: 'That account is already linked to another creator. Check the spelling, or email us.', closed: 'Applications are closed at the moment.', busy: 'We are getting a lot of applications right now. Please try again in an hour.' };
-
     const form = h(
       'form',
       { class: 'cp-form', novalidate: true },
-      h('fieldset', { class: 'cp-choice' }, h('legend', {}, 'Have you talked with a Mindroll representative?'), h('label', { class: 'cp-check' }, yes, 'Yes'), h('label', { class: 'cp-check' }, no, 'No')),
-      repField,
       field('TikTok', tiktok),
       field('Instagram', instagram),
       h('p', { class: 'cp-hint' }, 'You only need one of the two.'),
+      h('fieldset', { class: 'cp-choice' }, h('legend', {}, 'Have you talked with a Mindroll representative?'), h('label', { class: 'cp-check' }, yes, 'Yes'), h('label', { class: 'cp-check' }, no, 'No')),
+      repField,
       trap,
       status,
       submit,
@@ -193,22 +229,26 @@
       'submit',
       act(submit, async () => {
         status.hidden = true;
+        if (!tiktok.value.trim() && !instagram.value.trim()) return fail(REPLY.no_handle);
         if (!yes.checked && !no.checked) return fail('Tell us whether you have talked with a representative.');
         if (yes.checked && !repName.value.trim()) return fail('Enter the name of the person you talked with.');
-        if (!tiktok.value.trim() && !instagram.value.trim()) return fail(REPLY.no_handle);
         if (trap.value) return renderWaiting({ status: 'pending' });
         if (cp.demo) return renderWaiting({ status: 'pending' }, 'This is a preview, so nothing was saved or emailed.');
         const note = yes.checked ? `Talked with a representative: ${repName.value.trim()}` : 'Has not talked with a representative';
         const reply = await cp.rpc('creator_apply', { p_tiktok: tiktok.value, p_instagram: instagram.value, p_note: note, p_invite: INVITE });
         if (reply === 'applied' || reply === 'exists') {
           try { localStorage.setItem(APPLIED, String(Date.now())); } catch { /* private window */ }
+          /* The answers and the follower check are extras: the application stands without them. */
+          if (reply === 'applied') {
+            await cp.rpc('creator_apply_details', { p_niche: answers.niche || null, p_followers: answers.followers || null, p_freq: answers.freq || null, p_ugc: answers.ugc ?? null }).catch(() => {});
+            cp.fn('creator-lead').catch(() => {});
+          }
           return load();
         }
         fail(REPLY[reply] || 'That did not go through. Please try again.');
       }),
     );
-
-    show(h('div', { class: 'cp-card cp-narrow' }, h('p', { class: 'cp-eyebrow' }, 'Creator program'), h('h1', {}, 'Link your accounts'), h('p', { class: 'cp-muted' }, 'Add the TikTok or Instagram account you will post from. That is all we need to set you up.'), form));
+    frame('Where do you post?', 'Add the TikTok or Instagram account you will post from.', form);
   }
 
   function renderWaiting(creator, previewNote) {
