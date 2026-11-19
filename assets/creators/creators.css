@@ -439,6 +439,7 @@
 [data-creators='admin'] .cp-tab__count { background: var(--clay); }
 
 .mr-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.5rem; }
+.mr-head__who { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
 .mr-head h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -0.025em; line-height: 1; }
 .mr-head__tools { display: flex; align-items: center; gap: 0.6rem; }
 .mr-tool { font: inherit; font-size: 0.875rem; font-weight: 600; border: 1px solid var(--line-strong, var(--line)); background: none; border-radius: 999px; padding: 0.5rem 0.95rem; cursor: pointer; color: var(--ink-soft); }

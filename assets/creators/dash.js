@@ -60,7 +60,9 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null)]);
+      const [data, brief, team, picture] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null)]);
+      /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
+      if (data?.creator) data.creator.avatar_url = picture;
       if (data) { data.brief = brief || null; data.team = team || null; }
       const stamp = JSON.stringify(data);
       const apply = () => {
@@ -459,7 +461,7 @@
     const help = h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
     const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
-    const head = h('header', { class: 'mr-head' }, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1]), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
+    const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
     cp.live.drawn();
   }
