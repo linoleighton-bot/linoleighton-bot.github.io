@@ -670,23 +670,48 @@
   }
 
   /*
-   * How a creator's videos reach us: by connecting TikTok or Instagram, so every
-   * #mindroll video is found by itself, or by sending each video's link. Either
-   * way a video is reviewed before it counts.
+   * How a creator's videos reach us: they name their TikTok or Instagram account,
+   * and every #mindroll video on it is found by itself with its views (read from
+   * the public account, no sign-in), or they send each video's link. Either way
+   * a video is reviewed before it counts.
    */
   function connectView(data) {
     const creator = data.creator;
     const clean = (v) => String(v || '').trim().replace(/^@/, '');
     const mine = (data.videos || []).filter((v) => v.status !== 'approved' || Date.now() - new Date(v.created_at).getTime() < 14 * 864e5).slice(0, 12);
     const STATUS = { pending: ['Waiting for review', 'warn'], approved: ['Approved', 'good'], rejected: ['Declined', 'bad'] };
-    const account = (platform, label, handle) =>
-      h(
+    const tag = data.settings?.hashtag || 'mindroll';
+    const every = Number(data.settings?.scan_minutes) || 60;
+    const field = (platform, label, handle) => {
+      const input = h('input', { class: 'cp-input', type: 'text', value: handle ? `@${handle}` : '', placeholder: '@username', 'aria-label': `${label} username`, autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false', maxlength: '80' });
+      const card = h(
         'div',
-        { class: 'mr-connect__card', 'data-platform': platform },
-        h('div', { class: 'mr-connect__top' }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), h('div', {}, h('b', {}, label), h('span', { class: 'cp-muted cp-small' }, handle ? `@${handle} · on your profile` : 'No account on your profile yet'))),
-        h('button', { class: 'btn btn--primary', type: 'button', disabled: true }, `Connect ${label}`),
-        h('p', { class: 'cp-muted cp-small' }, `Opening soon. We are waiting for ${label} to approve the connection. Until then, send each video below.`),
+        { class: 'mr-connect__card', 'data-platform': platform, 'data-on': handle ? '' : null },
+        h('div', { class: 'mr-connect__top' }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), h('div', {}, h('b', {}, label), h('span', { class: 'cp-muted cp-small' }, handle ? 'Tracking on' : 'Not added yet'))),
+        input,
       );
+      return { card, input };
+    };
+    const ttHandle = clean(creator.tiktok_handle || creator.tiktok), igHandle = clean(creator.instagram_handle || creator.instagram);
+    const tt = field('tiktok', 'TikTok', ttHandle);
+    const ig = field('instagram', 'Instagram', igHandle);
+    const tracked = Boolean(ttHandle || igHandle);
+    const checked = creator.last_scanned_at ? new Date(creator.last_scanned_at).getTime() : 0;
+    const mins = checked ? Math.max(0, Math.round((Date.now() - checked) / 6e4)) : null;
+    const when = !tracked ? 'Add a username and your videos start showing up by themselves.'
+      : mins === null ? 'First check runs within 15 minutes.'
+      : `Last checked ${mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 2880 ? `${Math.round(mins / 60)} hr ago` : `${Math.round(mins / 1440)} days ago`}. Views update about every ${every < 60 ? `${every} minutes` : every === 60 ? 'hour' : `${Math.round(every / 60)} hours`}.`;
+    const save = h('button', { class: 'btn btn--primary', type: 'button' }, tracked ? 'Save accounts' : 'Start tracking');
+    const SAVED = { no_handle: 'Add at least one username.', bad_handle: 'That username is too long.', handle_taken: 'Another creator has already added that account. Check the spelling, or message your manager.', not_creator: 'Your account has to be accepted first.', same: 'Those are the accounts we already track.' };
+    save.addEventListener('click', act(save, async () => {
+      const t = tt.input.value.trim(), i = ig.input.value.trim();
+      if (!t && !i) throw new Error(SAVED.no_handle);
+      if (cp.demo) { Object.assign(creator, { tiktok: t || null, instagram: i || null, tiktok_handle: clean(t) || null, instagram_handle: clean(i) || null, last_scanned_at: null }); toast('Saved. (Sample data: nothing was saved.)'); return renderDashboard(data); }
+      const reply = await cp.rpc('creator_set_accounts', { p_tiktok: t || null, p_instagram: i || null });
+      if (reply !== 'saved') throw new Error(SAVED[reply] || 'That did not save.');
+      toast('Saved. Your videos will start showing up within 15 minutes.');
+      await load();
+    }));
     const url = h('input', { class: 'cp-input', type: 'url', inputmode: 'url', placeholder: 'Paste the TikTok or Instagram link to your video', 'aria-label': 'Video link', autocapitalize: 'none', spellcheck: 'false' });
     const send = h('button', { class: 'btn btn--primary', type: 'button' }, 'Send for review');
     const REPLY = { bad_url: 'That does not look like a TikTok, Instagram or YouTube video link.', duplicate: 'That video has already been sent.', not_creator: 'Your account has to be accepted first.', too_many: 'That is the limit for today. Send the rest tomorrow.' };
@@ -700,9 +725,9 @@
       await load();
     }));
     return [
-      h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Connect TikTok or Instagram and every video you post with #${data.settings?.hashtag || 'mindroll'} shows up here by itself. Prefer not to connect? Send each video's link instead. Either way, a video counts once it is approved.`)),
-      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Option 1: connect an account'), h('span', { class: 'cp-muted' }, 'Automatic')), h('div', { class: 'mr-connect__grid' }, account('tiktok', 'TikTok', clean(creator.tiktok)), account('instagram', 'Instagram', clean(creator.instagram)))),
-      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Option 2: send a video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${data.settings?.hashtag || 'mindroll'} in the caption and your link in your bio before you send it.`)),
+      h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Add your TikTok or Instagram username and every video you post with #${tag} shows up here by itself, with its views. No password and no sign-in: we only read what is public. A video counts once it is approved.`)),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your accounts'), h('span', { class: 'cp-muted' }, tracked ? 'Automatic' : 'Not tracking yet')), h('div', { class: 'mr-connect__grid' }, tt.card, ig.card), h('div', { class: 'mr-connect__save' }, save, h('p', { class: 'cp-muted cp-small' }, when)), h('p', { class: 'cp-muted cp-small' }, 'Your account has to be public for us to see your videos.')),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Or send one video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${tag} in the caption and your link in your bio before you send it.`)),
       h(
         'section',
         { class: 'mr-panel' },

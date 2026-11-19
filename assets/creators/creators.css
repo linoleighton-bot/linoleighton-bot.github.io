@@ -954,7 +954,10 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-connect__top b { font-size: 1.125rem; }
 .mr-connect__top i { font-style: normal; font-weight: 800; font-size: 0.8125rem; width: 2.75rem; height: 2.75rem; border-radius: 0.8rem; display: grid; place-items: center; background: var(--ink); color: #fff; flex: none; }
 .mr-connect__card[data-platform='instagram'] .mr-connect__top i { background: #C13584; }
-.mr-connect__card .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.mr-connect__card .cp-input { width: 100%; box-sizing: border-box; padding-block: 0.75rem; }
+.mr-connect__card[data-on] .mr-connect__top span { color: #12A150; font-weight: 600; }
+.mr-connect__save { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; margin-top: 0.9rem; }
+.mr-connect__save p { margin: 0; }
 .mr-connect__send { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; }
 .mr-connect__send .cp-input { width: 100%; box-sizing: border-box; padding-block: 0.75rem; }
 .mr-connect__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
