@@ -1184,3 +1184,9 @@ a.mr-handle:hover { color: var(--mr-accent); }
   .mr-team__parts .mr-rankups li { grid-template-columns: 1fr 1fr; }
   .mr-rankups li small { text-align: left; }
 }
+
+/* The tax and legal page: a plain column of text. */
+.cp-legal { max-width: 46rem; padding-block: 2rem 4rem; line-height: 1.6; }
+.cp-legal h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -0.03em; margin: 0.5rem 0; }
+.cp-legal h2 { font-size: 1.25rem; letter-spacing: -0.01em; margin: 2rem 0 0.5rem; }
+.cp-legal ul { padding-left: 1.2rem; display: grid; gap: 0.5rem; }
