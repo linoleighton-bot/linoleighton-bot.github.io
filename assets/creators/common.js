@@ -617,6 +617,93 @@
     },
   };
 
+
+  /*
+   * A creator shown as a person: picture (or their initials on their rank's
+   * colour), name, and the accounts they post from. Used everywhere a creator
+   * appears, so nobody has to read an email address to know who it is.
+   */
+  const RANK_TONES = ['iron', 'iron', 'silver', 'gold', 'platinum', 'diamond'];
+  const cleanHandle = (v) => String(v || '').trim().replace(/^@/, '');
+  const handleLinks = (c) => {
+    const one = (platform, handle) => (handle ? h('a', { class: 'mr-handle', 'data-platform': platform, href: platform === 'tiktok' ? `https://www.tiktok.com/@${encodeURIComponent(handle)}` : `https://www.instagram.com/${encodeURIComponent(handle)}/`, target: '_blank', rel: 'noopener noreferrer', title: platform === 'tiktok' ? 'TikTok' : 'Instagram', onclick: (e) => e.stopPropagation() }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), `@${handle}`) : null);
+    const out = [one('tiktok', cleanHandle(c.tiktok)), one('instagram', cleanHandle(c.instagram))].filter(Boolean);
+    return out.length ? out : [h('span', { class: 'mr-handle', 'data-missing': '' }, 'No account linked')];
+  };
+  const avatar = (c, size) => {
+    const name = String(c.display_name || c.name || '?').trim();
+    const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '?';
+    const tone = c.champion ? 'champion' : RANK_TONES[Number(c.tier_level ?? c.incentives?.tier_level ?? 1)] || 'iron';
+    const src = safeUrl(c.avatar_url);
+    const el = h('span', { class: 'mr-avatar', 'data-rank': tone, 'data-size': size || null, 'aria-hidden': 'true' }, src ? h('img', { src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : initials);
+    if (src) el.querySelector('img').addEventListener('error', () => { el.textContent = initials; });
+    return el;
+  };
+  const person = (c, o = {}) => h('span', { class: 'mr-person', 'data-size': o.size || null }, avatar(c, o.size), h('span', { class: 'mr-person__text' }, h('span', { class: 'mr-person__name' }, h('b', {}, c.display_name || c.name), o.badge || null), h('span', { class: 'mr-person__handles' }, handleLinks(c))));
+
+  /* A manager's team: the numbers across it, what the manager's pay comes to, and each creator as a profile row. */
+  function teamView(team, o = {}) {
+    const t = team.totals || {};
+    const pay = team.pay || {};
+    const tierName = (c) => (c.champion ? 'Champion' : ((team.tiers || []).find((x) => x.level === c.tier_level) || {}).name || 'Iron');
+    const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
+    const dollars0 = (cents) => `$${Math.round(Number(cents || 0) / 100).toLocaleString('en-US')}`;
+    const activity = (c) => {
+      if (c.status !== 'active') return ['Waiting for approval', 'warn'];
+      if (!c.last_posted_at) return ['Has not posted', 'bad'];
+      const days = Math.floor((Date.now() - new Date(c.last_posted_at).getTime()) / 864e5);
+      return days <= 0 ? ['Posted today', 'good'] : days <= 3 ? [`Posted ${days}d ago`, 'good'] : days <= 7 ? [`Posted ${days}d ago`, 'warn'] : [`Quiet for ${days}d`, 'bad'];
+    };
+    const list = team.creators || [];
+    const waiting = (team.videos || []).filter((v) => v.status === 'pending');
+    const reviewRow = (v) => {
+      const why = h('input', { class: 'cp-input', placeholder: 'Reason, if you decline (the creator sees it)', maxlength: '200', 'aria-label': 'Reason for declining' });
+      const approve = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Approve');
+      const decline = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Decline');
+      approve.addEventListener('click', act(approve, () => o.review(v, true, null)));
+      decline.addEventListener('click', act(decline, () => o.review(v, false, why.value.trim())));
+      return h('li', { class: 'mr-review__row' }, person(v.creator || {}), h('div', { class: 'mr-review__video' }, safeUrl(v.url) ? h('a', { class: 'btn btn--ghost btn--sm', href: safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, `Watch on ${v.platform === 'tiktok' ? 'TikTok' : v.platform === 'instagram' ? 'Instagram' : 'YouTube'}`) : null, h('span', { class: 'cp-muted cp-small' }, v.source === 'creator' ? 'Sent by the creator' : 'Found on their account')), h('div', { class: 'mr-review__act' }, why, approve, decline));
+    };
+    return [
+      o.review && waiting.length
+        ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Videos to review'), h('b', {}, num(waiting.length))), h('ul', { class: 'mr-review__list' }, waiting.map(reviewRow)), h('p', { class: 'cp-muted cp-small' }, 'A video only counts for the creator once it is approved.'))
+        : null,
+      h(
+        'section',
+        { class: 'mr-briefhero mr-team__hero' },
+        h('div', {}, h('p', { class: 'mr-brief__eyebrow' }, o.eyebrow || 'Your team'), h('h2', {}, team.manager?.display_name || 'Team'), h('p', {}, `${num(t.creators || 0)} creator${t.creators === 1 ? '' : 's'} · ${num(t.active_7d || 0)} posted this week${t.pending ? ` · ${num(t.pending)} waiting for approval` : ''}`)),
+        h('div', { class: 'mr-team__pay' }, h('span', {}, 'Your pay, last 30 days'), h('b', {}, dollars0(pay.total_cents)), h('small', {}, 'Estimate. Paid out by Mindroll at month end.')),
+      ),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Team views, 30 days', compact(t.views_30d || 0), `${num(t.videos_30d || 0)} videos`), tile('paper', 'Subscribers brought in', num(t.subscribers || 0), 'by your creators'), tile('paper', 'Team earned, 30 days', dollars0(t.commission_30d), 'creator commission'), tile('amber', 'Active weeks, 30 days', num(t.active_weeks_30d || 0), 'weeks a creator posted 4 days')),
+      h(
+        'section',
+        { class: 'mr-panel' },
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'How your pay adds up'), h('b', {}, dollars0(pay.total_cents))),
+        h(
+          'ul',
+          { class: 'mr-team__parts' },
+          h('li', {}, h('span', {}, h('b', {}, 'Commission'), h('small', {}, `${Math.round(Number(pay.commission_rate || 0) * 1000) / 10}% on top of what your creators earn`)), h('b', {}, dollars0(pay.from_commission_cents))),
+          h('li', {}, h('span', {}, h('b', {}, 'Activeness'), h('small', {}, `${dollars0(pay.active_cents)} for every active week a creator completes`)), h('b', {}, dollars0(pay.from_active_cents))),
+          h('li', {}, h('span', {}, h('b', {}, 'Views'), h('small', {}, `${dollars0(pay.views_cents)} for every 100K views your team gains`)), h('b', {}, dollars0(pay.from_views_cents))),
+        ),
+      ),
+      h(
+        'section',
+        { class: 'mr-panel' },
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Creators'), h('b', {}, num(list.length))),
+        list.length
+          ? h(
+              'div',
+              { class: 'mr-roster', role: 'table' },
+              h('div', { class: 'mr-roster__head', role: 'row' }, ['Creator', 'Activity', 'Videos', 'Views', 'Subs', 'Earned'].map((x) => h('span', { role: 'columnheader' }, x))),
+              list.map((c) => { const [label, tone] = activity(c); return h('div', { class: 'mr-roster__row', role: 'row' }, person(c, { badge: pill(tierName(c), c.champion ? 'good' : 'muted') }), h('span', { class: 'mr-dot', 'data-tone': tone }, label), h('span', { 'data-label': 'Videos' }, num(c.videos_30d || 0)), h('span', { 'data-label': 'Views' }, compact(c.views_30d || 0)), h('span', { 'data-label': 'Subs' }, num(c.subscribers || 0)), h('b', { 'data-label': 'Earned' }, dollars0(c.commission_30d))); }),
+            )
+          : h('p', { class: 'cp-muted' }, 'No creators on this team yet.'),
+        h('p', { class: 'cp-muted cp-small' }, 'Videos, views and earnings are the last 30 days.'),
+      ),
+    ];
+  }
+
   window.mindrollCreators = {
     root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM,
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
@@ -624,6 +711,7 @@
     /* Where an uploaded reference video is served from. */
     defaultBrief, rich, briefImage, briefVideos,
     live,
+    avatar, person, handleLinks, teamView,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),
   };
 })();

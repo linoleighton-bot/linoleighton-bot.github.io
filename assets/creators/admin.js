@@ -20,7 +20,7 @@
 
   /* One accent, used for every chart and button in the admin. */
   Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
-  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['brief', 'UGC Brief', 'book'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
+  const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['referrals', 'Referrals', 'users'], ['managers', 'Managers', 'badge'], ['brief', 'UGC Brief', 'book'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0',
@@ -31,6 +31,7 @@
     chart: 'M4 20V10m6 10V4m6 16v-7m5 7H2',
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
     sliders: 'M4 6h10m4 0h2M4 12h4m4 0h8M4 18h12m4 0h.01M16 4v4M10 10v4M18 16v4',
+    badge: 'M12 3l2.4 1.9 3-.3.9 2.9 2.5 1.7-1.1 2.8 1.1 2.8-2.5 1.7-.9 2.9-3-.3L12 21l-2.4-1.9-3 .3-.9-2.9-2.5-1.7 1.1-2.8-1.1-2.8 2.5-1.7.9-2.9 3 .3zM9 12l2 2 4-4',
     book: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10M9 8h5',
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1.2z',
@@ -96,7 +97,7 @@
   async function reload(quiet = false) {
     if (cp.demo) return render();
     try {
-      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, briefs, recent] = await Promise.all([
+      const [overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefDoc, managers, briefs, recent] = await Promise.all([
         cp.rpc('creator_admin_overview'),
         cp.rpc('creator_admin_funnel', { p_creator: funnelCreator, p_days: 30 }),
         ok(db.from('creator_videos').select('*').order('created_at', { ascending: false }).limit(500)),
@@ -106,10 +107,11 @@
         ok(db.from('creator_volume_rules').select('*').order('min_videos')),
         cp.rpc('creator_admin_campaigns'),
         cp.rpc('creator_admin_brief').catch(() => null),
+        cp.rpc('creator_admin_managers').catch(() => []),
         ok(db.from('creator_briefs').select('*').order('created_at', { ascending: false })),
         ok(db.from('creator_commissions').select('id, creator_id, kind, plan, store, base_cents, amount_cents, occurred_at').order('occurred_at', { ascending: false }).limit(60)),
       ]);
-      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc };
+      const next = { ...overview, funnel, videos, rules, bonuses, payouts, volume, campaigns, briefs, sales: recent, briefDoc, managers };
       const stamp = JSON.stringify(next);
       const apply = () => {
         const before = quiet && state ? new Set((state.feed || []).map((e) => `${e.at}|${e.kind}|${e.title}`)) : null;
@@ -154,7 +156,7 @@
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
-    const body = { overview: home, alerts, creators, links: linksTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
+    const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
@@ -703,7 +705,7 @@
                 h(
                   'li',
                   {},
-                  h('div', {}, h('b', {}, c.display_name), ' ', h('code', { class: 'cp-mono' }, c.code), ' ', h('span', { class: 'cp-muted cp-small' }, `${c.country} · ${c.email || ''} · applied ${day(c.created_at)}`), h('div', {}, handles(c)), c.note ? h('p', { class: 'cp-note' }, c.note) : null),
+                  h('div', {}, cp.person(c, { size: 'lg', badge: h('code', { class: 'cp-mono' }, c.code) }), h('p', { class: 'cp-muted cp-small' }, `${c.country || ''} · applied ${day(c.created_at)}${c.referred_by ? ` · invited by ${(state.creators.find((x) => x.id === c.referred_by) || {}).display_name || 'a creator'}` : ''}`), c.note ? h('p', { class: 'cp-note' }, c.note) : null),
                   h('div', { class: 'cp-inline' }, setStatus(c, 'active', 'Approve', 'btn btn--primary btn--sm'), setStatus(c, 'rejected', 'Decline')),
                 ),
               ),
@@ -721,7 +723,7 @@
                 h(
                   'li',
                   {},
-                  h('div', {}, h('b', {}, c.display_name), ' ', c.status === 'active' ? pill(tierName(c)) : statusPill(c.status), c.cashout_requested_at ? pill('Asked to cash out', 'warn') : null, c.payout_hold ? pill('On hold', 'warn') : null, manyDue(c) ? pill('ManyChat eligible', 'good') : null, c.status === 'active' && !c.payout_hold ? odd(c) : null, h('div', {}, handles(c)), c.scan_error ? h('div', { class: 'cp-small cp-bad' }, `Last account check failed (${c.scan_error})`) : null),
+                  h('div', { class: 'mr-rowhead' }, cp.person(c, { size: 'lg', badge: c.status === 'active' ? pill(tierName(c), c.champion ? 'good' : undefined) : statusPill(c.status) }), ' ', c.cashout_requested_at ? pill('Asked to cash out', 'warn') : null, c.payout_hold ? pill('On hold', 'warn') : null, manyDue(c) ? pill('ManyChat eligible', 'good') : null, c.status === 'active' && !c.payout_hold ? odd(c) : null,  c.scan_error ? h('div', { class: 'cp-small cp-bad' }, `Last account check failed (${c.scan_error})`) : null),
                   revenueBar(c),
                   h('div', {}, pay(c)),
                   foldPlain(
@@ -830,6 +832,183 @@
             ),
           )
         : null,
+    ];
+  }
+
+  /* --------------------------------------------------------------- managers */
+
+  /*
+   * Creator managers. Add one by email; when they sign in on the creator page
+   * with Google or Apple they get a team dashboard. Drag a creator onto a
+   * manager to put them on that team.
+   */
+  let managerDrag = null;
+  function managersTab() {
+    const managers = state.managers || [];
+    const s = state.settings || {};
+    const all = state.creators.filter((c) => c.status !== 'rejected');
+    const byId = new Map(all.map((c) => [c.id, c]));
+    const nameOf = (id) => (managers.find((m) => m.manager.id === id) || {}).manager?.display_name;
+    const dollars0 = (cents) => `$${Math.round(Number(cents || 0) / 100).toLocaleString('en-US')}`;
+
+    const assign = async (creatorId, managerId) => {
+      const c = byId.get(creatorId);
+      if (!c || (c.manager_id || null) === (managerId || null)) return;
+      try {
+        if (cp.demo) { c.manager_id = managerId || null; toast(managerId ? `${c.display_name} is now on ${nameOf(managerId)}'s team. (Sample data: nothing was saved.)` : `${c.display_name} has no manager now. (Sample data: nothing was saved.)`); return render(); }
+        await cp.rpc('creator_admin_set_manager', { p_creator: creatorId, p_manager: managerId || null });
+        toast(managerId ? `${c.display_name} is now on ${nameOf(managerId)}'s team.` : `${c.display_name} has no manager now.`);
+        await reload();
+      } catch (error) { toast(error.message || 'Something went wrong.', 'error'); }
+    };
+    const chip = (c) => {
+      const picker = h('select', { class: 'mr-ref__move', 'aria-label': `Move ${c.display_name} to` }, h('option', { value: '' }, 'Move to…'), h('option', { value: 'none' }, 'No manager'), managers.filter((m) => m.manager.id !== c.manager_id).map((m) => h('option', { value: m.manager.id }, m.manager.display_name)));
+      picker.addEventListener('change', () => { const v = picker.value; picker.value = ''; if (v) assign(c.id, v === 'none' ? null : v); });
+      const el = h('div', { class: 'mr-ref__chip', draggable: 'true' }, h('div', { class: 'mr-ref__who' }, cp.person(c, { badge: c.status === 'active' ? pill(tierName(c), c.champion ? 'good' : 'muted') : statusPill(c.status) })), h('div', { class: 'mr-ref__foot' }, h('span', {}, `${compact(c.incentives?.window_views || 0)} views · ${num(c.stats?.customers || 0)} subs`), picker));
+      el.addEventListener('dragstart', (e) => { managerDrag = c.id; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', c.id); } catch { /* kept in memory too */ } el.dataset.dragging = ''; });
+      el.addEventListener('dragend', () => { managerDrag = null; delete el.dataset.dragging; view.querySelectorAll('[data-over]').forEach((z) => delete z.dataset.over); });
+      return el;
+    };
+    const zone = (m) => {
+      const id = m ? m.manager.id : null;
+      const list = all.filter((c) => (c.manager_id || null) === id || (!m && c.manager_id && !managers.some((x) => x.manager.id === c.manager_id))).sort((x, y) => (y.incentives?.window_views || 0) - (x.incentives?.window_views || 0));
+      const remove = m ? confirmButton('Remove', 'Confirm: remove this manager', 'cp-link', async () => { if (cp.demo) { state.managers = managers.filter((x) => x !== m); all.forEach((c) => { if (c.manager_id === id) c.manager_id = null; }); toast('Removed. (Sample data: nothing was saved.)'); return render(); } await cp.rpc('creator_admin_remove_manager', { p_manager: id }); toast(`${m.manager.display_name} is no longer a manager. Their creators stay in the program.`); await reload(); }) : null;
+      const el = h(
+        'section',
+        { class: 'mr-ref__zone', 'data-manager': m ? '' : null },
+        h(
+          'header',
+          {},
+          m
+            ? h('div', { class: 'mr-ref__owner' }, cp.avatar({ display_name: m.manager.display_name, tier_level: 5 }), h('div', {}, h('b', {}, m.manager.display_name), h('span', { class: 'cp-muted cp-small' }, m.email), h('span', { class: 'cp-small' }, m.signed_in ? pill('Has signed in', 'good') : pill('Has not signed in yet', 'warn'))))
+            : h('div', {}, h('b', {}, 'No manager'), h('span', { class: 'cp-muted cp-small' }, 'Creators not on any team')),
+          m ? h('div', { class: 'mr-ref__pay' }, h('b', {}, dollars0(m.pay?.total_cents)), h('span', { class: 'cp-muted cp-small' }, 'pay, 30 days'), remove) : null,
+        ),
+        h('div', { class: 'mr-ref__drop' }, list.length ? list.map(chip) : h('p', { class: 'cp-muted cp-small' }, m ? 'Drop a creator here to put them on this team.' : 'Everyone is on a team.')),
+      );
+      el.addEventListener('dragover', (e) => { if (!managerDrag) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.dataset.over = ''; });
+      el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) delete el.dataset.over; });
+      el.addEventListener('drop', (e) => { e.preventDefault(); delete el.dataset.over; const cid = managerDrag || e.dataTransfer.getData('text/plain'); managerDrag = null; if (cid) assign(cid, id); });
+      return el;
+    };
+
+    const name = h('input', { class: 'cp-input', placeholder: 'Name', maxlength: '60', 'aria-label': 'Manager name' });
+    const email = h('input', { class: 'cp-input', type: 'email', placeholder: 'Email they sign in with (Google or Apple)', 'aria-label': 'Manager email', autocapitalize: 'none', spellcheck: 'false' });
+    const add = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Add manager');
+    add.addEventListener('click', act(add, async () => {
+      if (!name.value.trim()) throw new Error('Give the manager a name.');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())) throw new Error('That does not look like an email address.');
+      if (cp.demo) { state.managers = [...managers, { manager: { id: `m${Date.now()}`, display_name: name.value.trim(), active: true }, email: email.value.trim().toLowerCase(), signed_in: false, creators: [], totals: {}, pay: { total_cents: 0 } }]; toast('Added. (Sample data: nothing was saved.)'); return render(); }
+      await cp.rpc('creator_admin_add_manager', { p_email: email.value.trim(), p_name: name.value.trim() });
+      toast(`${name.value.trim()} is a manager. They will see their team the next time they sign in.`);
+      await reload();
+    }));
+
+    const pct = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_commission_rate ?? 0.1) * 1000) / 10), 'aria-label': 'Manager commission percent' });
+    const perActive = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_active_cents ?? 500) / 100)), 'aria-label': 'Dollars per active week' });
+    const perViews = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_views_cents ?? 100) / 100)), 'aria-label': 'Dollars per 100K views' });
+    const savePay = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save pay rules');
+    savePay.addEventListener('click', act(savePay, async () => {
+      const patch = { manager_commission_rate: Math.max(0, Math.min(100, Number(pct.value) || 0)) / 100, manager_active_cents: Math.max(0, Math.round((Number(perActive.value) || 0) * 100)), manager_views_cents: Math.max(0, Math.round((Number(perViews.value) || 0) * 100)) };
+      if (cp.demo) { Object.assign(state.settings, patch); toast('Saved. (Sample data: nothing was saved.)'); return render(); }
+      await ok(db.from('creator_settings').update(patch).eq('id', true));
+      toast('Manager pay rules saved.');
+      await reload();
+    }));
+
+    return [
+      section('Add a manager', h('span', { class: 'cp-muted' }, `${num(managers.length)} manager${managers.length === 1 ? '' : 's'}`), h('div', { class: 'mr-addrow' }, name, email, add), h('p', { class: 'cp-muted cp-small' }, 'They sign in on the creator page with that email, using Google or Apple, and get a "My team" dashboard. A password sign-in is not accepted for managers.')),
+      section('Teams', h('span', { class: 'cp-muted' }, 'Drag a creator onto a manager to move them'), h('div', { class: 'mr-ref__board' }, managers.map(zone), zone(null))),
+      section(
+        'What managers are paid',
+        h('span', { class: 'cp-muted' }, 'Shown to managers as an estimate'),
+        h('div', { class: 'mr-payrules' }, h('label', {}, h('span', {}, 'Commission on top of what their creators earn'), h('span', { class: 'cp-inline' }, pct, '%')), h('label', {}, h('span', {}, 'For each active week a creator completes'), h('span', { class: 'cp-inline' }, '$', perActive)), h('label', {}, h('span', {}, 'For every 100K views the team gains'), h('span', { class: 'cp-inline' }, '$', perViews))),
+        h('div', { class: 'cp-inline' }, savePay),
+        h('p', { class: 'cp-muted cp-small' }, 'These work out what each manager is owed for the last 30 days. Nothing is paid automatically: you pay managers yourself for now.'),
+      ),
+    ];
+  }
+
+  /* -------------------------------------------------------------- referrals */
+
+  /*
+   * Who brought in whom. A creator who joins on another creator's invite link
+   * sits under them; when the new creator is accepted and their videos reach
+   * the view goal between them, the one who invited them is paid the bonus.
+   * Drag a creator onto someone else to change who referred them.
+   */
+  let dragging = null;
+  function referralsTab() {
+    const s = state.settings || {};
+    const goal = Number(s.referral_views || 100000);
+    const bonus = Number(s.referral_bonus_cents || 0);
+    const all = state.creators.filter((c) => c.status !== 'rejected');
+    const byId = new Map(all.map((c) => [c.id, c]));
+    const paidFor = new Set((state.bonuses || []).filter((b) => b.kind === 'referral' && b.ref).map((b) => b.ref));
+    const viewsOf = (c) => Number(c.stats?.views || 0);
+    const kids = (id) => all.filter((c) => (c.referred_by || null) === id && c.id !== id).sort((x, y) => viewsOf(y) - viewsOf(x));
+    const referred = all.filter((c) => c.referred_by && byId.has(c.referred_by));
+    const stageOf = (c) => (paidFor.has(c.id) ? ['Paid', 'good'] : c.status !== 'active' ? [c.status === 'pending' ? 'Waiting for approval' : 'Paused', 'warn'] : viewsOf(c) >= goal ? ['Reached the goal', 'good'] : ['Posting', 'muted']);
+
+    const move = async (creatorId, referrerId) => {
+     try {
+      const c = byId.get(creatorId);
+      if (!c || creatorId === referrerId || (c.referred_by || null) === (referrerId || null)) return;
+      // Nobody can sit under someone who is already under them.
+      for (let up = referrerId, n = 0; up && n < 50; up = byId.get(up)?.referred_by, n++) if (up === creatorId) throw new Error(`${byId.get(referrerId).display_name} was referred by ${c.display_name}, so it cannot go the other way round.`);
+      if (cp.demo) { c.referred_by = referrerId || null; toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}. (Sample data: nothing was saved.)` : `${c.display_name} has no referrer now. (Sample data: nothing was saved.)`); return render(); }
+      await cp.rpc('creator_admin_set_referrer', { p_creator: creatorId, p_referrer: referrerId || null });
+      toast(referrerId ? `${c.display_name} is now under ${byId.get(referrerId).display_name}.` : `${c.display_name} has no referrer now.`);
+      await reload();
+     } catch (error) { toast(error.message || 'Something went wrong.', 'error'); }
+    };
+
+    const chip = (c) => {
+      const [label, tone] = stageOf(c);
+      const share = Math.max(0, Math.min(1, viewsOf(c) / goal));
+      const picker = h('select', { class: 'mr-ref__move', 'aria-label': `Move ${c.display_name} under` }, h('option', { value: '' }, 'Move to…'), h('option', { value: 'none' }, 'No referrer'), all.filter((o) => o.status === 'active' && o.id !== c.id && o.id !== c.referred_by).map((o) => h('option', { value: o.id }, o.display_name)));
+      picker.addEventListener('change', () => { const v = picker.value; picker.value = ''; if (v) move(c.id, v === 'none' ? null : v); });
+      const el = h(
+        'div',
+        { class: 'mr-ref__chip', draggable: 'true', 'data-tone': tone },
+        h('div', { class: 'mr-ref__who' }, cp.person(c), c.referred_by || c.status !== 'active' ? pill(label, tone) : null),
+        h('div', { class: 'mr-ref__bar', role: 'img', 'aria-label': `${compact(viewsOf(c))} of ${compact(goal)} views` }, h('i', { style: `width:${(share * 100).toFixed(1)}%` })),
+        h('div', { class: 'mr-ref__foot' }, h('span', {}, `${compact(viewsOf(c))} / ${compact(goal)} views`), picker),
+      );
+      el.addEventListener('dragstart', (e) => { dragging = c.id; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', c.id); } catch { /* some browsers refuse; the id is kept in memory too */ } el.dataset.dragging = ''; });
+      el.addEventListener('dragend', () => { dragging = null; delete el.dataset.dragging; view.querySelectorAll('[data-over]').forEach((z) => delete z.dataset.over); });
+      return el;
+    };
+    const zone = (referrer) => {
+      const list = kids(referrer ? referrer.id : null).filter((c) => (referrer ? true : !c.referred_by || !byId.has(c.referred_by)));
+      const paid = list.filter((c) => paidFor.has(c.id)).length;
+      const el = h(
+        'section',
+        { class: 'mr-ref__zone', 'data-empty': list.length ? null : '' },
+        h(
+          'header',
+          {},
+          referrer ? h('div', { class: 'mr-ref__owner' }, cp.avatar(referrer), h('div', {}, h('b', {}, referrer.display_name), h('span', { class: 'cp-muted cp-small' }, `${num(list.length)} referred${paid ? ` · ${cp.dollars(paid * bonus)} paid` : ''}`))) : h('div', {}, h('b', {}, 'No referrer'), h('span', { class: 'cp-muted cp-small' }, 'Joined without an invite link')),
+        ),
+        h('div', { class: 'mr-ref__drop' }, list.length ? list.map(chip) : h('p', { class: 'cp-muted cp-small' }, referrer ? 'Drop a creator here to put them under this person.' : 'Drop a creator here to remove their referrer.')),
+      );
+      el.addEventListener('dragover', (e) => { if (!dragging || dragging === referrer?.id) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.dataset.over = ''; });
+      el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) delete el.dataset.over; });
+      el.addEventListener('drop', (e) => { e.preventDefault(); delete el.dataset.over; const id = dragging || e.dataTransfer.getData('text/plain'); dragging = null; if (id) move(id, referrer ? referrer.id : null); });
+      return el;
+    };
+    const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
+    const referrers = all.filter((c) => c.status === 'active').sort((x, y) => kids(y.id).length - kids(x.id).length || x.display_name.localeCompare(y.display_name));
+    const reached = referred.filter((c) => c.status === 'active' && viewsOf(c) >= goal).length;
+
+    return [
+      h(
+        'section',
+        { class: 'mr-panel mr-ref__how' },
+        h('ol', {}, h('li', {}, h('b', {}, '1'), h('span', {}, 'A creator shares their invite link')), h('li', {}, h('b', {}, '2'), h('span', {}, 'Someone applies on it and you accept them')), h('li', {}, h('b', {}, '3'), h('span', {}, `Their videos reach ${compact(goal)} views in total`)), h('li', { 'data-pay': '' }, h('b', {}, cp.dollars(bonus)), h('span', {}, 'goes to the creator who invited them'))),
+      ),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Referred creators', num(referred.length), 'joined on an invite link'), tile('paper', 'Accepted', num(referred.filter((c) => c.status === 'active').length), 'approved into the program'), tile('paper', `Reached ${compact(goal)} views`, num(reached), 'the goal that pays'), tile('amber', 'Paid to referrers', cp.dollars(paidFor.size * bonus), `${num(paidFor.size)} × ${cp.dollars(bonus)}`)),
+      section('Who referred whom', h('span', { class: 'cp-muted' }, 'Drag a creator onto someone else to move them'), h('div', { class: 'mr-ref__board' }, zone(null), referrers.map(zone))),
     ];
   }
 
@@ -1815,7 +1994,7 @@
       id, display_name: name, code, status, country: 'US', email: `${code}@example.com`, commission_rate: o.rate ?? null, payouts_enabled: o.stripe ?? true, created_at: ago(o.age ?? 40), approved_at: ago(38),
       tiktok: `@${code}`, instagram: o.ig ? `@${code}` : null, youtube: null, note: o.note ?? null, cashout_requested_at: o.cashout ? ago(1) : null, scan_error: o.scanError ?? null,
       payout_method: o.stripe === false ? null : 'venmo', payout_handle: o.stripe === false ? null : `@${code}`,
-      referred_by: o.by ?? null, tier_level: o.tier ?? 1, champion: false, payout_hold: !!o.hold, hold_reason: o.hold || null, handle_verified: o.verified ?? true, terms_accepted_at: status === 'active' ? ago(37) : null,
+      referred_by: o.by ?? null, manager_id: o.mgr ?? null, tier_level: o.tier ?? 1, champion: false, payout_hold: !!o.hold, hold_reason: o.hold || null, handle_verified: o.verified ?? true, terms_accepted_at: status === 'active' ? ago(37) : null,
       rate: o.rate ?? [0.1, 0.12, 0.15][(o.tier ?? 1) - 1], incentives: { tier_level: o.tier ?? 1, by_kind: o.kinds ?? {}, month_by_kind: o.month ?? {}, window_revenue_cents: Math.round((o.rev ?? 0) * 0.8), window_views: Math.round((o.views ?? 0) * 0.9), window_posts: o.videos ?? 0 },
       balance: { available_cents: o.ready ?? 0, pending_cents: o.pending ?? 0, paid_cents: o.paid ?? 0, in_transit_cents: 0, commission_cents: o.comm ?? 0, bonus_cents: o.bonus ?? 0 },
       stats: { clicks: o.clicks ?? 0, signups: o.signups ?? 0, customers: o.subs ?? 0, revenue_cents: o.rev ?? 0, videos: o.videos ?? 0, views: o.views ?? 0 },
@@ -1833,10 +2012,10 @@
       creators: [
         c('c5', 'Jonah Reads', 'jonah', 'pending', { by: 'c1', age: 1, ig: true, note: '48K on TikTok, mostly book and study content. Posting three times a week.' }),
         c('c6', 'Priya', 'priya', 'pending', { age: 2 }),
-        c('c1', 'Maya', 'maya', 'active', { ready: 16160, pending: 5744, paid: 14200, comm: 20604, bonus: 15500, clicks: 6240, signups: 388, subs: 41, rev: 173354, videos: 4, views: 718400, ig: true, tier: 2, cashout: true, kinds: { views: 5000, rank_up: 2500 }, month: { views: 4000, rank_up: 2500 } }),
-        c('c2', 'Theo Studies', 'theo', 'active', { ready: 3400, pending: 2800, paid: 2000, comm: 6200, bonus: 2000, clicks: 2210, signups: 142, subs: 16, rev: 62000, videos: 6, views: 264000, tier: 1, kinds: { views: 1000, manual: 1000 }, month: { views: 1000 } }),
-        c('c3', 'Bookish Lina', 'lina', 'active', { by: 'c1', verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),
-        c('c4', 'Sam', 'sam', 'paused', { clicks: 210, signups: 9, subs: 1, rev: 1699, comm: 170, pending: 170, videos: 1, views: 4100 }),
+        c('c1', 'Maya', 'maya', 'active', { mgr: 'm1', ready: 16160, pending: 5744, paid: 14200, comm: 20604, bonus: 15500, clicks: 6240, signups: 388, subs: 41, rev: 173354, videos: 4, views: 718400, ig: true, tier: 2, cashout: true, kinds: { views: 5000, rank_up: 2500 }, month: { views: 4000, rank_up: 2500 } }),
+        c('c2', 'Theo Studies', 'theo', 'active', { by: 'c1', mgr: 'm1', ready: 3400, pending: 2800, paid: 2000, comm: 6200, bonus: 2000, clicks: 2210, signups: 142, subs: 16, rev: 62000, videos: 6, views: 264000, tier: 1, kinds: { views: 1000, manual: 1000 }, month: { views: 1000 } }),
+        c('c3', 'Bookish Lina', 'lina', 'active', { by: 'c1', mgr: 'm2', verified: false, ready: 600, pending: 800, paid: 0, comm: 1400, bonus: 0, clicks: 704, signups: 36, subs: 5, rev: 14000, videos: 2, views: 31200, stripe: false }),
+        c('c4', 'Sam', 'sam', 'paused', { by: 'c2', clicks: 210, signups: 9, subs: 1, rev: 1699, comm: 170, pending: 170, videos: 1, views: 4100 }),
       ],
       pulse: { sales_today_cents: 21400, sales_7d_cents: 98200, sales_prev_7d_cents: 71400, subs_today: 6, subs_7d: 31, views_today: 61300, views_7d: 412000, videos_7d: 14, daily: Array.from({ length: 90 }, (_, i) => { const cents = Math.round((1800 + i * 190) * (1 + 0.45 * Math.sin(i * 1.7)) * (i % 7 === 5 ? 1.6 : 1)); return { day: ago(89 - i).slice(0, 10), sales_cents: cents, paid_cents: Math.round(cents * 0.14), subs: Math.round(cents / 2600), views: cents * 4 }; }) },
       sales: [['c1', 'purchase', 'weekly', 1949, 234, 0.02], ['c2', 'renewal', 'weekly', 1949, 195, 0.06], ['c1', 'purchase', 'annual', 8774, 1653, 0.2], ['c3', 'purchase', 'weekly', 1949, 195, 0.4], ['c1', 'refund', 'weekly', -1949, -234, 0.9], ['c2', 'purchase', 'weekly', 1949, 195, 1.3], ['c1', 'renewal', 'weekly', 1949, 234, 1.6]].map(([creator_id, kind, plan, base_cents, amount_cents, age], i) => ({ id: `s${i}`, creator_id, kind, plan, base_cents, amount_cents, occurred_at: ago(age) })),
@@ -1909,7 +2088,12 @@
         { id: 'r3', label: '500K views', threshold_views: 500000, amount_cents: 3000, active: true, applies_from: '1970-01-01T00:00:00Z' },
         { id: 'r4', label: '1M views', threshold_views: 1000000, amount_cents: 6000, active: true, applies_from: '1970-01-01T00:00:00Z' },
       ],
+      managers: [
+        { manager: { id: 'm1', display_name: 'Alex Rivera', active: true }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 31200 } },
+        { manager: { id: 'm2', display_name: 'Dana Cho', active: true }, email: 'dana@example.com', signed_in: false, creators: [], totals: {}, pay: { total_cents: 4100 } },
+      ],
       bonuses: [
+        { id: 'br1', creator_id: 'c1', kind: 'referral', amount_cents: 10000, label: 'Referred Theo Studies', ref: 'c2', created_at: ago(6) },
         { id: 'b1', creator_id: 'c1', kind: 'views', label: '500K views', rule_id: 'r3', amount_cents: 3000, payout_id: null, created_at: ago(3) },
         { id: 'b2', creator_id: 'c1', kind: 'views', label: '100K views', rule_id: 'r2', amount_cents: 1000, payout_id: null, created_at: ago(5) },
         { id: 'b5', creator_id: 'c2', kind: 'manual', label: 'Launch week', rule_id: null, amount_cents: 1000, payout_id: 'p3', created_at: ago(20) },

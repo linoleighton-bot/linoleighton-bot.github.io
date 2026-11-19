@@ -60,15 +60,16 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null)]);
-      if (data) data.brief = brief || null;
+      const [data, brief, team] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null)]);
+      if (data) { data.brief = brief || null; data.team = team || null; }
       const stamp = JSON.stringify(data);
       const apply = () => {
         const countOf = (d) => { try { return d?.creator?.status === 'active' && d.creator.terms_accepted !== false ? feedOf(d).length : null; } catch { return null; } };
         const before = quiet ? countOf(liveData) : null;
         lastStamp = stamp;
         liveData = data;
-        if (!data.creator) renderApply(data);
+        if (!data.creator && data.team && !wantsToApply) renderManager(data);
+        else if (!data.creator) renderApply(data);
         else if (data.creator.status !== 'active') renderWaiting(data.creator);
         else if (data.creator.terms_accepted === false) renderTerms(data);
         else renderDashboard(data);
@@ -132,6 +133,12 @@
    * come from the handle, and the country is asked for when they add a bank.
    * Sending it saves the application and emails the team straight away.
    */
+  /* A manager who is not (yet) a creator themselves: their team, and a way to apply. */
+  let wantsToApply = false;
+  function renderManager(data) {
+    show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason) }))));
+  }
+
   function renderApply(data) {
     if (!data.applications_open) {
       return show(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'Applications are closed'), h('p', { class: 'cp-muted' }, 'We are not taking new creators at the moment. Check back soon.')));
@@ -258,7 +265,7 @@
   /* Which of the two panes is showing, and the data to redraw it from. */
   /* The same plain scheme as the admin: one accent for every chart and button. */
   Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
-  const PANES = [['home', 'Home', 'home'], ['brief', 'UGC Brief', 'book'], ['alerts', 'Notifications', 'bell'], ['campaigns', 'Campaigns', 'flag'], ['videos', 'Videos', 'play'], ['links', 'Links', 'link'], ['wallet', 'Wallet', 'wallet'], ['pay', 'Ranks', 'trophy'], ['race', 'Race', 'medal'], ['invite', 'Invite', 'users']];
+  const PANES = [['home', 'Home', 'home'], ['brief', 'UGC Brief', 'book'], ['alerts', 'Notifications', 'bell'], ['campaigns', 'Campaigns', 'flag'], ['videos', 'Videos', 'play'], ['links', 'Links', 'link'], ['wallet', 'Wallet', 'wallet'], ['pay', 'Ranks', 'trophy'], ['race', 'Race', 'medal'], ['invite', 'Invite', 'users'], ['connect', 'Connect accounts', 'plug']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zm4 10a2 2 0 0 0 4 0',
@@ -269,6 +276,8 @@
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     book: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10M9 8h5',
+    badge: 'M12 3l2.4 1.9 3-.3.9 2.9 2.5 1.7-1.1 2.8 1.1 2.8-2.5 1.7-.9 2.9-3-.3L12 21l-2.4-1.9-3 .3-.9-2.9-2.5-1.7 1.1-2.8-1.1-2.8 2.5-1.7.9-2.9 3 .3zM9 12l2 2 4-4',
+    plug: 'M9 3v5m6-5v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4',
     medal: 'M8 3h8l-2.5 6h-3zM12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm0-8v4m-1.5-3.2L12 13',
   };
   const icon = (name) => {
@@ -412,6 +421,11 @@
   }
 
   function renderDashboard(data) {
+    const hasTeam = PANES.some(([id]) => id === 'team');
+    if (data.team && !hasTeam) PANES.splice(1, 0, ['team', 'My team', 'badge']);
+    if (!data.team && hasTeam) PANES.splice(PANES.findIndex(([id]) => id === 'team'), 1);
+    if (location.hash === '#team' && data.team && !renderDashboard.opened) { renderDashboard.opened = true; pane = 'team'; }
+    if (!PANES.some(([id]) => id === pane)) pane = 'home';
     const { creator, stats } = data;
     lastData = data;
     /* First visit: start the demo run. */
@@ -429,6 +443,8 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
+      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason) }),
+      connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
       videos: () => [briefsCard(data), ironCard(data), videosCard(data), viewsCard(data)],
@@ -436,10 +452,10 @@
       wallet: () => [walletCard(data), section('Earned each week', null, cp.timeChart('columns', weekly(data), (cents) => money(cents).replace(/\.00$/, ''), 'Earned each week')), planCards(data), incentiveCards(data)[1], detailTables(data)],
       pay: () => [...payView(data), ironCard(data), incentiveCards(data)[0], raceStrip(data)],
       race: () => raceView(data),
-      invite: () => [referralCard(data), manychatCard(data)],
+      invite: () => [...(referralCard(data) || []), manychatCard(data)],
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
-    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
+    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
     const help = h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
     const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
@@ -643,6 +659,61 @@
   function raceBanner(label, left, amount, right, foot, state, level) {
     return h('section', { class: 'mr-prize', 'data-won': state === 'won' ? '' : null, 'data-mine': state === 'mine' ? '' : null, 'data-metal': METAL[level] || null }, h('small', {}, label), h('div', { class: 'mr-prize__row' }, h('span', {}, left), h('b', {}, amount), h('span', {}, right)), foot ? h('em', {}, foot) : null);
   }
+  /* --------------------------------------------------------- connect accounts */
+
+  async function reviewVideo(data, video, approve, reason) {
+    if (!approve && !reason) throw new Error('Say why you are declining it, so the creator knows what to fix.');
+    if (cp.demo) { video.status = approve ? 'approved' : 'rejected'; video.reject_reason = approve ? null : reason; toast(`${approve ? 'Approved' : 'Declined'}. (Sample data: nothing was saved.)`); return data.creator ? renderDashboard(data) : renderManager(data); }
+    await cp.rpc('creator_review_video', { p_video: video.id, p_approve: approve, p_reason: reason || null });
+    toast(approve ? 'Approved. It counts for the creator now.' : 'Declined. The creator will see your reason.');
+    await load();
+  }
+
+  /*
+   * How a creator's videos reach us: by connecting TikTok or Instagram, so every
+   * #mindroll video is found by itself, or by sending each video's link. Either
+   * way a video is reviewed before it counts.
+   */
+  function connectView(data) {
+    const creator = data.creator;
+    const clean = (v) => String(v || '').trim().replace(/^@/, '');
+    const mine = (data.videos || []).filter((v) => v.status !== 'approved' || Date.now() - new Date(v.created_at).getTime() < 14 * 864e5).slice(0, 12);
+    const STATUS = { pending: ['Waiting for review', 'warn'], approved: ['Approved', 'good'], rejected: ['Declined', 'bad'] };
+    const account = (platform, label, handle) =>
+      h(
+        'div',
+        { class: 'mr-connect__card', 'data-platform': platform },
+        h('div', { class: 'mr-connect__top' }, h('i', { 'aria-hidden': 'true' }, platform === 'tiktok' ? 'TT' : 'IG'), h('div', {}, h('b', {}, label), h('span', { class: 'cp-muted cp-small' }, handle ? `@${handle} · on your profile` : 'No account on your profile yet'))),
+        h('button', { class: 'btn btn--primary', type: 'button', disabled: true }, `Connect ${label}`),
+        h('p', { class: 'cp-muted cp-small' }, `Opening soon. We are waiting for ${label} to approve the connection. Until then, send each video below.`),
+      );
+    const url = h('input', { class: 'cp-input', type: 'url', inputmode: 'url', placeholder: 'Paste the TikTok or Instagram link to your video', 'aria-label': 'Video link', autocapitalize: 'none', spellcheck: 'false' });
+    const send = h('button', { class: 'btn btn--primary', type: 'button' }, 'Send for review');
+    const REPLY = { bad_url: 'That does not look like a TikTok, Instagram or YouTube video link.', duplicate: 'That video has already been sent.', not_creator: 'Your account has to be accepted first.', too_many: 'That is the limit for today. Send the rest tomorrow.' };
+    send.addEventListener('click', act(send, async () => {
+      const value = url.value.trim();
+      if (!/^https:\/\//i.test(value)) throw new Error('Paste the full link, starting with https://');
+      if (cp.demo) { data.videos = [{ id: `v${Date.now()}`, url: value, platform: /instagram/.test(value) ? 'instagram' : 'tiktok', title: null, status: 'pending', created_at: new Date().toISOString(), views: 0 }, ...(data.videos || [])]; toast('Sent for review. (Sample data: nothing was saved.)'); return renderDashboard(data); }
+      const reply = await cp.rpc('creator_submit_video', { p_url: value });
+      if (reply !== 'added') throw new Error(REPLY[reply] || 'That did not send.');
+      toast('Sent for review. You will see it here once it is approved.');
+      await load();
+    }));
+    return [
+      h('section', { class: 'mr-briefhero mr-connect__hero' }, h('p', { class: 'mr-brief__eyebrow' }, 'Connect accounts'), h('h2', {}, 'Get your videos counted'), h('p', {}, `Connect TikTok or Instagram and every video you post with #${data.settings?.hashtag || 'mindroll'} shows up here by itself. Prefer not to connect? Send each video's link instead. Either way, a video counts once it is approved.`)),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Option 1: connect an account'), h('span', { class: 'cp-muted' }, 'Automatic')), h('div', { class: 'mr-connect__grid' }, account('tiktok', 'TikTok', clean(creator.tiktok)), account('instagram', 'Instagram', clean(creator.instagram)))),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Option 2: send a video for review'), h('span', { class: 'cp-muted' }, 'One link at a time')), h('div', { class: 'mr-connect__send' }, url, send), h('p', { class: 'cp-muted cp-small' }, `Put #${data.settings?.hashtag || 'mindroll'} in the caption and your link in your bio before you send it.`)),
+      h(
+        'section',
+        { class: 'mr-panel' },
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Your recent videos'), h('b', {}, num(mine.length))),
+        mine.length
+          ? h('ul', { class: 'mr-connect__list' }, mine.map((v) => { const [label, tone] = STATUS[v.status] || [v.status, 'muted']; return h('li', {}, h('div', {}, cp.safeUrl(v.url) ? h('a', { href: cp.safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, v.title || v.url.replace(/^https:\/\/(www\.)?/, '').slice(0, 60)) : h('span', {}, v.title || 'Video'), v.status === 'rejected' && v.reject_reason ? h('p', { class: 'cp-small cp-bad' }, `Why: ${v.reject_reason}`) : null), pill(label, tone)); }))
+          : h('p', { class: 'cp-muted' }, 'Nothing sent yet.'),
+      ),
+    ];
+  }
+
   /* ------------------------------------------------------------- UGC brief */
 
   /* What to make and how to make it: the brief every creator gets, kept in the dashboard. */
@@ -803,14 +874,42 @@
     const r = data.referrals;
     if (!r || !(r.bonus_cents > 0)) return null;
     const link = `https://getmindroll.com/creators/?invite=${r.code}`;
-    return h(
-      'section',
-      { class: 'cp-card' },
-      h('div', { class: 'cp-card__head' }, cp.figure('Invite a creator', `${cp.dollars(r.bonus_cents)} each`), r.earned_cents > 0 ? h('span', { class: 'cp-rate' }, `${cp.dollars(r.earned_cents)} earned`) : null),
-      h('p', { class: 'cp-muted' }, `Share your invite link with another creator. When they join and their videos reach ${compact(r.views)} views in total, ${cp.dollars(r.bonus_cents)} goes into your wallet.`),
-      h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link, 'Copy')),
-      r.creators.length ? r.creators.map((row) => (row.paid ? h('p', { class: 'cp-rowlabel cp-small' }, h('span', {}, row.name), pill('Paid', 'good')) : progress(row.status === 'active' ? row.name : `${row.name} (waiting for approval)`, Number(row.views), r.views, compact))) : null,
-    );
+    const goal = Number(r.views || 0);
+    const list = r.creators || [];
+    const accepted = list.filter((c) => c.status === 'active');
+    const paid = list.filter((c) => c.paid);
+    const stage = (c) => (c.paid ? 3 : c.status !== 'active' ? 0 : Number(c.views) >= goal ? 2 : 1);
+    const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
+    const row = (c) => {
+      const at = stage(c);
+      const share = Math.max(0, Math.min(1, Number(c.views) / (goal || 1)));
+      const STEPS = ['Applied', 'Accepted', `${compact(goal)} views`, `${cp.dollars(r.bonus_cents)} paid`];
+      return h(
+        'li',
+        { class: 'mr-ref__row', 'data-done': c.paid ? '' : null },
+        h('div', { class: 'mr-ref__who' }, h('b', {}, c.name), c.paid ? pill(`${cp.dollars(r.bonus_cents)} paid`, 'good') : c.status !== 'active' ? pill('Waiting for approval', 'warn') : pill(`${compact(Math.max(0, goal - Number(c.views)))} views to go`, 'muted')),
+        h('ol', { class: 'mr-ref__steps' }, STEPS.map((label, i) => h('li', { 'data-on': i === 0 || i <= at ? '' : null }, label))),
+        h('div', { class: 'mr-ref__bar', role: 'img', 'aria-label': `${compact(c.views)} of ${compact(goal)} views` }, h('i', { style: `width:${((c.paid ? 1 : share) * 100).toFixed(1)}%` })),
+        h('span', { class: 'cp-muted cp-small' }, `${compact(c.views)} / ${compact(goal)} views across their videos`),
+      );
+    };
+    return [
+      h(
+        'section',
+        { class: 'mr-briefhero mr-ref__hero' },
+        h('p', { class: 'mr-brief__eyebrow' }, 'Invite a creator'),
+        h('h2', {}, `Get ${cp.dollars(r.bonus_cents)} for every creator you bring in`),
+        h('p', {}, `Share your invite link. When they join, get accepted and their videos reach ${compact(goal)} views in total, ${cp.dollars(r.bonus_cents)} goes into your wallet.`),
+        h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link, 'Copy')),
+      ),
+      h(
+        'section',
+        { class: 'mr-panel mr-ref__how' },
+        h('ol', {}, h('li', {}, h('b', {}, '1'), h('span', {}, 'They apply with your link')), h('li', {}, h('b', {}, '2'), h('span', {}, 'They get accepted')), h('li', {}, h('b', {}, '3'), h('span', {}, `Their videos reach ${compact(goal)} views`)), h('li', { 'data-pay': '' }, h('b', {}, cp.dollars(r.bonus_cents)), h('span', {}, 'lands in your wallet'))),
+      ),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Invited', num(list.length), 'applied with your link'), tile('paper', 'Accepted', num(accepted.length), 'in the program'), tile('paper', 'Paid out', num(paid.length), `reached ${compact(goal)} views`), tile('amber', 'Earned from invites', cp.dollars(r.earned_cents || 0), `${cp.dollars(r.bonus_cents)} each`)),
+      h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Creators you invited'), h('b', {}, num(list.length))), list.length ? h('ul', { class: 'mr-ref__list' }, list.map(row)) : h('p', { class: 'cp-muted' }, 'Nobody yet. Send your link to a creator and they will show up here the moment they apply.')),
+    ];
   }
 
   /* What the creator has won in campaigns over the last two weeks, added up. It is already in their wallet. */
@@ -1394,7 +1493,25 @@
           top: [{ place: 1, name: 'Noor', score: 3 }, { place: 2, name: 'Maya', score: 2, you: true }, { place: 3, name: 'Theo Studies', score: 1 }],
           videos: [{ id: 'v4', title: 'POV: you finally remember what you read #Mindroll', views: 3100, approved: true }, { id: 'v5', title: 'Stop highlighting. Do this instead #Mindroll', views: 1840, approved: true }, { id: 'v6', title: 'Day 1 of reading 5 minutes #Mindroll', views: 420, approved: false }], results: [] },
       ],
-      referrals: { code: 'maya', bonus_cents: 10000, views: 100000, earned_cents: 10000, creators: [{ name: 'Noor', status: 'active', views: 246600, paid: true }, { name: 'Jonah Reads', status: 'active', views: 38200, paid: false }] },
+      team: {
+        manager: { id: 'm1', display_name: 'Maya\'s team', active: true },
+        tiers: [{ level: 1, name: 'Iron' }, { level: 2, name: 'Silver' }, { level: 3, name: 'Gold' }, { level: 4, name: 'Platinum' }, { level: 5, name: 'Diamond' }],
+        totals: { creators: 5, pending: 1, active_7d: 4, views_30d: 2184000, videos_30d: 61, sales_30d: 812400, commission_30d: 112300, active_weeks_30d: 11, subscribers: 187 },
+        pay: { commission_rate: 0.1, active_cents: 500, views_cents: 100, from_commission_cents: 11230, from_active_cents: 5500, from_views_cents: 2100, total_cents: 18830 },
+        videos: [
+          { id: 'tv1', url: 'https://www.tiktok.com/@noor.reads/video/7400000000000000001', platform: 'tiktok', status: 'pending', source: 'auto', created_at: new Date(Date.now() - 2 * 36e5).toISOString(), creator: { display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', tier_level: 3 } },
+          { id: 'tv2', url: 'https://www.instagram.com/reel/C9aaaaaaaaa/', platform: 'instagram', status: 'pending', source: 'creator', created_at: new Date(Date.now() - 5 * 36e5).toISOString(), creator: { display_name: 'Bookish Lina', instagram: '@bookish.lina', tier_level: 1 } },
+        ],
+        creators: [
+          { id: 't1', display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', status: 'active', tier_level: 3, videos_30d: 22, views_30d: 1204000, subscribers: 96, commission_30d: 61200, last_posted_at: new Date(Date.now() - 0.2 * 864e5).toISOString() },
+          { id: 't2', display_name: 'Theo Studies', tiktok: '@theostudies', status: 'active', tier_level: 2, videos_30d: 17, views_30d: 612000, subscribers: 51, commission_30d: 31400, last_posted_at: new Date(Date.now() - 1.3 * 864e5).toISOString() },
+          { id: 't3', display_name: 'Bookish Lina', instagram: '@bookish.lina', status: 'active', tier_level: 1, videos_30d: 14, views_30d: 298000, subscribers: 29, commission_30d: 14900, last_posted_at: new Date(Date.now() - 5.5 * 864e5).toISOString() },
+          { id: 't4', display_name: 'Sam', tiktok: '@samwrites', status: 'active', tier_level: 1, videos_30d: 8, views_30d: 70000, subscribers: 11, commission_30d: 4800, last_posted_at: new Date(Date.now() - 12 * 864e5).toISOString() },
+          { id: 't5', display_name: 'Jonah Reads', tiktok: '@jonahreads', status: 'active', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, last_posted_at: null },
+          { id: 't6', display_name: 'Priya', tiktok: '@priya.pages', status: 'pending', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, last_posted_at: null },
+        ],
+      },
+      referrals: { code: 'maya', bonus_cents: 10000, views: 100000, earned_cents: 10000, creators: [{ name: 'Noor', status: 'active', views: 246600, paid: true }, { name: 'Jonah Reads', status: 'active', views: 38200, paid: false }, { name: 'Priya', status: 'pending', views: 0, paid: false }] },
       top_video_winners: { min_views: 100000, pool_rate: 0.05, split: [50, 30, 20], step_views: 0, step_cents: 0, week: ago(9).slice(0, 10), winners: [{ place: 1, creator_id: 'c9', creator: 'Noor', title: 'Reading 5 minutes a day did this', url: 'https://www.tiktok.com/@noor/video/7521000000000000009', platform: 'tiktok', gained: 612000, prize_cents: 9450 }, { place: 2, creator_id: 'c1', creator: 'Maya', title: 'I replaced doomscrolling with this for 30 days', url: 'https://www.tiktok.com/@maya/video/7517114944362499342', platform: 'tiktok', gained: 308200, prize_cents: 5540 }, { place: 3, creator_id: 'c2', creator: 'Theo Studies', title: 'Five minutes a day, actually remembered', url: 'https://youtube.com/shorts/Y2Ah_DFr8cw', platform: 'youtube', gained: 121000, prize_cents: 3360 }] },
       top_videos: {
         day: [{ id: 'x1', url: 'https://www.tiktok.com/@noor/video/7521000000000000009', platform: 'tiktok', title: 'Reading 5 minutes a day did this', creator: 'Noor', creator_id: 'c9', views: 96400, gained: 61300 }],
