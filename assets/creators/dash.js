@@ -538,10 +538,8 @@
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
-    const help = h('button', { class: 'mr-tool', type: 'button', 'aria-pressed': String(helpOn()), onclick: () => { keep('mindroll.creator.help', helpOn() ? 'off' : 'on'); renderDashboard(data); } }, helpOn() ? 'Hide notes' : 'Explain');
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
-    const tour = h('button', { class: 'mr-tool', type: 'button', onclick: startTour }, 'Demo run');
-    const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, tour, help, bellButton));
+    const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
     cp.tabbar({ label: 'Your dashboard', items: PANES.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
     cp.live.drawn();
