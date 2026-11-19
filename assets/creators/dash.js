@@ -60,10 +60,10 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team, picture, discordName] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null)]);
+      const [data, brief, team, picture, discordName, boost] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null)]);
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
       if (data?.creator) { data.creator.avatar_url = picture; data.creator.discord_name = discordName; }
-      if (data) { data.brief = brief || null; data.team = team || null; }
+      if (data) { data.brief = brief || null; data.team = team || null; data.first_video = keepBoost(boost); }
       const stamp = JSON.stringify(data);
       const apply = () => {
         const countOf = (d) => { try { return d?.creator?.status === 'active' && d.creator.terms_accepted !== false ? feedOf(d).length : null; } catch { return null; } };
@@ -352,6 +352,7 @@
     const tile = (tone, label, value, foot, to) => h('button', { class: 'mr-tile', 'data-tone': tone, type: 'button', onclick: () => openPane(to) }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
     const live = (data.contests || []).filter((k) => k.open || k.upcoming);
     return [
+      firstVideoBox(data),
       creator.payout_hold ? h('div', { class: 'cp-card cp-notice', role: 'status' }, h('b', {}, 'Your payouts are on hold'), h('p', { class: 'cp-muted' }, 'We are checking your account. Nothing is paid out until that is done. Questions: ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))) : null,
       h(
         'section',
@@ -362,7 +363,6 @@
         tile('paper', 'Views', compact(stats.views || 0), `${num(stats.videos || 0)} video${stats.videos === 1 ? '' : 's'}`, 'videos'),
         tile('amber', 'Earned this week', big(weeks[weeks.length - 1].value), 'See your wallet', 'wallet'),
       ),
-      firstSaleNote(data),
       ironCard(data),
       h('div', { class: 'mr-two' }, tierCard(data, tier), h('section', { class: 'mr-panel' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Live now'), h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('campaigns') }, 'Campaigns')), live.length ? h('ul', { class: 'mr-live' }, live.map((k) => h('li', {}, h('i', { 'data-upcoming': k.upcoming || null }), h('span', {}, h('b', {}, k.title), h('small', {}, `Win up to ${cp.dollars(k.prizes[0] || 0)}${k.joined ? (k.place ? ` · you are ${ordinal(k.place)}` : ' · you are in') : ''}`)), h('b', {}, k.joined ? 'Joined' : 'Join')))) : h('p', { class: 'mr-quiet' }, 'No campaign running right now.'))),
       topVideosCard(data),
@@ -454,7 +454,7 @@
       campaigns: () => campaignsView(data),
       videos: () => [briefsCard(data), ironCard(data), videosCard(data), viewsCard(data)],
       links: () => [howCard(data), linksCard(data), section('From click to subscriber', null, cp.hbars([{ label: 'Clicked your link', value: stats.clicks }, { label: 'Signed up', value: stats.signups }, { label: 'Subscribed', value: stats.customers }], num))],
-      wallet: () => [walletCard(data), section('Earned each week', null, cp.timeChart('columns', weekly(data), (cents) => money(cents).replace(/\.00$/, ''), 'Earned each week')), planCards(data), incentiveCards(data)[1], detailTables(data)],
+      wallet: () => [firstVideoBox(data), walletCard(data), section('Earned each week', null, cp.timeChart('columns', weekly(data), (cents) => money(cents).replace(/\.00$/, ''), 'Earned each week')), planCards(data), incentiveCards(data)[1], detailTables(data)],
       pay: () => [...payView(data), ironCard(data), incentiveCards(data)[0], raceStrip(data)],
       race: () => raceView(data),
       invite: () => [...(referralCard(data) || []), manychatCard(data)],
@@ -922,14 +922,54 @@
     return h('button', { class: 'mr-racestrip', type: 'button', onclick: () => openPane('race') }, h('small', {}, 'Race to the podium'), h('b', {}, cp.dollars(open.reduce((sum, r) => sum + Number(r.cents), 0))), h('span', {}, `still to win. First to ${open[0].name} takes ${cp.dollars(open[0].cents)}.`), h('em', {}, 'See the race'));
   }
 
-  /* The first weekly sale and the first yearly sale pay a bigger share, once each. */
-  function firstSaleNote(data) {
-    const inc = data.incentives;
-    const rate = Number(inc?.first_sale_rate || 0);
-    const used = inc?.first_sale_used || [];
-    if (!(rate > 0) || (used.includes(1) && used.includes(2))) return null;
-    const left = [!used.includes(1) && 'first weekly sale', !used.includes(2) && 'first yearly sale'].filter(Boolean);
-    return h('div', { class: 'cp-card cp-notice' }, h('b', {}, `Your ${left.join(' and your ')} ${left.length > 1 ? 'each pay' : 'pays'} ${pct(rate)}`), h('p', {}, `A one-time boost: ${pct(rate)} of that sale goes to you. After that you earn your usual ${pct(data.creator.rate)}.`));
+  /*
+   * The first-video boost. The clock starts the first time a creator opens the
+   * dashboard after accepting the terms; the first video posted before it runs
+   * out is paid more. The database owns the clock: the page only counts down to
+   * the deadline it was given, measured against the server's time, not the phone's.
+   */
+  let boostClock = null;
+  function keepBoost(boost) {
+    if (!boost) return null;
+    const { now, ...rest } = boost;
+    if (!boostClock || boostClock.ends_at !== boost.ends_at) boostClock = { ends_at: boost.ends_at, local: Date.now() + (new Date(boost.ends_at) - new Date(now)) };
+    return rest;
+  }
+  const clockText = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)); const p = (n) => String(n).padStart(2, '0'); return `${p(Math.floor(t / 3600))}:${p(Math.floor((t % 3600) / 60))}:${p(t % 60)}`; };
+  setInterval(() => {
+    document.querySelectorAll('[data-boost-ends]').forEach((el) => {
+      const left = Number(el.dataset.boostEnds) - Date.now();
+      el.textContent = clockText(left);
+      if (left <= 0 && !el.dataset.done) { el.dataset.done = ''; load(true); }
+    });
+  }, 1000);
+  function firstVideoBox(data) {
+    const f = data.first_video;
+    if (!f) return null;
+    const times = `${Number(f.multiplier)}x`;
+    const example = Number(f.step_cents) > 0 ? ` For example, ${cp.dollars(f.step_cents)} at ${compact(f.step_views)} views becomes ${cp.dollars(f.step_cents * Number(f.multiplier))}.` : '';
+    if (f.state === 'open') {
+      const ends = cp.demo ? Date.now() + 23.4 * 36e5 : boostClock?.local || new Date(f.ends_at).getTime();
+      if (ends <= Date.now()) return null;
+      return h(
+        'section',
+        { class: 'mr-boost', role: 'status' },
+        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, `Your first video pays ${times}`), h('p', {}, `Post your first video before the clock runs out and everything it earns in views pay is multiplied by ${Number(f.multiplier)}.${example}`), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video')),
+        h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Ends in'), h('b', { 'data-boost-ends': String(ends), 'aria-live': 'off' }, clockText(ends - Date.now())), h('span', {}, `${num(f.hours)} hours from when you started`)),
+      );
+    }
+    if (f.state === 'locked' && f.video) {
+      /* Shown for a month after it was locked in, then it steps out of the way. */
+      if (Date.now() - new Date(f.started_at).getTime() > 30 * 864e5) return null;
+      const waiting = f.video.status !== 'approved';
+      return h(
+        'section',
+        { class: 'mr-boost', 'data-locked': '', role: 'status' },
+        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, waiting ? `Locked in: your first video will pay ${times}` : `Your first video is paying ${times}`), h('p', {}, waiting ? 'You posted in time. It is waiting for review, and the boost starts the moment it is approved.' : `Everything this video earns in views pay is multiplied by ${Number(f.multiplier)}, up to ${cp.dollars(f.cap_cents)} extra.${example}`)),
+        h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Boost paid so far'), h('b', {}, cp.dollars(f.earned_cents || 0)), h('span', {}, `${compact(f.video.views || 0)} views on it`)),
+      );
+    }
+    return null;
   }
 
   /* ManyChat is set up for a creator by the team once they have earned enough commission. */
@@ -1637,23 +1677,24 @@
           top: [{ place: 1, name: 'Noor', score: 3 }, { place: 2, name: 'Maya', score: 2, you: true }, { place: 3, name: 'Theo Studies', score: 1 }],
           videos: [{ id: 'v4', title: 'POV: you finally remember what you read #Mindroll', views: 3100, approved: true }, { id: 'v5', title: 'Stop highlighting. Do this instead #Mindroll', views: 1840, approved: true }, { id: 'v6', title: 'Day 1 of reading 5 minutes #Mindroll', views: 420, approved: false }], results: [] },
       ],
+      first_video: { state: 'open', started_at: new Date(Date.now() - 0.6 * 36e5).toISOString(), ends_at: new Date(Date.now() + 23.4 * 36e5).toISOString(), hours: 24, multiplier: 2, cap_cents: 100000, step_views: 50000, step_cents: 5000, video: null, earned_cents: 0 },
       team: {
-        manager: { id: 'm1', display_name: 'Maya\'s team', active: true },
+        manager: { id: 'm1', display_name: 'Maya\'s team', active: true, cut_rate: 0.5 },
         manage: { rate_cap: 0.25, managers: [{ id: 'm2', name: 'Jordan' }], rates: {} },
         tiers: [{ level: 1, name: 'Iron' }, { level: 2, name: 'Silver' }, { level: 3, name: 'Gold' }, { level: 4, name: 'Platinum' }, { level: 5, name: 'Diamond' }],
-        totals: { creators: 5, pending: 1, active_7d: 4, views_30d: 2184000, videos_30d: 61, sales_30d: 812400, commission_30d: 112300, active_weeks_30d: 11, subscribers: 187 },
-        pay: { commission_rate: 0.1, active_cents: 500, views_cents: 100, from_commission_cents: 11230, from_active_cents: 5500, from_views_cents: 2100, total_cents: 18830 },
+        totals: { creators: 5, pending: 1, active_7d: 4, views_30d: 2184000, videos_30d: 61, sales_30d: 812400, commission_30d: 112300, net_30d: 786100, bonus_30d: 67380, active_weeks_30d: 11, subscribers: 187 },
+        pay: { cut_rate: 0.5, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, rankup_rate: 0.1, rankup_paid_cents: 17500, from_rankup_cents: 1750, rankups: [{ level: 2, name: 'Silver', bonus_cents: 2500, yours_cents: 250, count_30d: 1 }, { level: 3, name: 'Gold', bonus_cents: 15000, yours_cents: 1500, count_30d: 1 }, { level: 4, name: 'Platinum', bonus_cents: 27500, yours_cents: 2750, count_30d: 0 }, { level: 5, name: 'Diamond', bonus_cents: 32000, yours_cents: 3200, count_30d: 0 }], active_cents: 500, views_cents: 100, from_active_cents: 5500, from_views_cents: 2100, bonus_total_cents: 9350, total_cents: 321900 },
         videos: [
           { id: 'tv1', url: 'https://www.tiktok.com/@noor.reads/video/7400000000000000001', platform: 'tiktok', status: 'pending', source: 'auto', created_at: new Date(Date.now() - 2 * 36e5).toISOString(), creator: { display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', tier_level: 3 } },
           { id: 'tv2', url: 'https://www.instagram.com/reel/C9aaaaaaaaa/', platform: 'instagram', status: 'pending', source: 'creator', created_at: new Date(Date.now() - 5 * 36e5).toISOString(), creator: { display_name: 'Bookish Lina', instagram: '@bookish.lina', tier_level: 1 } },
         ],
         creators: [
-          { id: 't1', display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', status: 'active', tier_level: 3, videos_30d: 22, views_30d: 1204000, subscribers: 96, commission_30d: 61200, last_posted_at: new Date(Date.now() - 0.2 * 864e5).toISOString() },
-          { id: 't2', display_name: 'Theo Studies', tiktok: '@theostudies', handle_verified: false, status: 'active', tier_level: 2, videos_30d: 17, views_30d: 612000, subscribers: 51, commission_30d: 31400, last_posted_at: new Date(Date.now() - 1.3 * 864e5).toISOString() },
-          { id: 't3', display_name: 'Bookish Lina', instagram: '@bookish.lina', status: 'active', tier_level: 1, videos_30d: 14, views_30d: 298000, subscribers: 29, commission_30d: 14900, last_posted_at: new Date(Date.now() - 5.5 * 864e5).toISOString() },
-          { id: 't4', display_name: 'Sam', tiktok: '@samwrites', status: 'active', tier_level: 1, videos_30d: 8, views_30d: 70000, subscribers: 11, commission_30d: 4800, last_posted_at: new Date(Date.now() - 12 * 864e5).toISOString() },
-          { id: 't5', display_name: 'Jonah Reads', tiktok: '@jonahreads', status: 'active', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, last_posted_at: null },
-          { id: 't6', display_name: 'Priya', tiktok: '@priya.pages', status: 'pending', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, last_posted_at: null },
+          { id: 't1', display_name: 'Noor', tiktok: '@noor.reads', instagram: '@noor.reads', status: 'active', tier_level: 3, videos_30d: 22, views_30d: 1204000, subscribers: 96, commission_30d: 61200, net_30d: 428400, bonus_30d: 36720, last_posted_at: new Date(Date.now() - 0.2 * 864e5).toISOString() },
+          { id: 't2', display_name: 'Theo Studies', tiktok: '@theostudies', handle_verified: false, status: 'active', tier_level: 2, videos_30d: 17, views_30d: 612000, subscribers: 51, commission_30d: 31400, net_30d: 219800, bonus_30d: 18840, last_posted_at: new Date(Date.now() - 1.3 * 864e5).toISOString() },
+          { id: 't3', display_name: 'Bookish Lina', instagram: '@bookish.lina', status: 'active', tier_level: 1, videos_30d: 14, views_30d: 298000, subscribers: 29, commission_30d: 14900, net_30d: 104300, bonus_30d: 8940, last_posted_at: new Date(Date.now() - 5.5 * 864e5).toISOString() },
+          { id: 't4', display_name: 'Sam', tiktok: '@samwrites', status: 'active', tier_level: 1, videos_30d: 8, views_30d: 70000, subscribers: 11, commission_30d: 4800, net_30d: 33600, bonus_30d: 2880, last_posted_at: new Date(Date.now() - 12 * 864e5).toISOString() },
+          { id: 't5', display_name: 'Jonah Reads', tiktok: '@jonahreads', status: 'active', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, net_30d: 0, bonus_30d: 0, last_posted_at: null },
+          { id: 't6', display_name: 'Priya', tiktok: '@priya.pages', status: 'pending', tier_level: 1, videos_30d: 0, views_30d: 0, subscribers: 0, commission_30d: 0, net_30d: 0, bonus_30d: 0, last_posted_at: null },
         ],
       },
       referrals: { code: 'maya', bonus_cents: 10000, views: 100000, earned_cents: 10000, creators: [{ name: 'Noor', status: 'active', views: 246600, paid: true }, { name: 'Jonah Reads', status: 'active', views: 38200, paid: false }, { name: 'Priya', status: 'pending', views: 0, paid: false }] },

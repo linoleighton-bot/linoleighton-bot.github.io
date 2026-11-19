@@ -490,7 +490,7 @@
     ladder(views, rules.map((rule) => ({ at: rule.threshold_views, label: dollars(rule.amount_cents), tip: [money(rule.amount_cents), `at ${num(rule.threshold_views)} views`] })), { live, unit: 'views' });
 
   /** The four kinds of bonus, in the order every chart lists them. */
-  const KINDS = [['views', 'View bonuses'], ['active', 'Active creator'], ['volume', 'Posting volume'], ['rank_up', 'Rank-up'], ['prize', 'Tier campaign prizes'], ['contest', 'Campaign wins'], ['top_video', 'Top videos'], ['referral', 'Creator referrals'], ['iron_views', 'Views pay (Iron)'], ['first_sale', 'First-sale bonus'], ['first_top', 'Race to the podium'], ['daily', 'Champion pay'], ['manual', 'One-off']];
+  const KINDS = [['views', 'View bonuses'], ['active', 'Active creator'], ['volume', 'Posting volume'], ['rank_up', 'Rank-up'], ['prize', 'Tier campaign prizes'], ['contest', 'Campaign wins'], ['top_video', 'Top videos'], ['referral', 'Creator referrals'], ['iron_views', 'Views pay (Iron)'], ['first_sale', 'First-sale bonus'], ['first_video', 'First video boost'], ['first_top', 'Race to the podium'], ['daily', 'Champion pay'], ['manual', 'One-off']];
 
   /** The detail tables, folded away until somebody wants them. */
   const fold = (label, ...body) => h('details', { class: 'cp-fold' }, h('summary', {}, label), ...body);
@@ -648,6 +648,9 @@
     const tierName = (c) => (c.champion ? 'Champion' : ((team.tiers || []).find((x) => x.level === c.tier_level) || {}).name || 'Iron');
     const tile = (tone, label, value, foot) => h('div', { class: 'mr-tile', 'data-tone': tone }, h('span', { class: 'mr-tile__label' }, label), h('b', { class: 'mr-tile__value' }, value), foot ? h('span', { class: 'mr-tile__foot' }, foot) : null);
     const dollars0 = (cents) => `$${Math.round(Number(cents || 0) / 100).toLocaleString('en-US')}`;
+    const signed = (cents) => (Number(cents) < 0 ? `−${dollars0(-cents)}` : dollars0(cents));
+    const share = (rate) => `${Math.round(Number(rate || 0) * 1000) / 10}%`;
+    const cut = Number(pay.cut_rate ?? team.manager?.cut_rate ?? 0);
     const activity = (c) => {
       if (c.status !== 'active') return ['Waiting for approval', 'warn'];
       if (!c.last_posted_at) return ['Has not posted', 'bad'];
@@ -713,18 +716,37 @@
       h(
         'section',
         { class: 'mr-briefhero mr-team__hero' },
-        h('div', {}, h('p', { class: 'mr-brief__eyebrow' }, o.eyebrow || 'Your team'), h('h2', {}, team.manager?.display_name || 'Team'), h('p', {}, `${num(t.creators || 0)} creator${t.creators === 1 ? '' : 's'} · ${num(t.active_7d || 0)} posted this week${t.pending ? ` · ${num(t.pending)} waiting for approval` : ''}`)),
-        h('div', { class: 'mr-team__pay' }, h('span', {}, 'Your pay, last 30 days'), h('b', {}, dollars0(pay.total_cents)), h('small', {}, 'Estimate. Paid out by Mindroll at month end.')),
+        h('div', {}, h('p', { class: 'mr-brief__eyebrow' }, o.eyebrow || 'Your team'), h('h2', {}, team.manager?.display_name || 'Team'), h('p', {}, `${num(t.creators || 0)} creator${t.creators === 1 ? '' : 's'} · ${num(t.active_7d || 0)} posted this week${t.pending ? ` · ${num(t.pending)} waiting for approval` : ''}`), h('p', { class: 'mr-team__cutline' }, cut > 0 ? ['Your cut: ', h('b', {}, share(cut)), ' of what your team leaves after your creators are paid'] : 'Your cut has not been set yet. Agree it with Mindroll.')),
+        h('div', { class: 'mr-team__pay' }, h('span', {}, 'Your pay, last 30 days'), h('b', {}, dollars0(pay.total_cents)), h('small', {}, 'Your cut plus bonuses. Estimate, paid out by Mindroll at month end.')),
       ),
-      h('div', { class: 'mr-grid' }, tile('paper', 'Team views, 30 days', compact(t.views_30d || 0), `${num(t.videos_30d || 0)} videos`), tile('paper', 'Subscribers brought in', num(t.subscribers || 0), 'by your creators'), tile('paper', 'Team earned, 30 days', dollars0(t.commission_30d), 'creator commission'), tile('amber', 'Active weeks, 30 days', num(t.active_weeks_30d || 0), 'weeks a creator posted 4 days')),
+      h('div', { class: 'mr-grid' }, tile('paper', 'Team views, 30 days', compact(t.views_30d || 0), `${num(t.videos_30d || 0)} videos`), tile('paper', 'Subscribers brought in', num(t.subscribers || 0), 'by your creators'), tile('paper', 'Paid to your creators', dollars0(pay.paid_out_cents), 'commission and bonuses, 30 days'), tile('amber', 'Active weeks, 30 days', num(t.active_weeks_30d || 0), 'weeks a creator posted 4 days')),
       h(
         'section',
         { class: 'mr-panel' },
-        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'How your pay adds up'), h('b', {}, dollars0(pay.total_cents))),
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, cut > 0 ? `Your cut: ${share(cut)}` : 'Your cut'), h('b', {}, dollars0(pay.from_cut_cents))),
+        h(
+          'div',
+          { class: 'mr-cut' },
+          h('div', {}, h('small', {}, 'Your team brought in'), h('b', {}, dollars0(pay.brought_in_cents)), h('span', {}, 'sales, after store fees')),
+          h('i', { 'aria-hidden': 'true' }, '−'),
+          h('div', {}, h('small', {}, 'Paid to your creators'), h('b', {}, dollars0(pay.paid_out_cents)), h('span', {}, 'commission and every bonus')),
+          h('i', { 'aria-hidden': 'true' }, '='),
+          h('div', {}, h('small', {}, 'Left over'), h('b', {}, dollars0(pay.profit_cents)), h('span', {}, 'never counted below $0')),
+          h('i', { 'aria-hidden': 'true' }, '→'),
+          h('div', { 'data-yours': '' }, h('small', {}, cut > 0 ? `Your ${share(cut)}` : 'Your cut'), h('b', {}, dollars0(pay.from_cut_cents)), h('span', {}, cut > 0 ? `Mindroll keeps the other ${share(1 - cut)}` : 'not set yet')),
+        ),
+        h('p', { class: 'cp-muted cp-small' }, `Your cut is taken from what is left after your creators are paid, not from the sales. Example: a creator brings in $20,000 and is paid $10,000. $10,000 is left, so ${cut > 0 ? `your ${share(cut)} is ${dollars0(1000000 * cut)}` : 'at 50% you would get $5,000'}.`),
+        Number(pay.paid_out_cents || 0) > Number(pay.brought_in_cents || 0) ? h('p', { class: 'cp-small' }, 'Right now your creators have been paid more than their sales brought in, so there is nothing left to share yet. It never goes below $0.') : null,
+        list.length ? h('details', { class: 'cp-fold' }, h('summary', {}, 'See it creator by creator'), h('div', { class: 'mr-cuttable', role: 'table' }, h('div', { class: 'mr-cuttable__head', role: 'row' }, ['Creator', 'Brought in', 'Paid to them', 'Left over'].map((x) => h('span', { role: 'columnheader' }, x))), list.map((c) => { const paid = Number(c.commission_30d || 0) + Number(c.bonus_30d || 0); return h('div', { class: 'mr-cuttable__row', role: 'row' }, h('b', {}, c.display_name), h('span', { 'data-label': 'Brought in' }, dollars0(c.net_30d)), h('span', { 'data-label': 'Paid to them' }, dollars0(paid)), h('span', { 'data-label': 'Left over' }, signed(Number(c.net_30d || 0) - paid))); })), h('p', { class: 'cp-muted cp-small' }, 'The team is added up as a whole, so one creator in the minus is covered by the others.')) : null,
+      ),
+      h(
+        'section',
+        { class: 'mr-panel' },
+        h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Bonuses, on top of your cut'), h('b', {}, dollars0(Number(pay.from_rankup_cents || 0) + Number(pay.from_active_cents || 0) + Number(pay.from_views_cents || 0)))),
         h(
           'ul',
           { class: 'mr-team__parts' },
-          h('li', {}, h('span', {}, h('b', {}, 'Commission'), h('small', {}, `${Math.round(Number(pay.commission_rate || 0) * 1000) / 10}% on top of what your creators earn`)), h('b', {}, dollars0(pay.from_commission_cents))),
+          h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Rank-up bonus'), h('small', {}, `${share(pay.rankup_rate)} of the rank-up bonus, every time one of your creators ranks up. Tap to see every rank.`)), h('b', {}, dollars0(pay.from_rankup_cents))), h('ul', { class: 'mr-rankups' }, (pay.rankups || []).map((r) => h('li', {}, h('b', {}, r.name), h('span', {}, `Creator gets ${dollars(r.bonus_cents)}`), h('span', { 'data-yours': '' }, `You get ${dollars(r.yours_cents)}`), h('small', {}, Number(r.count_30d) > 0 ? `${num(r.count_30d)} in the last 30 days` : 'none yet'))), (pay.rankups || []).length ? null : h('li', { class: 'cp-muted' }, 'No rank-up bonuses are set.')))),
           h('li', {}, h('span', {}, h('b', {}, 'Activeness'), h('small', {}, `${dollars0(pay.active_cents)} for every active week a creator completes`)), h('b', {}, dollars0(pay.from_active_cents))),
           h('li', {}, h('span', {}, h('b', {}, 'Views'), h('small', {}, `${dollars0(pay.views_cents)} for every 100K views your team gains`)), h('b', {}, dollars0(pay.from_views_cents))),
         ),

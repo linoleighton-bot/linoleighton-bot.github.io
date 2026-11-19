@@ -893,6 +893,19 @@
       const id = m ? m.manager.id : null;
       const list = all.filter((c) => (c.manager_id || null) === id || (!m && c.manager_id && !managers.some((x) => x.manager.id === c.manager_id))).sort((x, y) => (y.incentives?.window_views || 0) - (x.incentives?.window_views || 0));
       const remove = m ? confirmButton('Remove', 'Confirm: remove this manager', 'cp-link', async () => { if (cp.demo) { state.managers = managers.filter((x) => x !== m); all.forEach((c) => { if (c.manager_id === id) c.manager_id = null; }); toast('Removed. (Sample data: nothing was saved.)'); return render(); } await cp.rpc('creator_admin_remove_manager', { p_manager: id }); toast(`${m.manager.display_name} is no longer a manager. Their creators stay in the program.`); await reload(); }) : null;
+      const cutBox = m ? (() => {
+        const input = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '1', value: String(Math.round(Number(m.manager.cut_rate || 0) * 1000) / 10), 'aria-label': `${m.manager.display_name}'s cut, percent` });
+        const save = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save');
+        save.addEventListener('click', act(save, async () => {
+          const rate = Math.max(0, Math.min(100, Number(input.value) || 0)) / 100;
+          if (cp.demo) { m.manager.cut_rate = rate; toast('Saved. (Sample data: nothing was saved.)'); return render(); }
+          await ok(db.from('creator_managers').update({ cut_rate: rate }).eq('id', id));
+          toast(`${m.manager.display_name} now gets ${Math.round(rate * 1000) / 10}% of what their team leaves after the creators are paid.`);
+          await reload();
+        }));
+        const p = m.pay || {};
+        return h('div', { class: 'mr-ref__cut' }, h('label', {}, h('span', {}, h('b', {}, 'Their cut'), h('small', { class: 'cp-muted' }, `You keep the other ${Math.round((1 - Number(m.manager.cut_rate || 0)) * 1000) / 10}%`)), h('span', { class: 'cp-inline' }, input, '%', save)), h('p', { class: 'cp-muted cp-small' }, `Last 30 days: team brought in ${dollars0(p.brought_in_cents)}, creators were paid ${dollars0(p.paid_out_cents)}, ${dollars0(p.profit_cents)} left. Their cut ${dollars0(p.from_cut_cents)} + bonuses ${dollars0(Number(p.from_rankup_cents || 0) + Number(p.from_active_cents || 0) + Number(p.from_views_cents || 0))}.`));
+      })() : null;
       const el = h(
         'section',
         { class: 'mr-ref__zone', 'data-manager': m ? '' : null },
@@ -904,6 +917,7 @@
             : h('div', {}, h('b', {}, 'No manager'), h('span', { class: 'cp-muted cp-small' }, 'Creators not on any team')),
           m ? h('div', { class: 'mr-ref__pay' }, h('b', {}, dollars0(m.pay?.total_cents)), h('span', { class: 'cp-muted cp-small' }, 'pay, 30 days'), remove) : null,
         ),
+        cutBox,
         h('div', { class: 'mr-ref__drop' }, list.length ? list.map(chip) : h('p', { class: 'cp-muted cp-small' }, m ? 'Drop a creator here to put them on this team.' : 'Everyone is on a team.')),
       );
       el.addEventListener('dragover', (e) => { if (!managerDrag) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.dataset.over = ''; });
@@ -924,7 +938,7 @@
       await reload();
     }));
 
-    const pct = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_commission_rate ?? 0.1) * 1000) / 10), 'aria-label': 'Manager commission percent' });
+    const pct = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_rankup_rate ?? 0.1) * 1000) / 10), 'aria-label': 'Manager share of a rank-up bonus, percent' });
     const perActive = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_active_cents ?? 500) / 100)), 'aria-label': 'Dollars per active week' });
     const perViews = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', step: '1', value: String(Math.round(Number(s.manager_views_cents ?? 100) / 100)), 'aria-label': 'Dollars per 100K views' });
     const rateCap = h('input', { class: 'cp-input cp-input--num', type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round(Number(s.manager_rate_cap ?? 0.25) * 1000) / 10), 'aria-label': 'Highest commission a manager can give' });
@@ -944,7 +958,7 @@
     }
     const savePay = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Save pay rules');
     savePay.addEventListener('click', act(savePay, async () => {
-      const patch = { manager_commission_rate: Math.max(0, Math.min(100, Number(pct.value) || 0)) / 100, manager_active_cents: Math.max(0, Math.round((Number(perActive.value) || 0) * 100)), manager_views_cents: Math.max(0, Math.round((Number(perViews.value) || 0) * 100)) };
+      const patch = { manager_rankup_rate: Math.max(0, Math.min(100, Number(pct.value) || 0)) / 100, manager_active_cents: Math.max(0, Math.round((Number(perActive.value) || 0) * 100)), manager_views_cents: Math.max(0, Math.round((Number(perViews.value) || 0) * 100)) };
       if (cp.demo) { Object.assign(state.settings, patch); toast('Saved. (Sample data: nothing was saved.)'); return render(); }
       await ok(db.from('creator_settings').update(patch).eq('id', true));
       toast('Manager pay rules saved.');
@@ -963,11 +977,12 @@
         changes,
       ),
       section(
-        'What managers are paid',
-        h('span', { class: 'cp-muted' }, 'Shown to managers as an estimate'),
-        h('div', { class: 'mr-payrules' }, h('label', {}, h('span', {}, 'Commission on top of what their creators earn'), h('span', { class: 'cp-inline' }, pct, '%')), h('label', {}, h('span', {}, 'For each active week a creator completes'), h('span', { class: 'cp-inline' }, '$', perActive)), h('label', {}, h('span', {}, 'For every 100K views the team gains'), h('span', { class: 'cp-inline' }, '$', perViews))),
+        'Manager bonuses',
+        h('span', { class: 'cp-muted' }, 'On top of their cut'),
+        h('p', { class: 'cp-muted cp-small' }, 'Each manager\'s cut is set on their own card above. It is a share of what their team leaves after the creators are paid, not of the sales: a creator who brings in $20,000 and is paid $10,000 leaves $10,000, so a 50% cut is $5,000. These three bonuses are the same for every manager.'),
+        h('div', { class: 'mr-payrules' }, h('label', {}, h('span', {}, 'Share of each rank-up bonus a creator on their team earns'), h('span', { class: 'cp-inline' }, pct, '%')), h('label', {}, h('span', {}, 'For each active week a creator completes'), h('span', { class: 'cp-inline' }, '$', perActive)), h('label', {}, h('span', {}, 'For every 100K views the team gains'), h('span', { class: 'cp-inline' }, '$', perViews))),
         h('div', { class: 'cp-inline' }, savePay),
-        h('p', { class: 'cp-muted cp-small' }, 'These work out what each manager is owed for the last 30 days. Nothing is paid automatically: you pay managers yourself for now.'),
+        h('p', { class: 'cp-muted cp-small' }, 'Managers see all of this on their My team page as an estimate for the last 30 days. Nothing is paid automatically: you pay managers yourself for now.'),
       ),
     ];
   }
@@ -1952,6 +1967,11 @@
     const ironCap = h('input', { type: 'number', min: '0', step: '10000', value: String(s.iron_cap_views ?? 1000000) });
     const ironMin = h('input', { type: 'number', min: '0', step: '500', value: String(s.iron_video_min_views ?? 2000) });
     const firstRate = h('input', { type: 'number', min: '0', max: '100', step: '5', value: String(Math.round((s.first_sale_rate ?? 0.5) * 100)) });
+    const fvOn = h('input', { type: 'checkbox' });
+    fvOn.checked = s.first_video_on !== false;
+    const fvTimes = h('input', { type: 'number', min: '1', max: '10', step: '0.5', value: String(Number(s.first_video_multiplier ?? 2)) });
+    const fvHours = h('input', { type: 'number', min: '1', max: '720', step: '1', value: String(s.first_video_hours ?? 24) });
+    const fvCap = h('input', { type: 'number', min: '0', step: '50', value: String((s.first_video_cap_cents ?? 100000) / 100) });
     const topMin = h('input', { type: 'number', min: '0', step: '1000', value: String(s.top_video_min_views ?? 100000) });
     const topRate = h('input', { type: 'number', min: '0', max: '100', step: '0.5', value: String(Math.round((s.top_video_pool_rate ?? 0.05) * 1000) / 10) });
     const terms = h('textarea', { rows: '12' }, s.terms_text || '');
@@ -1979,6 +1999,9 @@
       h('div', { class: 'cp-form__row' }, field('Views pay for the first rank ($)', ironPay), field('for every (views)', ironStep), field('up to (views)', ironCap)),
       h('div', { class: 'cp-form__row' }, field('A video counts for views pay from (views)', ironMin), field('First weekly and first yearly sale pay (%)', firstRate)),
       h('small', { class: 'cp-hint' }, 'Views pay: the first step needs only views, and each step after it needs one more subscriber. $0 switches it off. Creator referrals, top-video prizes, views pay, the first-sale bonus and the campaigns you run by hand are paid in full, outside the share above.'),
+      h('label', { class: 'cp-check' }, fvOn, 'First video boost: a new creator\'s first video pays more if they post it in time'),
+      h('div', { class: 'cp-form__row' }, field('First video pays (times)', fvTimes), field('if posted within (hours)', fvHours), field('Most extra per creator ($)', fvCap)),
+      h('small', { class: 'cp-hint' }, 'The clock starts the first time a creator opens their dashboard after accepting the terms, and they see it counting down. Whatever that first video earns in views pay is multiplied. With the numbers above, a new creator with no sales yet is paid one extra views-pay step; it only grows past that as they bring in subscribers. Paid in full, outside the share above.'),
       field('Creator terms', terms, 'Every creator accepts these before their dashboard opens. Have the wording checked before you rely on it.'),
       h('label', { class: 'cp-check' }, again, 'I changed the terms: ask every creator to accept them again'),
       h('label', { class: 'cp-check' }, open, 'Accept new creator applications'),
@@ -2013,6 +2036,10 @@
           iron_cap_views: Math.max(0, Math.round(Number(ironCap.value))),
           iron_video_min_views: Math.max(0, Math.round(Number(ironMin.value))),
           first_sale_rate: Math.min(1, Math.max(0, Number(firstRate.value) / 100)),
+          first_video_on: fvOn.checked,
+          first_video_multiplier: Math.min(10, Math.max(1, Number(fvTimes.value) || 1)),
+          first_video_hours: Math.min(720, Math.max(1, Math.round(Number(fvHours.value) || 24))),
+          first_video_cap_cents: Math.max(0, Math.round(Number(fvCap.value) * 100)),
           top_video_min_views: Math.max(0, Math.round(Number(topMin.value))),
           top_video_pool_rate: Math.min(1, Math.max(0, Number(topRate.value) / 100)),
         };
@@ -2132,7 +2159,7 @@
         { id: 'r4', label: '1M views', threshold_views: 1000000, amount_cents: 6000, active: true, applies_from: '1970-01-01T00:00:00Z' },
       ],
       managers: [
-        { manager: { id: 'm1', display_name: 'Alex Rivera', active: true }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 31200 } },
+        { manager: { id: 'm1', display_name: 'Alex Rivera', active: true, cut_rate: 0.5 }, email: 'alex@example.com', signed_in: true, creators: [], totals: {}, pay: { total_cents: 331200, brought_in_cents: 812400, paid_out_cents: 187300, profit_cents: 625100, from_cut_cents: 312550, from_rankup_cents: 1750, from_active_cents: 5500, from_views_cents: 2100 } },
         { manager: { id: 'm2', display_name: 'Dana Cho', active: true }, email: 'dana@example.com', signed_in: false, creators: [], totals: {}, pay: { total_cents: 4100 } },
       ],
       bonuses: [
