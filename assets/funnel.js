@@ -824,6 +824,25 @@
       })}`,
     );
 
+    /*
+     * The date thirty days out, in the app's own wording.
+     *
+     * `app/onboarding/plan.tsx` puts "COMPLETELY TRANSFORM BY" over a day on
+     * the calendar, and that screen is the one this reader meets again the
+     * first time they open the app. Same claim, same horizon, same ordinal
+     * ("Dec 19th") — a bare numeric date reads as admin.
+     */
+    const horizon = new Date();
+    horizon.setDate(horizon.getDate() + 30);
+    const dayOf = horizon.getDate();
+    const tens = dayOf % 100;
+    const suffix =
+      tens >= 11 && tens <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][dayOf % 10] || 'th';
+    set(
+      'horizon',
+      `${horizon.toLocaleDateString('en-GB', { month: 'short' })} ${dayOf}${suffix}`,
+    );
+
     /* ---- the four decisions */
 
     const commitment = chosenIds('commitment')[0];
@@ -1019,29 +1038,47 @@
       heardBox.hidden = rows.length === 0;
     }
 
-    /* ---- the first week */
+    /* ---- the first week, as books */
 
     /*
-     * Built from the books they said yes to, then from their topics.
+     * Seven real books, each with its cover.
      *
-     * A week of seven identical "a lesson from your topics" rows is a
-     * placeholder with a calendar drawn around it. The books are real titles
-     * the reader has just chosen in front of us, so those go first and the
-     * topics carry the rest — and if they said no to everything and picked no
-     * topics, the week hides rather than inventing one.
+     * This used to list the five yes/no books and then pad the rest with the
+     * reader's own topic names — "Mental health · Chosen for you" — which is
+     * a label standing where a title should be, and the giveaway that the
+     * week was decoration. The topics now resolve to actual books through
+     * `boot.topicBooks`, built and checked at compile time, so every day
+     * names something that exists and shows the cover it will appear as.
+     *
+     * Order: the books they said yes to, because those were chosen in front
+     * of us, then the recommendations for the topics they picked, taken one
+     * topic at a time so a reader with three topics gets all three rather
+     * than three of the first. Nothing is invented — a reader who said no to
+     * everything and picked nothing gets no week.
      */
     const yes = Object.entries(boot.tasteBooks || {})
       .filter(([id]) => chosenIds(id)[0] === 'yes')
-      .map(([, book]) => book);
+      .map(([, book]) => ({ title: book.title, note: book.author || '', cover: book.cover }));
 
     const days = [];
-    for (const book of yes) {
-      if (days.length >= 7) break;
-      days.push({ title: book.title, note: book.author || 'From your shelf' });
-    }
-    for (const topic of topics) {
-      if (days.length >= 7) break;
-      days.push({ title: topic, note: 'Chosen for you' });
+    const seen = new Set();
+    const push = (book) => {
+      if (!book || days.length >= 7 || seen.has(book.title)) return;
+      seen.add(book.title);
+      days.push(book);
+    };
+
+    yes.forEach(push);
+
+    /* Round-robin across their topics, so each one is represented. */
+    const picked = chosenIds('topics');
+    const shelves = picked.map((id) => boot.topicBooks?.[id] || []);
+    for (let depth = 0; depth < 3 && days.length < 7; depth += 1) {
+      for (const shelf of shelves) {
+        if (days.length >= 7) break;
+        const book = shelf[depth];
+        if (book) push({ title: book.title, note: book.author || '', cover: book.cover });
+      }
     }
 
     const weekBox = el.querySelector('[data-plan2-week]');
@@ -1052,9 +1089,26 @@
           const li = document.createElement('li');
           li.className = 'fweek__day';
           if (i === 0) li.setAttribute('data-first', '');
+
           const n = document.createElement('span');
           n.className = 'fweek__n';
-          n.textContent = `Day ${i + 1}`;
+          n.textContent = String(i + 1);
+
+          /* The cover is checked for, like every other drawing in this flow:
+             a day whose art is missing shows the title alone, never a broken
+             image. */
+          let art = null;
+          if (day.cover) {
+            art = document.createElement('img');
+            art.className = 'fweek__cover';
+            art.src = day.cover;
+            art.alt = '';
+            art.width = 44;
+            art.height = 64;
+            art.loading = 'lazy';
+            art.decoding = 'async';
+          }
+
           const text = document.createElement('span');
           text.className = 'fweek__text';
           const title = document.createElement('b');
@@ -1062,12 +1116,43 @@
           const note = document.createElement('small');
           note.textContent = day.note;
           text.append(title, note);
-          li.append(n, text);
+
+          li.append(n);
+          if (art) li.append(art);
+          li.append(text);
           return li;
         }),
       );
       weekBox.hidden = days.length === 0;
     }
+
+    /* ---- what they open first, on the card */
+
+    const first = days[0];
+    const startBox = el.querySelector('[data-plan2-start]');
+    if (startBox) {
+      const cover = el.querySelector('[data-plan2-startcover]');
+      if (first && cover && first.cover) cover.src = first.cover;
+      else if (cover) cover.remove();
+      set('startTitle', first ? first.title : '');
+      set('startMeta', first ? `About ${minutes} min` : '');
+      startBox.hidden = !first;
+    }
+
+    /*
+     * Who they become, taken from the topic they led with.
+     *
+     * One clause, not a list: naming three identities is a menu, and a menu
+     * is the opposite of "this is who you will be". The first topic they
+     * chose is the one they reached for first, so it carries it; with no
+     * topics at all the sentence still has to be true, so it falls back to
+     * what the product does for anybody.
+     */
+    const lead = chosenIds('topics')[0];
+    const become =
+      (lead && boot.topicBecome?.[lead]) ||
+      'the one who actually remembers what they read';
+    set('become', `In a year, you are ${become}.`);
 
     /* ---- the arithmetic */
 

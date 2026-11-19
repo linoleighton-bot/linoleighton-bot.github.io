@@ -1485,6 +1485,9 @@ body.page-funnel2 {
   --f2-card: #ffffff;
   --f2-track: color-mix(in srgb, var(--ink) 11%, var(--f2-bg));
   --f2-muted: color-mix(in srgb, var(--ink) 58%, var(--f2-bg));
+  /* The lighter clay, for marks that sit on the dark card. `--clay` itself
+     is too deep to read against ink. */
+  --f2-glow: #E08150;
   --f2-col: 21.4375rem; /* 343px */
 
   font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -2484,13 +2487,35 @@ body.page-funnel2 .fweek {
   list-style: none;
 }
 
+/*
+ * Day number, cover, title.
+ *
+ * The week used to be a number and a line of text; with a real book behind
+ * every day the cover is the thing worth showing, because a reader judges a
+ * shelf by its spines and has already been shown these same covers twice —
+ * on the opening screen and on the yes/no cards.
+ */
 body.page-funnel2 .fweek__day {
   position: relative;
   display: grid;
-  grid-template-columns: 3.6rem 1fr;
-  align-items: start;
+  grid-template-columns: 1.6rem 2.75rem 1fr;
+  align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 0 0.75rem 0;
+  padding: 0.5rem 0 0.55rem 0;
+}
+
+body.page-funnel2 .fweek__cover {
+  width: 2.75rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: var(--f2-track);
+  box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+/* A day whose cover is missing keeps the title where the others have it. */
+body.page-funnel2 .fweek__day:not(:has(.fweek__cover)) .fweek__text {
+  grid-column: 2 / -1;
 }
 
 /*
@@ -2502,9 +2527,9 @@ body.page-funnel2 .fweek__day {
 body.page-funnel2 .fweek__day:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: 1.78rem;
-  top: 1.7rem;
-  bottom: -0.15rem;
+  left: 0.73rem;
+  top: 2.1rem;
+  bottom: -0.1rem;
   width: 2px;
   background: var(--f2-track);
 }
@@ -2514,6 +2539,7 @@ body.page-funnel2 .fweek__n {
   z-index: 1;
   display: grid;
   place-items: center;
+  width: 1.6rem;
   height: 1.6rem;
   border-radius: 999px;
   background: var(--f2-track);
@@ -3519,44 +3545,52 @@ body.page-funnel2 .fface__name {
   color: var(--f2-ink);
 }
 
-/* The tick sits on the rim of the portrait, so the chosen face is marked
-   without the name moving. */
-body.page-funnel2 .fface__tick {
+/*
+ * A chosen face is ringed and washed, not ticked.
+ *
+ * There was a clay disc with a white check pinned to the rim of the
+ * portrait. The ring it sits in is a circle with `overflow: hidden`, so the
+ * disc was cut into a wedge by the curve it sat against — a sliver of orange
+ * with half a tick in it, nine times over. The ring that was meant to mark
+ * the choice did not show either: it was an inset shadow, drawn underneath
+ * the portrait that fills the circle.
+ *
+ * The screen this is modelled on marks a chosen face with no tick at all —
+ * the rim turns accent, a flat accent wash at ten per cent goes over the
+ * photograph, and the name under it turns accent too. Three signals, none of
+ * which can be clipped, and the grid stays nine faces rather than becoming
+ * nine badges. Measured on their page: 100px circle, 2px rim, wash at 0.1.
+ */
+body.page-funnel2 .fface__ring {
+  border: 2px solid color-mix(in srgb, var(--ink) 12%, var(--f2-bg));
+  background: var(--f2-bg);
+  transition: border-color 0.14s ease;
+}
+
+/* The wash is the ring's own ::after, so it is clipped by the same circle
+   as the portrait and cannot sit proud of it at any size. */
+body.page-funnel2 .fface__ring::after {
+  content: '';
   position: absolute;
-  right: 4%;
-  bottom: 4%;
-  width: 1.35rem;
-  height: 1.35rem;
+  inset: 0;
   border-radius: 50%;
   background: var(--f2-accent);
   opacity: 0;
-  transform: scale(0.6);
-  transition: opacity 0.12s ease, transform 0.12s ease;
-}
-
-body.page-funnel2 .fface__tick::after {
-  content: '';
-  position: absolute;
-  left: 0.47rem;
-  top: 0.34rem;
-  width: 0.32rem;
-  height: 0.55rem;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  transition: opacity 0.14s ease;
+  pointer-events: none;
 }
 
 body.page-funnel2 .fface[data-chosen] .fface__ring {
-  box-shadow: inset 0 0 0 3px var(--f2-accent);
+  border-color: var(--f2-accent);
 }
 
-body.page-funnel2 .fface[data-chosen] .fface__tick {
-  opacity: 1;
-  transform: none;
+body.page-funnel2 .fface[data-chosen] .fface__ring::after {
+  opacity: 0.1;
 }
 
 body.page-funnel2 .fface[data-chosen] .fface__name {
-  font-weight: 650;
+  font-weight: 600;
+  color: var(--f2-accent);
 }
 
 @media (max-width: 22.5rem) {
@@ -3904,4 +3938,232 @@ body.page-funnel2 .fbuild__pct i {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
+}
+
+/* ======================================== the plan, as the app presents it */
+
+/*
+ * The seal.
+ *
+ * The app's plan screen opens on a tick in a disc before it says anything,
+ * and it earns its place: the reader has just watched a progress ring fill,
+ * so the first thing on the next screen should confirm that it finished.
+ */
+body.page-funnel2 .fseal {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 auto 0.85rem;
+  border-radius: 50%;
+  background: var(--f2-accent);
+  color: #fff;
+}
+
+body.page-funnel2 .fseal svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/*
+ * The date the plan is measured against.
+ *
+ * Thirty days out, named on the calendar. "Your plan is ready" is a status
+ * the reader can do nothing with; a day with a claim attached is something
+ * they can picture now and check later, and it forecasts their own
+ * commitment rather than promising anything on our behalf. Lifted straight
+ * from `app/onboarding/plan.tsx` so the two screens say the same thing.
+ */
+body.page-funnel2 .fhorizon {
+  margin: 0.35rem 0 1.25rem;
+  padding: 0.85rem 1rem 0.95rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--clay) 10%, var(--f2-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--clay) 20%, transparent);
+  text-align: center;
+}
+
+body.page-funnel2 .fhorizon__cap {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .fhorizon__date {
+  margin: 0.15rem 0 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--f2-ink);
+}
+
+/* The topics, under the date, wearing the names they were chosen by. */
+body.page-funnel2 .fchips {
+  margin: 0 0 1.25rem;
+}
+
+body.page-funnel2 .fchips .fcard2__chips {
+  justify-content: center;
+}
+
+/*
+ * The first book, on the card.
+ *
+ * A cover is the first concrete thing on this screen — the reader has met
+ * these same drawings on the opening shelf and on the yes/no cards, so the
+ * plan's first day arrives already recognised.
+ */
+body.page-funnel2 .fstart {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.15rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+body.page-funnel2 .fstart__cover {
+  width: 2.5rem;
+  height: 3.6rem;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: var(--f2-track);
+  box-shadow: 0 6px 14px -10px color-mix(in srgb, var(--ink) 70%, transparent);
+}
+
+body.page-funnel2 .fstart__text {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+body.page-funnel2 .fstart__text small {
+  font-size: 0.7rem;
+  color: var(--f2-muted);
+}
+
+body.page-funnel2 .fstart__text b {
+  font-size: 0.925rem;
+  line-height: 1.3;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+body.page-funnel2 .fstart__go {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--f2-accent);
+  color: #fff;
+}
+
+body.page-funnel2 .fstart__go svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+/*
+ * Who they become, said once and plainly.
+ *
+ * The largest sentence on the lower half of the screen, because it is the
+ * only part of it that answers "and then what". The figures underneath cost
+ * the claim; this makes it.
+ */
+body.page-funnel2 .fbecome {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  font-weight: 600;
+  text-wrap: pretty;
+  color: var(--f2-ink);
+}
+
+/*
+ * A year from now, on the one dark surface in the funnel.
+ *
+ * The app ends its plan on a dark card with the year's figure and twelve
+ * rising bars, and the inversion works here because it is the last block on
+ * the screen rather than the whole plan — the thing it has to outrank is the
+ * button under it, not the twenty cards behind it.
+ */
+body.page-funnel2 .fyear {
+  padding: 1.15rem 1.15rem 1.25rem;
+  border-radius: 1rem;
+  background: var(--f2-ink);
+  color: var(--f2-bg);
+  text-align: left;
+}
+
+body.page-funnel2 .fyear__cap {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--f2-glow) 90%, #fff);
+}
+
+body.page-funnel2 .fyear__big {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0.3rem 0 0;
+}
+
+body.page-funnel2 .fyear__big b {
+  font-size: 2.25rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+body.page-funnel2 .fyear__big span {
+  font-size: 1.05rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* Twelve months, rising. Gentle compounding, not a hockey stick. */
+body.page-funnel2 .fyear__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.3rem;
+  height: 2.75rem;
+  margin: 0.85rem 0 0.75rem;
+}
+
+body.page-funnel2 .fyear__bars i {
+  flex: 1;
+  height: var(--g, 50%);
+  border-radius: 0.15rem;
+  background: color-mix(in srgb, var(--f2-glow) 70%, transparent);
+}
+
+body.page-funnel2 .fyear__bars i:last-child {
+  background: var(--f2-glow);
+}
+
+body.page-funnel2 .fyear__note {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.page-funnel2 .funnel[data-live] .fstep:not([hidden]) .fyear__bars i {
+    animation: f2-rise 0.7s var(--f2-ease) both;
+    animation-delay: calc(var(--i, 0) * 40ms + 200ms);
+    transform-origin: 50% 100%;
+  }
+}
+
+@keyframes f2-rise {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
 }
