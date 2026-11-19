@@ -4235,3 +4235,29 @@ body.page-funnel2 .pw__till .rcb-ui-main .layout-content {
   background: var(--f2-card, #fff) !important;
 }
 body.page-funnel2 .pw__till .rcb-ui-main .layout-content { padding: 1.1rem !important; }
+
+/* ==========================================================================
+ * Apple Pay (or Google Pay) directly under the plans.
+ *
+ * Where the phone has a wallet its button is the way to pay, full width and
+ * the height of our own button. The card form is still there, as a line of
+ * text underneath rather than a second big button competing with it.
+ * ========================================================================== */
+body.page-funnel2 .pw__wallet:not([hidden]) {
+  margin: 0.25rem 0 0.35rem;
+  min-height: 3rem;
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta {
+  background: none;
+  box-shadow: none;
+  color: var(--clay);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  min-height: 2.75rem;
+  padding-block: 0.4rem;
+}
+body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta::after { display: none; }
