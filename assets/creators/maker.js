@@ -76,8 +76,10 @@
   /* --------------------------------------------------------------- templates */
 
   const words = (text, pos, from, to) => ({ kind: 'text', text, pos, size: 'm', from: from || 0, to: to ?? null });
+  /* The sample formats shown on the preview pages: three the team might put up, each with its reference. */
   const DEMO = [{
     brief_id: 'f1',
+    brief: { id: 'f1', title: 'The "I replaced doomscrolling" hook', url: 'https://www.tiktok.com/@mindroll/video/7520000000000000100', video_path: null, note: 'Say the swap in the first two seconds, show the app by second five.' },
     active: true,
     music_path: null,
     music_volume: 0.25,
@@ -87,6 +89,32 @@
       { start: 3, end: 8, line: 'It is called Mindroll. You swipe through big ideas from books, a minute each.', layers: [words('Big ideas, one minute each', 'bottom'), { kind: 'video', path: '/app/assets/assets/onboarding/brain-wake.be22d1fe2e29e275298f016b4206060d.mp4', note: 'A short recording of the app', pos: 'middle', size: 'm', from: 1, to: 4.5 }] },
       { start: 8, end: 13, line: 'Ten minutes on the train and I have finished what used to take me a month to read.', layers: [words('10 minutes a day', 'bottom', 0, 2.5), words('= a book a week', 'bottom', 2.5, null)] },
       { start: 13, end: 17, line: 'Link is in my bio. Try it for a week and tell me I am wrong.', layers: [words('Link in bio', 'middle')] },
+    ],
+  }, {
+    brief_id: 'f2',
+    brief: { id: 'f2', title: '"3 things I learned this week"', url: 'https://www.tiktok.com/@mindroll/video/7520000000000000200', video_path: null, note: 'A quick list. One idea per clip, count them on screen.' },
+    active: true,
+    music_path: null,
+    music_volume: 0.25,
+    caption: '3 things I learned this week, in five minutes a day. #Mindroll',
+    slots: [
+      { start: 0, end: 3, line: 'Three things I learned this week without opening a single book.', layers: [words('3 things I learned this week', 'top')] },
+      { start: 3, end: 8, line: 'One. Your brain keeps what it meets again, so the good ideas come back until they stick.', layers: [words('1. Ideas you revisit, you keep', 'bottom')] },
+      { start: 8, end: 13, line: 'Two. The Stoics wrote their notes to themselves, not to an audience.', layers: [words('2. Write it for yourself', 'bottom')] },
+      { start: 13, end: 18, line: 'Three. Five minutes a day beats an hour once a week.', layers: [words('3. Small and daily wins', 'bottom')] },
+      { start: 18, end: 22, line: 'All of it came from Mindroll. Link is in my bio.', layers: [words('Link in bio', 'middle'), { kind: 'video', path: '/app/assets/assets/onboarding/brain-smart.25419c3ee8e998f275243c42933c6f52.mp4', note: 'A short recording of the app', pos: 'top', size: 's', from: 0.5, to: null }] },
+    ],
+  }, {
+    brief_id: 'f3',
+    brief: { id: 'f3', title: 'POV: your commute, but smarter', url: 'https://www.tiktok.com/@mindroll/video/7520000000000000300', video_path: null, note: 'Three shots, hardly any talking. Film it on the way somewhere.' },
+    active: true,
+    music_path: null,
+    music_volume: 0.25,
+    caption: 'POV: you stopped scrolling on the train. #Mindroll',
+    slots: [
+      { start: 0, end: 4, line: 'Film yourself getting on the train or the bus, phone in hand. No need to speak.', layers: [words('POV: you stopped scrolling on your commute', 'top')] },
+      { start: 4, end: 10, line: 'Film over your shoulder, or just your face reading. Say: this is the only app I open now.', layers: [{ kind: 'video', path: '/app/assets/assets/onboarding/brain-wake.be22d1fe2e29e275298f016b4206060d.mp4', note: 'A short recording of the app', pos: 'middle', size: 'l', from: 0.5, to: 5 }, words('5 ideas before my stop', 'bottom')] },
+      { start: 10, end: 14, line: 'Look up at the camera. Say: link is in my bio.', layers: [words('Link in bio', 'middle')] },
     ],
   }];
 
@@ -129,7 +157,8 @@
           if (!error && data) rows = data;
         } catch { /* no table yet, or offline: no templates */ }
       }
-      const byId = new Map((briefs || []).map((b) => [b.id, b]));
+      /* The preview's sample formats carry their own reference; real ones are matched to the reference videos this creator can see. */
+      const byId = new Map([...(briefs || []), ...(cp.demo ? DEMO.map((t) => t.brief) : [])].map((b) => [b.id, b]));
       list = rows.map(clean).filter((t) => byId.has(t.brief_id) && t.slots.length).map((t) => ({ ...t, brief: byId.get(t.brief_id) }));
       return list.length;
     })());
@@ -574,20 +603,21 @@
     const t = list.find((x) => x.brief_id === ui.id);
     if (!t) {
       kids.push(cp.section(
-        'Make a video',
-        h('span', { class: 'cp-muted' }, 'No editing needed'),
-        h('p', { class: 'cp-muted' }, 'Pick a format, film each short clip, and the captions and music are added for you. You get one finished video to post.'),
+        'Winning formats',
+        h('span', { class: 'cp-muted' }, `${list.length} picked by the Mindroll team`),
+        h('p', { class: 'cp-muted' }, 'These are formats that are working right now. Choose the one you want to copy, film each short clip, and the captions and music are added for you. You get one finished video to post.'),
         h('ul', { class: 'mk-pick' }, list.map((x) => {
           const ref = fileUrl(x.brief.video_path);
           const total = x.slots.reduce((a, s) => a + slotLen(s), 0);
           return h('li', {},
             ref ? h('video', { src: ref, controls: true, preload: 'metadata', playsinline: true, 'aria-label': x.brief.title }) : null,
             h('div', {},
+              h('span', { class: 'mk-label' }, 'Winning format'),
               h('b', {}, x.brief.title),
               x.brief.note ? h('p', { class: 'cp-muted cp-small' }, x.brief.note) : null,
               h('p', { class: 'cp-muted cp-small' }, `${x.slots.length} clips${total ? ` · about ${secs(total)}` : ''}`),
               h('div', { class: 'cp-inline' },
-                h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => openTemplate(x.brief_id) }, 'Make this video'),
+                h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => openTemplate(x.brief_id) }, 'Copy this one'),
                 cp.safeUrl(x.brief.url) ? h('a', { class: 'btn btn--ghost btn--sm', href: cp.safeUrl(x.brief.url), target: '_blank', rel: 'noopener noreferrer' }, 'Watch the reference') : null,
               ),
             ),
@@ -621,7 +651,7 @@
         if (ui.result) root.querySelector('.mk-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       kids.push(
-        h('button', { class: 'cp-link mk-back', type: 'button', disabled: ui.busy || null, onclick: () => { ui.id = null; clearResult(); draw(); } }, '← All formats'),
+        h('button', { class: 'cp-link mk-back', type: 'button', disabled: ui.busy || null, onclick: () => { ui.id = null; clearResult(); draw(); } }, '← All winning formats'),
         ui.result ? resultCard(t) : null,
         cp.section(
           t.brief.title,
@@ -973,7 +1003,7 @@
     return cp.section(
       'Video templates',
       h('span', { class: 'cp-muted' }, 'Creators film the clips; the edit is done for them'),
-      h('p', { class: 'cp-muted cp-small' }, 'Turn a reference video into a fill-in template. It appears to creators as "Make a video", under UGC Brief.'),
+      h('p', { class: 'cp-muted cp-small' }, 'Turn a reference video into a fill-in template. Each one you switch on appears to creators as a winning format they can choose to copy, in "Make a video" under UGC Brief.'),
       folds.map((f) => f.el),
     );
   }
