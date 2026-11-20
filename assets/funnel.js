@@ -1333,10 +1333,6 @@
       claimCreator(user);
       showSignedIn();
       if (wasSignedOut && byId[order[index]]?.kind === 'account') render({ push: false });
-      /* The session is read after the first screen is drawn. A reader who lands
-         straight on the plans was a stranger when the checkout was warmed, so
-         it is asked again now that there is somebody to sell to. */
-      if (wasSignedOut && ['offer', 'plan'].includes(byId[order[index]]?.kind)) warmAhead?.();
     };
 
     client.auth.getSession().then(({ data }) => sessionArrived(data.session));
@@ -1684,12 +1680,9 @@
          * markup shipped one label and the reader saw another, and changing
          * the copy in the funnel data appeared to do nothing at all.
          */
-        /* Only the button directly under the wallet button steps back. */
-        button.textContent = offerEl.hasAttribute('data-wallet') && button.previousElementSibling?.classList.contains('pw__wallet')
-          ? 'Pay by card instead'
-          : chosen.trialDays
-            ? `Start my ${chosen.trialDays} days free`
-            : byId['offer']?.cta || 'Subscribe';
+        button.textContent = chosen.trialDays
+          ? `Start my ${chosen.trialDays} days free`
+          : byId['offer']?.cta || 'Subscribe';
       }
 
       const echo = offerEl.querySelector('[data-plan-echo]');
@@ -1724,14 +1717,11 @@
      * exist, because the checkout is wired further down this same function.
      */
     let reopen = null;
-    let rewallet = null;
-    let mountWallet = null;
     for (const button of planButtons) {
       button.addEventListener('click', () => {
         const was = plan;
         plan = button.dataset.planId;
         paint();
-        if (was !== plan && rewallet) rewallet();
         if (was !== plan && reopen) reopen();
       });
     }
@@ -1835,10 +1825,7 @@
      * the note above is at pains to avoid. The plan step calls it, two
      * screens and about a minute before the press.
      */
-    warmAhead = () => {
-      warmCheckout();
-      mountWallet?.();
-    };
+    warmAhead = warmCheckout;
 
     /**
      * Give the checkout somewhere with a height to be drawn in.
@@ -2074,138 +2061,8 @@
       };
 
       for (const node of offerEl.querySelectorAll('[data-checkout]')) {
-        /*
-         * The button at the foot of the page. Where the wallet button is
-         * showing, it takes the reader back up to the plans and that button
-         * and does not open the card form.
-         */
-        const again = Boolean(node.closest('.pw2__again'));
-        node.addEventListener('click', () => {
-          if (again && offerEl.hasAttribute('data-wallet') && !tillOpen()) {
-            const plans = offerEl.querySelector('.pw2__plans');
-            try {
-              plans.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            } catch {
-              plans.scrollIntoView();
-            }
-            return;
-          }
-          openCheckout();
-        });
+        node.addEventListener('click', openCheckout);
       }
-
-      /*
-       * Apple Pay first.
-       *
-       * Most readers arrive from a video, on a phone, with a card already in
-       * their wallet. For them the card form is the long way round: the app
-       * they are about to buy would never show one. So where the phone has a
-       * wallet, its button sits directly under the two plans — choose a plan,
-       * press it, confirm with a face or a thumb — and the card form becomes a
-       * quiet "pay by card instead" underneath.
-       *
-       * The SDK draws only the wallet button here, and reports whether the
-       * device has one. Where it does not, nothing is shown and the page is
-       * exactly as it was.
-       *
-       * Its promise settles once. Backing out of the sheet does not settle
-       * it, so the button simply stays; a failed payment does, so the button
-       * is drawn again with a fresh promise rather than left looking alive
-       * and wired to nothing. Twice, then the card form is the way through.
-       */
-      let walletSlot = null;
-      let walletCtl = null;
-      let walletTries = 0;
-      let walletBusy = false;
-      const packageFor = (current) =>
-        current.availablePackages.find(
-          (c) => c.identifier === boot.plans.find((p) => p.id === plan)?.packageId,
-        ) || null;
-
-      const dropWallet = () => {
-        walletCtl = null;
-        offerEl.removeAttribute('data-wallet');
-        if (walletSlot) walletSlot.remove();
-        walletSlot = null;
-        paint();
-      };
-
-      mountWallet = async () => {
-        if (!user || walletBusy || walletSlot || walletTries > 2) return;
-        walletBusy = true;
-        walletTries += 1;
-        let slot = null;
-        try {
-          const Purchases = await loadSdk();
-          const purchases = await instance(Purchases);
-          if (typeof purchases.presentExpressPurchaseButton !== 'function') return;
-          if (!offerings) offerings = purchases.getOfferings();
-          const current = (await offerings)?.current;
-          const pkg = current && packageFor(current);
-          if (!pkg) return;
-
-          slot = document.createElement('div');
-          slot.className = 'pw__wallet';
-          slot.hidden = true;
-          checkout.parentNode.insertBefore(slot, checkout);
-          walletSlot = slot;
-          walletBusy = false;
-
-          const result = await purchases.presentExpressPurchaseButton({
-            rcPackage: pkg,
-            htmlTarget: slot,
-            customerEmail: user.email || undefined,
-            onButtonReady: (control, hasWallet) => {
-              if (walletSlot !== slot) return;
-              walletCtl = control;
-              /* The plan may have changed while the button was loading. */
-              const now = packageFor(current);
-              if (now && now !== pkg) control.updatePurchase(now);
-              if (!hasWallet) return;
-              slot.hidden = false;
-              offerEl.setAttribute('data-wallet', '');
-              paint();
-            },
-          });
-
-          const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
-          if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
-          session += 1;
-          if (till) till.hidden = true;
-          dropWallet();
-          next();
-        } catch (error) {
-          console.error('[wallet]', error);
-          const shown = Boolean(slot) && !slot.hidden;
-          if (walletSlot === slot) dropWallet();
-          walletBusy = false;
-          /* Only say anything if the reader had a button to press. */
-          if (shown) {
-            say(
-              /declin|insufficient|expired|did not open/i.test(String(error?.message || ''))
-                ? error.message
-                : 'That payment did not go through and nothing was charged. Try again, or pay by card.',
-            );
-            mountWallet();
-          }
-        } finally {
-          walletBusy = false;
-        }
-      };
-
-      rewallet = async () => {
-        if (!walletCtl || !offerings) return;
-        try {
-          const current = (await offerings)?.current;
-          const pkg = current && packageFor(current);
-          if (pkg) walletCtl.updatePurchase(pkg);
-        } catch {
-          /* The card form still sells the right plan. */
-        }
-      };
-
-      /* The offer may already be on screen by the time this is wired. */
-      if (order[index] === 'offer') mountWallet();
       /* Now that it exists, a plan change can reopen the till on the new one. */
       reopen = () => {
         if (tillOpen()) openCheckout();

@@ -4164,120 +4164,189 @@ body.page-funnel2 .fyear__note {
 }
 
 /* ==========================================================================
- * The till, as one card on the page's own paper.
+ * The first two screens, split the way the model splits them.
  *
- * The payment form arrives with its own look: a blue-grey header, a blue Pay
- * button, system type, and a fixed-height box that scrolls inside the page.
- * On the cream funnel that read as a different website dropped into the
- * middle of ours, and on a phone the inner scroll hid the Pay button.
+ * Measured on their page at a 375 column. Ours is 343, so the two answer
+ * pills come out at 167 rather than 166 and everything else is theirs.
  *
- * The form sets its colours as inline styles on its own elements, so the
- * inherited `--rc-*` values above never reached it; these are marked
- * important for that reason and no other. The card fields themselves are
- * drawn by the payment provider in frames and are left exactly as they are.
- * ========================================================================== */
-body.page-funnel2 .pw__till:not([hidden]) {
-  margin: 1.1rem 0 1.4rem;
+ *   opening   headline 32/40 with one word in the accent, two proof badges,
+ *             a visual about 309 tall, a line at 20/24, sticky button
+ *   gender    headline 28/36 w700 at the top, 16/22.4 under it, a figure,
+ *             the question at 20/24 w700, two filled pills 166x44, 8 apart
+ * ====================================================================== */
+
+body.page-funnel2 .fhook2 {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+/*
+ * The heading is focused when the step appears, so screen readers announce
+ * it; `funnel.css` suppresses the ring on funnel 1's headline for the same
+ * reason and this one needs the same treatment, or every reader sees a clay
+ * rectangle drawn round the first thing on the page.
+ */
+body.page-funnel2 .fhook2__head:focus,
+body.page-funnel2 .fhook2__head:focus-visible {
+  outline: none;
+}
+
+body.page-funnel2 .fhook2__head {
+  margin: 0.5rem 0 0;
+  font-size: 2rem;
+  line-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* The thing you are getting, in the accent — their construction. */
+body.page-funnel2 .fhook2__head em {
+  font-style: normal;
+  color: var(--f2-accent);
+}
+
+body.page-funnel2 .fhook2__badges {
+  display: flex;
+  justify-content: center;
+  gap: 1.75rem;
+  margin: 1rem 0 0.25rem;
   padding: 0;
-  /* The script sizes this box to the form; the form now sizes itself. */
-  height: auto !important;
-  overflow: hidden;
-  border: 1px solid var(--f2-edge, #e3ded3);
-  border-radius: 1.1rem;
-  background: var(--f2-card, #fff);
-  box-shadow: 0 14px 34px -22px rgba(60, 30, 10, 0.5);
+  list-style: none;
 }
 
-/* No box inside the box, and no second scrollbar. */
-body.page-funnel2 .pw__till .rcb-ui-container.inside,
-body.page-funnel2 .pw__till .rcb-ui-container.inside > div {
-  height: auto !important;
-  overflow: visible !important;
-  background: transparent !important;
-  /* The form asks to be measured in both directions, which gives it no height
-     of its own. Its layout only ever asks about width. */
-  container-type: inline-size !important;
+body.page-funnel2 .fhook2__badges li {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--f2-muted);
 }
 
-body.page-funnel2 .pw__till .rcb-ui-container,
-body.page-funnel2 .pw__till .rcb-ui-container *:not(iframe) {
-  font-family: inherit !important;
+body.page-funnel2 .fhook2__badges span {
+  display: grid;
+  gap: 0.05rem;
+  text-align: center;
 }
 
-body.page-funnel2 .pw__till .rcb-ui-layout,
-body.page-funnel2 .pw__till .rcb-ui-navbar,
-body.page-funnel2 .pw__till .rcb-ui-main {
-  --rc-color-primary: var(--clay) !important;
-  --rc-color-primary-hover: color-mix(in srgb, var(--clay) 88%, #000) !important;
-  --rc-color-primary-pressed: color-mix(in srgb, var(--clay) 78%, #000) !important;
-  --rc-color-primary-text: #fff !important;
-  --rc-color-focus: var(--clay) !important;
-  --rc-color-accent: var(--clay) !important;
-  --rc-shape-input-button-border-radius: 0.9rem !important;
+body.page-funnel2 .fhook2__badges small {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--f2-muted);
 }
 
-/* What is being bought: a warm band across the top of the card, edge to edge. */
-body.page-funnel2 .pw__till .rcb-ui-navbar,
-body.page-funnel2 .pw__till .rcb-ui-navbar .layout-wrapper-outer,
-body.page-funnel2 .pw__till .rcb-ui-navbar .layout-content {
-  background: color-mix(in srgb, var(--clay) 9%, var(--f2-card, #fff)) !important;
+body.page-funnel2 .fhook2__badges b {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--f2-ink);
 }
-body.page-funnel2 .pw__till .rcb-ui-navbar { border-bottom: 1px solid var(--f2-edge, #e3ded3); }
-/* The page already says whose checkout this is. */
-body.page-funnel2 .pw__till .rcb-ui-navbar .navbar-header { display: none !important; }
-body.page-funnel2 .pw__till .rcb-ui-navbar .layout-content { padding: 1.1rem 0 1rem !important; }
-body.page-funnel2 .pw__till .rcb-ui-navbar .navbar-body { padding: 0 1.1rem !important; }
-body.page-funnel2 .pw__till .rcb-pricing-info { gap: 0.6rem !important; }
 
-body.page-funnel2 .pw__till .rcb-ui-main,
-body.page-funnel2 .pw__till .rcb-ui-main .layout-wrapper-outer,
-body.page-funnel2 .pw__till .rcb-ui-main .layout-content {
-  background: var(--f2-card, #fff) !important;
+body.page-funnel2 .fhook2__badges .fhook__laurel {
+  width: 0.85rem;
+  height: 2.1rem;
+  flex: none;
+  color: var(--f2-muted);
 }
-body.page-funnel2 .pw__till .rcb-ui-main .layout-content { padding: 1.1rem !important; }
 
-/* ==========================================================================
- * Apple Pay (or Google Pay) directly under the plans.
+/* Their line under the picture: larger and heavier than a caption. */
+body.page-funnel2 .fhook2__line {
+  margin: 1.1rem 0 0;
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  text-wrap: balance;
+  color: var(--f2-ink);
+}
+
+/* ---- the gender screen */
+
+body.page-funnel2 .fstep[data-step='gender'] .fs__title {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  text-align: center;
+  text-wrap: balance;
+}
+
+body.page-funnel2 .fstep[data-step='gender'] .fs__body {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  line-height: 1.4rem;
+  text-align: center;
+  text-wrap: pretty;
+  color: var(--f2-muted);
+}
+
+/*
+ * The figure takes the slack, so the question and its answers stay put.
  *
- * Where the phone has a wallet its button is the way to pay, full width and
- * the height of our own button. The card form is still there, as a line of
- * text underneath rather than a second big button competing with it.
- * ========================================================================== */
-body.page-funnel2 .pw__wallet:not([hidden]) {
-  margin: 0.25rem 0 0.35rem;
-  min-height: 3rem;
-  border-radius: 0.9rem;
-  overflow: hidden;
+ * `margin: auto 0` rather than a fixed height: the drawing is square with
+ * air around the subject, and letting it absorb whatever is left over keeps
+ * the question at the foot of the screen on a tall phone and simply shrinks
+ * the picture on a short one, instead of pushing the pills off the bottom.
+ */
+body.page-funnel2 .fq__art {
+  display: block;
+  width: 100%;
+  max-width: 17rem;
+  height: auto;
+  margin: auto auto;
+  aspect-ratio: 16 / 11;
+  object-fit: cover;
 }
-body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta {
-  background: none;
+
+body.page-funnel2 .fq__prompt {
+  margin: 0 0 0.9rem;
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--f2-ink);
+}
+
+/* The pair, filled — theirs are solid ink on this screen, not outlined. */
+body.page-funnel2 .fstep[data-step='gender'] .fq--pair {
+  margin-top: 0;
+}
+
+body.page-funnel2 .fstep[data-step='gender'] .fq--pair .fq__option {
+  min-height: 0;
+  height: 2.75rem;
+  padding-block: 0;
+  border-radius: 0.75rem;
+  background: var(--f2-ink);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
   box-shadow: none;
-  color: var(--clay);
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  min-height: 2.75rem;
-  padding-block: 0.4rem;
-}
-body.page-funnel2 .fstep[data-kind='offer'][data-wallet] .pw__wallet + .fs__cta::after { display: none; }
-
-/* ==========================================================================
- * Sign-up is Apple or Google, nothing else.
- *
- * The email and password form was the only place in the whole flow, after the
- * optional name, where a reader on a phone had to type. It is hidden rather
- * than removed, so the script that wires it still finds what it expects.
- * ========================================================================== */
-body.page-funnel2 #step-account .signin__email,
-body.page-funnel2 #step-account .signin__emailform {
-  display: none !important;
 }
 
-/* "Skip this" under the name box: easier to see and to hit with a thumb. */
-body.page-funnel2 #step-name .fs__skip {
-  font-size: 1.0625rem;
+body.page-funnel2 .fstep[data-step='gender'] .fq--pair .fq__option:first-child,
+body.page-funnel2 .fstep[data-step='gender'] .fq--pair .fq__option:last-child {
+  background: var(--f2-ink);
+  color: #fff;
+}
+
+body.page-funnel2 .fstep[data-step='gender'] .fq--pair .fq__option[data-chosen] {
+  background: var(--f2-accent);
+}
+
+/* The third answer is a real branch, kept and kept quiet. */
+body.page-funnel2 .fstep[data-step='gender'] .fq__option:nth-child(3) {
+  grid-column: 1 / -1;
+  min-height: 2.5rem;
+  background: transparent;
+  color: var(--f2-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+body.page-funnel2 .fstep[data-step='gender'] .fq__option:nth-child(3)[data-chosen] {
+  background: transparent;
+  color: var(--f2-accent);
   font-weight: 600;
-  min-height: 3rem;
-  padding: 0.75rem 1.25rem;
 }
