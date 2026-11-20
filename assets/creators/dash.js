@@ -366,6 +366,7 @@
     plug: 'M9 3v5m6-5v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4',
     film: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4',
     medal: 'M8 3h8l-2.5 6h-3zM12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm0-8v4m-1.5-3.2L12 13',
+    spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   };
   const icon = (name) => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -379,7 +380,15 @@
   const keep = (key, value) => { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch { /* private window */ } return null; };
   const helpOn = () => keep('mindroll.creator.help') === 'on';
 
-  let pane = PANES.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  /* "Start here" (guides.js welcome): first in the menu until the first video is in, then last. */
+  const START = ['start', 'Start here', 'spark'];
+  const placeStart = (data) => {
+    if (typeof cp.guides?.welcome !== 'function') return;
+    const at = PANES.findIndex(([id]) => id === 'start');
+    if (at >= 0) PANES.splice(at, 1);
+    if ((data?.videos || []).length) PANES.push(START); else PANES.unshift(START);
+  };
+  let pane = [...PANES, START].some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   /*
    * A manager has two dashboards on this page: their own as a creator, and
    * their team's. `mode` is which one is on screen. An admin sees the same
@@ -639,11 +648,17 @@
       cp.maker.load(data.briefs).then((n) => { if (!n) return; if (location.hash === '#make') pane = 'make'; renderDashboard(lastData); });
     }
     if (cp.maker?.count && !PANES.some(([id]) => id === 'make')) PANES.splice(PANES.findIndex(([id]) => id === 'brief') + 1, 0, ['make', 'Make a video', 'film']);
+    placeStart(data);
+    /* First visit: open "Start here" before anything else. The demo run follows once it has been read. */
+    if (mode === 'creator' && !renderDashboard.welcomed && PANES.some(([id]) => id === 'start') && !keep('mindroll.creator.welcomed') && !(data.videos || []).length && ![...PANES, ...MGR].some(([id]) => id === location.hash.slice(1))) {
+      renderDashboard.welcomed = true;
+      pane = 'start';
+    }
     if (!panes.some(([id]) => id === pane)) pane = mode === 'manager' ? 'team' : 'home';
     const { creator, stats } = data;
     lastData = data;
-    /* First visit: start the demo run. */
-    if (mode === 'creator' && tourStep === null && !keep('mindroll.creator.toured') && !renderDashboard.started) {
+    /* First visit: start the demo run, once "Start here" is out of the way. */
+    if (mode === 'creator' && pane !== 'start' && tourStep === null && !keep('mindroll.creator.toured') && !renderDashboard.started && (keep('mindroll.creator.welcomed') || !PANES.some(([id]) => id === 'start') || (data.videos || []).length)) {
       renderDashboard.started = true;
       tourStep = 0;
       pane = tourSteps(data)[0][0];
@@ -656,6 +671,18 @@
     };
     const body = {
       home: () => homeView(data),
+      start: () => {
+        const editor = PANES.some(([id]) => id === 'make') ? 'make' : (data.briefs || []).length ? 'brief' : 'videos';
+        return cp.guides.welcome({
+          data,
+          editor,
+          canBuild: cp.maker ? cp.maker.canBuild : undefined,
+          go: openPane,
+          done: () => { keep('mindroll.creator.welcomed', '1'); renderDashboard.started = true; },
+          tour: (data.videos || []).length ? null : startTour,
+          boost: firstVideoBox(data, null),
+        });
+      },
       brief: () => briefView(data),
       make: () => cp.maker.view(data),
       team: () => teamPage(data, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, margin: data.incentives?.margin?.rate, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
@@ -675,11 +702,11 @@
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const views = [['creator', 'Creator', () => setMode('creator')], canManage ? ['manager', 'Manager', () => setMode('manager')] : null, isAdmin ? ['admin', 'Admin', () => location.assign(cp.demo ? '/admin/?demo' : '/admin/')] : null].filter(Boolean);
-    const nav = h('nav', { class: 'mr-side', 'aria-label': mode === 'manager' ? 'Manager dashboard' : 'Your dashboard' }, panes.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
+    const nav = h('nav', { class: 'mr-side', 'aria-label': mode === 'manager' ? 'Manager dashboard' : 'Your dashboard' }, panes.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || (id === 'start' && !(data.videos || []).length) || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'start' && !(data.videos || []).length ? h('em', {}, 'New') : id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : panes.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, cp.viewSwitch(views, mode), mode === 'manager' ? null : bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
-    cp.tabbar({ label: mode === 'manager' ? 'Manager dashboard' : 'Your dashboard', items: panes.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: mode === 'manager' ? panes.slice(0, 4).map(([id]) => id) : ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
+    cp.tabbar({ label: mode === 'manager' ? 'Manager dashboard' : 'Your dashboard', items: panes.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: mode === 'manager' ? panes.slice(0, 4).map(([id]) => id) : panes.some(([id]) => id === 'start') && !(data.videos || []).length ? ['start', 'home', 'videos', 'wallet'] : ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
     cp.live.drawn();
   }
 
@@ -1207,7 +1234,7 @@
       if (left <= 0 && !el.dataset.done) { el.dataset.done = ''; load(true); }
     });
   }, 1000);
-  function firstVideoBox(data) {
+  function firstVideoBox(data, to = 'videos', label = 'Post my first video') {
     const f = data.first_video;
     if (!f) return null;
     const times = `${Number(f.multiplier)}x`;
@@ -1219,7 +1246,7 @@
       return h(
         'section',
         { class: 'mr-boost', role: 'status' },
-        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, `Your first video pays ${times}`), h('p', {}, `Post your first video before the clock runs out and it pays ${times}: ${what}.${example}`), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video')),
+        h('div', { class: 'mr-boost__text' }, h('small', {}, 'New creator boost'), h('h2', {}, `Your first video pays ${times}`), h('p', {}, `Post your first video before the clock runs out and it pays ${times}: ${what}.${example}`), to ? h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane(to) }, label) : null),
         h('div', { class: 'mr-boost__clock' }, h('span', {}, 'Ends in'), h('b', { 'data-boost-ends': String(ends), 'aria-live': 'off' }, clockText(ends - Date.now())), h('span', {}, `${num(f.hours)} hours from when you started`)),
       );
     }
@@ -2007,6 +2034,25 @@
     };
   }
 
+  /* ?demo=new: the same sample creator on their first day. Iron, no videos, no money yet, the boost clock running. */
+  function dayOne(d) {
+    const inc = d.incentives;
+    const zero = (o) => Object.fromEntries(Object.keys(o).map((k) => [k, 0]));
+    Object.assign(d.creator, { display_name: 'Sam', code: 'sam', rate: inc.tiers[0].commission_rate, tiktok_handle: 'sam.reads', instagram_handle: null, payout_method: null, payout_handle: null });
+    Object.assign(inc, { tier_level: 1, window_revenue_cents: 0, window_views: 0, window_posts: 0, tier_basis_cents: 0, month_revenue_cents: 0, multiplier: 1, annual_bonus_cents: inc.tiers[0].annual_flat_cents, by_kind: {}, first_sale_used: [] });
+    inc.active = { ...inc.active, days: 0, amount_cents: inc.active.base_amount_cents };
+    inc.volume = { ...inc.volume, videos: 0, sales: 0 };
+    inc.champion = { ...inc.champion, place: null };
+    inc.iron = { ...inc.iron, eligible: true, views: 0, subs: 0, steps_paid: 0, paid_cents: 0, steps_by_views: 0, steps_allowed: 1 };
+    inc.race = { prizes: inc.race.prizes.map((p) => ({ ...p, winner: null, you: false })) };
+    d.balance = zero(d.balance);
+    d.stats = zero(d.stats);
+    Object.assign(d, { videos: [], bonuses: [], commissions: [], payouts: [], links: [], views_daily: d.views_daily.map((x) => ({ ...x, views: 0 })), team: null });
+    d.referrals = { ...d.referrals, code: 'sam', earned_cents: 0, creators: [] };
+    d.contests = (d.contests || []).map((k) => ({ ...k, joined: false, place: null }));
+    return d;
+  }
+
   /* Last, so every helper above exists before the first render. */
   if (cp.empty && !new URLSearchParams(location.search).has('dashboard')) {
     /* The local preview starts where a new creator does: with the application. */
@@ -2020,7 +2066,7 @@
   } else if (cp.demo) {
     setWho('Sample data');
     isAdmin = true;
-    renderDashboard(demoData());
+    renderDashboard(new URLSearchParams(location.search).get('demo') === 'new' ? dayOne(demoData()) : demoData());
   } else if (!cp.client) {
     show(h('p', { class: 'cp-empty' }, 'This page could not load. Please refresh.'));
   } else {

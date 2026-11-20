@@ -129,3 +129,99 @@
   .mr-guide-chain__box b { font-size: 0.8125rem; }
   .mr-guide-chain__box span { font-size: 0.6875rem; }
 }
+
+/* "Start here" (guides.js welcome). Three pay lanes, one colour each, used the same way on every part of the page. */
+.mr-guide { --lane-views: #2F6BFF; --lane-base: #F5A524; --lane-sale: #12A150; --lane-once: #A7ADB8; }
+.mr-guide [data-lane="views"] { --lane: var(--lane-views); }
+.mr-guide [data-lane="base"] { --lane: var(--lane-base); }
+.mr-guide [data-lane="sale"] { --lane: var(--lane-sale); }
+.mr-guide [data-lane="once"] { --lane: var(--lane-once); }
+
+[data-creators] .mr-panel.mr-welcome__hero { border: 0; background: linear-gradient(135deg, #0F1115 0%, #1B2A55 60%, #2F6BFF 130%); color: #fff; padding: clamp(1.5rem, 4vw, 2.5rem); }
+[data-creators] .mr-welcome__hero h2 { font-size: clamp(1.75rem, 4.6vw, 2.75rem); line-height: 1.05; letter-spacing: -0.035em; color: #fff; max-width: 34rem; }
+.mr-welcome__hero .mr-guide__eyebrow { color: #F5A524; }
+.mr-welcome__hero .mr-welcome__lead { color: rgb(255 255 255 / 0.85); }
+.mr-welcome__hero .btn--primary { background: #fff; color: #0F1115; border-color: #fff; }
+.mr-welcome__hero .btn--ghost { color: #fff; border-color: rgb(255 255 255 / 0.4); background: transparent; }
+.mr-welcome__lead { font-size: 1.0625rem; line-height: 1.5; max-width: 42rem; }
+.mr-welcome__cta { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.mr-welcome__toc { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; font-size: 0.875rem; color: rgb(255 255 255 / 0.75); }
+.mr-welcome__toc li { display: flex; align-items: center; gap: 0.45rem; }
+.mr-welcome__toc b { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: rgb(255 255 255 / 0.14); font-size: 0.75rem; color: #fff; }
+
+/* The flow: numbered steps joined by a line. Across on wide screens, down on a phone. */
+.mr-welcome-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; position: relative; }
+.mr-welcome-flow::before { content: ''; position: absolute; top: 1.05rem; left: 1rem; right: 1rem; height: 2px; background: var(--line-strong); }
+.mr-welcome-flow__step { position: relative; display: grid; gap: 0.6rem; align-content: start; }
+.mr-welcome-flow__dot { width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font-weight: 800; font-size: 0.875rem; position: relative; box-shadow: 0 0 0 4px var(--surface); }
+.mr-welcome-flow__step:last-child .mr-welcome-flow__dot { background: var(--mr-good); }
+.mr-welcome-flow__step > div { display: grid; gap: 0.25rem; }
+.mr-welcome-flow__step b { font-size: 0.9375rem; font-weight: 800; }
+.mr-welcome-flow__step span { font-size: 0.8125rem; line-height: 1.4; color: var(--muted); }
+.mr-welcome-flow__lanes { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.15rem 0 0 !important; }
+.mr-welcome-flow__lanes em, .mr-welcome-shape__legend span { font-style: normal; font-size: 0.6875rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 999px; color: var(--ink); background: color-mix(in srgb, var(--lane) 16%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lane) 45%, #fff); }
+@media (max-width: 52rem) {
+  .mr-welcome-flow { grid-template-columns: 1fr; gap: 1rem; }
+  .mr-welcome-flow::before { top: 1rem; bottom: 1rem; left: 1.05rem; right: auto; width: 2px; height: auto; }
+  .mr-welcome-flow__step { grid-template-columns: 2.1rem 1fr; gap: 0.85rem; }
+}
+
+/* The three lanes. */
+.mr-welcome-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.85rem; }
+.mr-welcome-lane { display: grid; gap: 0.5rem; align-content: start; padding: 1.1rem 1.15rem 1.2rem; border-radius: 1.1rem; background: color-mix(in srgb, var(--lane) 7%, #fff); border-top: 4px solid var(--lane); }
+.mr-welcome-lane small { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+.mr-welcome-lane > b { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mr-welcome-lane p { font-size: 0.9375rem; line-height: 1.45; }
+.mr-welcome-lane ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; font-size: 0.8125rem; line-height: 1.4; color: var(--ink-soft); }
+
+/* The shape of the money over 12 weeks. */
+.mr-welcome-shape { margin: 0; display: grid; gap: 0.6rem; padding: 1rem; border-radius: 1.1rem; background: var(--sunk); }
+.mr-welcome-shape figcaption { display: grid; gap: 0.15rem; }
+.mr-welcome-shape figcaption small { color: var(--muted); font-size: 0.8125rem; }
+.mr-welcome-shape__legend { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.mr-welcome-shape svg { width: 100%; height: auto; display: block; }
+.mr-welcome-shape__bar { fill: var(--lane); }
+.mr-welcome-shape__bar[data-lane="once"] { fill: #A7ADB8; }
+.mr-welcome-shape__wk { font-size: 11px; fill: var(--muted); font-weight: 700; }
+
+.mr-welcome-why { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.85rem; }
+.mr-welcome-why > div { display: grid; gap: 0.25rem; padding-left: 0.85rem; border-left: 3px solid var(--mr-accent); }
+.mr-welcome-why b { font-size: 0.9375rem; }
+.mr-welcome-why span { font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
+
+/* The calculator. */
+.mr-welcome-calc { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.mr-welcome-calc__fields { display: grid; gap: 1.1rem; }
+.mr-welcome-calc__field { display: grid; gap: 0.45rem; }
+.mr-welcome-calc__field > span { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9375rem; font-weight: 700; }
+.mr-welcome-calc__field output { font-variant-numeric: tabular-nums; color: var(--mr-accent); }
+.mr-welcome-calc__field input { width: 100%; accent-color: var(--mr-accent); min-height: 44px; }
+.mr-welcome-calc__out { display: grid; gap: 0.5rem; padding: 1.1rem 1.2rem; border-radius: 1.1rem; background: var(--ink); color: #fff; }
+.mr-welcome-calc__out > small { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(255 255 255 / 0.7); }
+.mr-welcome-calc__out > b { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.mr-welcome-calc__rows li { grid-template-columns: minmax(0, 1fr) auto; color: #fff; }
+.mr-welcome-calc__rows li::before { display: none; }
+.mr-welcome-calc__rows li span { display: flex; align-items: center; gap: 0.5rem; color: rgb(255 255 255 / 0.85); }
+.mr-welcome-calc__rows li span::before { content: ''; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--lane); flex: none; }
+.mr-welcome-calc__rows li b { text-align: right; }
+.mr-welcome-calc__lock { font-size: 0.8125rem; color: #F5C46B; margin: 0; }
+.mr-welcome-calc__lock:empty { display: none; }
+@media (max-width: 44rem) { .mr-welcome-calc { grid-template-columns: 1fr; } }
+
+/* The first job. */
+.mr-welcome__first { border: 2px solid var(--mr-accent); }
+.mr-welcome-jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.mr-welcome-job { display: grid; grid-template-columns: 2rem 1fr auto; gap: 0.85rem; align-items: center; padding: 0.85rem 1rem; border-radius: 1rem; background: var(--sunk); }
+.mr-welcome-job__tick { width: 2rem; height: 2rem; border-radius: 50%; border: 2px solid var(--line-strong); display: grid; place-items: center; font-weight: 800; color: #fff; }
+.mr-welcome-job[data-done] .mr-welcome-job__tick { background: var(--mr-good); border-color: var(--mr-good); }
+.mr-welcome-job > div { display: grid; gap: 0.2rem; min-width: 0; }
+.mr-welcome-job b { font-size: 0.9375rem; }
+.mr-welcome-job span { font-size: 0.8125rem; color: var(--muted); line-height: 1.4; }
+.mr-welcome-job em { font-style: normal; font-size: 0.75rem; font-weight: 800; color: var(--mr-good); }
+.mr-welcome-job[data-done] b { color: var(--muted); }
+@media (max-width: 30rem) {
+  .mr-welcome-job { grid-template-columns: 2rem 1fr; }
+  .mr-welcome-job > .btn, .mr-welcome-job > em { grid-column: 2; justify-self: start; }
+}
+.mr-welcome__reward { display: grid; gap: 0.4rem; padding: 1rem 1.1rem; border-radius: 1rem; background: var(--mr-accent-soft); }
+.mr-welcome__reward ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.25rem; font-size: 0.9375rem; }

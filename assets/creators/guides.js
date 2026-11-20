@@ -332,5 +332,233 @@
     ].filter(Boolean);
   }
 
-  cp.guides = { structure, payByRank, referral };
+  /* ------------------------------------------------------------ welcome */
+
+  /*
+   * "Start here": the page a creator sees the first time their dashboard
+   * opens. What happens, how pay works (views pay, base pay and commission,
+   * stacked), and the first job: one video out, made in the editor. Every
+   * figure comes from `ctx.data`, the creator's own dashboard data; a pay lane
+   * whose numbers are missing is left out.
+   *
+   *   ctx = { data, go(pane), editor: 'make' | 'brief' | 'videos', canBuild, tour(), boost: node|null, done() }
+   */
+  function welcome(ctx = {}) {
+    const data = ctx.data || {};
+    const creator = data.creator || {};
+    const inc = data.incentives || {};
+    const tiers = tiersOf(inc);
+    const t0 = tiers[0] || null;
+    const top = tiers[tiers.length - 1] || null;
+    const champ = champOf(inc);
+    const iron = inc.iron && inc.iron.on && pos(inc.iron.step_cents) && pos(inc.iron.step_views) ? inc.iron : null;
+    const week0 = t0 ? weekOf(inc, t0) : 0;
+    const weekTop = top ? weekOf(inc, top) : 0;
+    const minDays = Number((inc.active && inc.active.min_days) || 0);
+    const volume = list(inc.volume && inc.volume.rules).filter((r) => pos(r.base_amount_cents ?? r.amount_cents));
+    const floor = inc.margin && Number(inc.margin.rate) > 0 && Number(inc.margin.rate) < 1 ? Number(inc.margin.rate) : null;
+    const tag = `#${String((data.settings && data.settings.hashtag) || 'mindroll').replace(/^./, (c) => c.toUpperCase())}`;
+    const videos = list(data.videos).length;
+    const linked = !!(creator.tiktok_handle || creator.instagram_handle);
+    const editorName = ctx.editor === 'make' ? 'the editor' : ctx.editor === 'brief' ? 'the UGC brief' : 'Videos';
+    const go = (pane) => () => { if (ctx.done) ctx.done(); if (ctx.go) ctx.go(pane); };
+    const rates = range(tiers.map((t) => t.commission_rate), pct);
+    const hasViews = !!iron, hasBase = week0 > 0, hasSale = !!rates;
+    const perK = iron ? Number(iron.step_cents) / (Number(iron.step_views) / 1000) : 0;
+    const perKText = perK ? `$${(perK / 100).toFixed(2)}` : null;
+
+    /* --- 1. the top: who this is for and the one thing to do */
+    const hero = h(
+      'section',
+      { class: 'mr-panel mr-guide mr-welcome__hero' },
+      h('p', { class: 'mr-guide__eyebrow' }, 'Start here · about 3 minutes'),
+      h('h2', {}, `Welcome in${creator.display_name ? `, ${creator.display_name}` : ''}. Let's get your first video out.`),
+      h('p', { class: 'mr-welcome__lead' }, `You make short videos about Mindroll. We pay you ${[hasViews ? 'for the views' : null, hasBase ? 'for posting steadily' : null, 'a share of every payment from the people who subscribe through your link, for as long as they stay'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ', and $1')}. This page shows how that works, then walks you through your first video. ${ctx.editor === 'make' ? 'The editor does the editing for you.' : ''}`),
+      h('div', { class: 'mr-welcome__cta' },
+        h('button', { class: 'btn btn--primary', type: 'button', onclick: go(ctx.editor || 'videos') }, ctx.editor === 'make' ? 'Make my first video' : 'Start my first video'),
+        ctx.tour ? h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { if (ctx.done) ctx.done(); ctx.tour(); } }, 'Show me around first') : null),
+      h('ol', { class: 'mr-welcome__toc' }, ['How it works', 'How you get paid', 'Your first video'].map((x, i) => h('li', {}, h('b', {}, String(i + 1)), x))),
+    );
+
+    /* --- 2. the diagram: from a video to money in the wallet */
+    const LANE = { views: 'Views pay', base: 'Base pay', sale: 'Commission' };
+    const step = (n, title, line, lanes) => h('li', { class: 'mr-welcome-flow__step' },
+      h('span', { class: 'mr-welcome-flow__dot', 'aria-hidden': 'true' }, String(n)),
+      h('div', {}, h('b', {}, title), h('span', {}, line), lanes && lanes.length ? h('p', { class: 'mr-welcome-flow__lanes' }, lanes.map((k) => h('em', { 'data-lane': k }, LANE[k]))) : null));
+    const flow = panel(
+      'How it works',
+      'One video, from your phone to your wallet',
+      h('ol', { class: 'mr-welcome-flow' },
+        step(1, 'You film', ctx.editor === 'make' ? 'Pick a format that already worked. The editor tells you what to film, clip by clip, and puts it together.' : 'Copy a format that already worked, from the UGC brief.'),
+        step(2, 'You post', `From the account you linked, with ${tag} in the caption and your link in your bio. We find the video by itself.`, hasBase ? ['base'] : []),
+        step(3, 'People watch', 'Views are counted on your dashboard as they come in.', iron ? ['views'] : []),
+        step(4, 'Some subscribe', 'Viewers tap your link and subscribe to Mindroll. They are tied to you for good.', ['sale']),
+        step(5, 'They keep paying, you keep earning', 'Every week a subscriber stays, a share of what they pay goes to you again.', ['sale']),
+        step(6, 'Cash out', `Earnings clear into your wallet${pos(data.settings && data.settings.hold_days) ? ` after ${num(data.settings.hold_days)} days` : ''}. Cash out to PayPal, Venmo or Zelle${pos(data.settings && data.settings.min_payout_cents) ? ` from ${dollars(data.settings.min_payout_cents)}` : ''}.`)),
+      note('The coloured tags show which part of your pay each step earns. All three are explained next.'),
+    );
+
+    /* --- 3. the pay: three lanes, stacked */
+    const lanes = [
+      iron ? h('article', { class: 'mr-welcome-lane', 'data-lane': 'views' },
+        h('small', {}, 'Views pay · our CPM'),
+        h('b', {}, `${perKText} per 1,000 views`),
+        h('p', {}, `${dollars(iron.step_cents)} for every ${compact(iron.step_views)} views across your videos, up to ${dollars(Math.floor(Number(iron.cap_views) / Number(iron.step_views)) * Number(iron.step_cents))}.`),
+        h('ul', {},
+          h('li', {}, `The first ${dollars(iron.step_cents)} needs views only.`),
+          h('li', {}, `Each ${dollars(iron.step_cents)} after that also needs 1 more subscriber through your link. That keeps the money on videos that actually work.`),
+          pos(iron.video_min_views) ? h('li', {}, `A video counts from ${compact(iron.video_min_views)} views.`) : null,
+          t0 ? h('li', {}, `For ${t0.name} creators, while you build up.`) : null)) : null,
+      week0 > 0 ? h('article', { class: 'mr-welcome-lane', 'data-lane': 'base' },
+        h('small', {}, 'Base pay · the posting package'),
+        h('b', {}, weekTop > week0 ? `${dollars(week0)} to ${dollars(weekTop)} a week` : `${dollars(week0)} a week`),
+        h('p', {}, `Post on ${minDays || 'enough'} different days in a week and you are paid the week's base.`),
+        h('ul', {},
+          t0 && top && weekTop > week0 ? h('li', {}, `${t0.name} starts at ${dollars(week0)}; it grows with your rank, up to ${dollars(weekTop)} at ${top.name}.`) : null,
+          t0 && pos(t0.active_day_views) ? h('li', {}, `A day counts once that day's videos reach your rank's views between them (${compact(t0.active_day_views)} at ${t0.name}).`) : null,
+          volume.length ? h('li', {}, `Plus a monthly volume bonus: ${volume.map((r) => `${num(r.min_videos)} videos${pos(r.min_sales) ? ` and ${num(r.min_sales)} sale${Number(r.min_sales) === 1 ? '' : 's'}` : ''} ${dollars(r.base_amount_cents ?? r.amount_cents)}`).join(', ')}.`) : null,
+          h('li', {}, floor != null ? 'Paid out of the sales you bring in. If your sales do not cover it yet, it waits and is paid as soon as they do.' : 'Paid out of the sales you bring in, so it can wait until they cover it.'))) : null,
+      rates ? h('article', { class: 'mr-welcome-lane', 'data-lane': 'sale' },
+        h('small', {}, 'Commission · the part that keeps paying'),
+        h('b', {}, `${rates} of every payment`),
+        h('p', {}, 'A share of what each subscriber pays, after store fees, every week they stay. Not once: every renewal.'),
+        h('ul', {},
+          t0 ? h('li', {}, `You start at ${pct(t0.commission_rate)}${t0.name ? ` (${t0.name})` : ''}. More sales, views and videos in 30 days move you up.`) : null,
+          t0 && pos(t0.annual_flat_cents) ? h('li', {}, `A yearly subscriber also pays you a flat ${dollars(t0.annual_flat_cents)}${top && Number(top.annual_flat_cents) > Number(t0.annual_flat_cents) ? ` (up to ${dollars(top.annual_flat_cents)})` : ''}.`) : null,
+          Number(inc.first_sale_rate) > 0 ? h('li', {}, `Your first weekly sale and your first yearly sale each pay ${pct(inc.first_sale_rate)}.`) : null,
+          champ ? h('li', {}, `The top ${num(champ.slots)} creators are Champions at ${pct(champ.rate)}.`) : null)) : null,
+    ].filter(Boolean);
+
+    /* The shape of the money over 12 weeks: a one-off deal next to the stack. Drawn, not measured: no amounts on it. */
+    const shape = (() => {
+      const W = 640, H = 200, L = 8, R = 8, top0 = 10, base = 150, weeks = 12;
+      const colW = (W - L - R) / weeks;
+      const bw = colW * 0.66;
+      const x = (i) => L + colW * i + (colW - bw) / 2;
+      const unit = (base - top0) / 7.4;
+      /* Illustrative heights in arbitrary units. */
+      const views = [3.2, 2.2, 1.2, 0.6, 0.3, 0, 0, 0, 0, 0, 0, 0].map((v) => (iron ? v : 0));
+      const basePay = Array.from({ length: weeks }, () => (week0 > 0 ? 0.9 : 0));
+      const sale = Array.from({ length: weeks }, (_, i) => Math.min(6, 0.45 * (i + 1)));
+      const once = [4.2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      const cols = [];
+      for (let i = 0; i < weeks; i += 1) {
+        let y = base;
+        [['sale', sale[i]], ['base', basePay[i]], ['views', views[i]]].forEach(([k, v]) => {
+          if (!v) return;
+          const hgt = v * unit;
+          y -= hgt;
+          cols.push(s('rect', { x: x(i) + bw * 0.38, y, width: bw * 0.62, height: hgt, class: 'mr-welcome-shape__bar', 'data-lane': k }));
+        });
+        if (once[i]) cols.push(s('rect', { x: x(i), y: base - once[i] * unit, width: bw * 0.32, height: once[i] * unit, class: 'mr-welcome-shape__bar', 'data-lane': 'once' }));
+        cols.push(s('text', { x: x(i) + bw / 2, y: base + 18, class: 'mr-welcome-shape__wk', 'text-anchor': 'middle' }, `W${i + 1}`));
+      }
+      return h('figure', { class: 'mr-welcome-shape' },
+        h('figcaption', {}, h('b', {}, 'Why the stack pays more over time'), h('small', {}, 'Your first 12 weeks, posting steadily, next to a one-off fee for one video. A drawing of when the money arrives, not real amounts. Commission keeps coming only while your subscribers stay.')),
+        h('div', { class: 'mr-welcome-shape__legend' },
+          h('span', { 'data-lane': 'once' }, 'A one-off fee per video'),
+          iron ? h('span', { 'data-lane': 'views' }, 'Views pay') : null,
+          week0 > 0 ? h('span', { 'data-lane': 'base' }, 'Base pay (while you keep posting)') : null,
+          h('span', { 'data-lane': 'sale' }, 'Commission')),
+        s('svg', { viewBox: `0 0 ${W} ${H - 30}`, role: 'img', 'aria-label': 'A one-off fee is paid once in week 1 and then stops. With Mindroll, views pay arrives in the first weeks, base pay arrives every week you post, and commission grows each week as subscribers stack up, and keeps paying.' },
+          s('line', { x1: 0, x2: W, y1: base, y2: base, class: 'mr-guide-col__base' }), ...cols));
+    })();
+
+    const pay = panel(
+      'How you get paid',
+      hasViews && hasBase ? 'Yes, we pay CPM. Yes, there is base pay. We just stack them.' : hasViews ? 'Yes, we pay CPM. Then we stack commission on top.' : hasBase ? 'Yes, there is base pay. Then we stack commission on top.' : 'Paid on every subscriber, every week they stay.',
+      h('p', { class: 'mr-welcome__lead' }, `Most UGC deals pick one: a rate per 1,000 views, or a flat fee per video or package. Both stop the day the video stops. ${hasViews || hasBase ? `Here you get ${[hasViews ? 'views pay' : null, hasBase ? 'base pay' : null].filter(Boolean).join(' and ')} to start, and commission on top that keeps paying after the views slow down.` : 'Here commission keeps paying after the views slow down.'}`),
+      h('div', { class: 'mr-welcome-lanes' }, lanes),
+      shape,
+      h('div', { class: 'mr-welcome-why' },
+        [['Paid for results, not just posts', 'One video that brings in subscribers pays you every week they stay. A flat fee pays once.'],
+          ['Your rate goes up', rates ? `Commission moves from ${rates.replace(' to ', ' up to ')} as you rank up${hasBase ? ', and base pay grows with it' : ''}${champ ? `; Champions get ${pct(champ.rate)}` : ''}. It is not a fixed deal.` : 'Your rate rises as you rank up. It is not a fixed deal.'],
+          ['Everything is on your dashboard', 'Every view, subscriber, bonus and payment shows up here, live. Nothing to chase.']]
+          .map(([b, line]) => h('div', {}, h('b', {}, b), h('span', {}, line)))),
+      note('Nothing here is guaranteed: no views and no sales means no pay. Bonuses are paid out of the sales you bring in, so a bonus can wait until your sales cover it.'),
+    );
+
+    /* --- 3b. a first-month calculator from the live numbers */
+    const calc = (() => {
+      if (!iron && !(week0 > 0)) return null;
+      const field = (label, min, max, stepBy, value, fmt) => {
+        const out = h('output', {}, fmt(value));
+        const input = h('input', { type: 'range', min, max, step: stepBy, value, 'aria-label': label });
+        return { input, out, row: h('label', { class: 'mr-welcome-calc__field' }, h('span', {}, label, out), input) };
+      };
+      const fv = iron ? field('Views across your videos', 0, Number(iron.cap_views) || 1000000, 10000, 150000, compact) : null;
+      const fs = field('Subscribers through your link', 0, 30, 1, 3, num);
+      const fw = week0 > 0 ? field(`Weeks you post on ${minDays || 'enough'} days${t0 && pos(t0.active_day_views) ? ` (${compact(t0.active_day_views)}+ views a day)` : ''}`, 0, 4, 1, 4, num) : null;
+      const rows = h('ul', { class: 'mr-guide-rows mr-welcome-calc__rows' });
+      const total = h('b', {});
+      const lock = h('p', { class: 'mr-welcome-calc__lock' });
+      const paint = () => {
+        const v = fv ? Number(fv.input.value) : 0;
+        const subs = Number(fs.input.value);
+        const w = fw ? Number(fw.input.value) : 0;
+        if (fv) fv.out.textContent = compact(v);
+        fs.out.textContent = num(subs);
+        if (fw) fw.out.textContent = num(w);
+        const byViews = iron ? Math.floor(Math.min(v, Number(iron.cap_views) || v) / Number(iron.step_views)) : 0;
+        const allowed = 1 + subs;
+        const steps = Math.min(byViews, allowed);
+        const viewsCents = steps * Number(iron ? iron.step_cents : 0);
+        const baseCents = w * week0;
+        /* Base pay is paid out of sales: with no subscriber yet it waits, so it is not counted as earned. */
+        const baseWaits = floor != null && subs === 0 && baseCents > 0;
+        rows.replaceChildren(...[
+          iron ? h('li', { 'data-lane': 'views' }, h('span', {}, 'Views pay'), h('b', {}, dollars(viewsCents))) : null,
+          week0 > 0 ? h('li', { 'data-lane': 'base' }, h('span', {}, baseWaits ? 'Base pay (waits for your first sale)' : 'Base pay'), h('b', {}, dollars(baseCents))) : null,
+          rates ? h('li', { 'data-lane': 'sale' }, h('span', {}, `Commission on ${num(subs)} subscriber${subs === 1 ? '' : 's'}`), h('b', {}, `+ ${t0 ? pct(t0.commission_rate) : rates} of each payment, every week`)) : null,
+        ].filter(Boolean));
+        total.textContent = dollars(viewsCents + (baseWaits ? 0 : baseCents));
+        lock.textContent = [
+          byViews > allowed ? `You would have the views for ${dollars(byViews * Number(iron.step_cents))} of views pay. ${byViews - allowed === 1 ? '1 more subscriber unlocks' : `${num(byViews - allowed)} more subscribers unlock`} the rest.` : '',
+          baseWaits ? `The ${dollars(baseCents)} of base pay is earned but waits until your sales cover it.` : '',
+        ].filter(Boolean).join(' ');
+      };
+      [fv, fs, fw].filter(Boolean).forEach((f) => f.input.addEventListener('input', paint));
+      paint();
+      return panel(
+        'Try it',
+        `Your first month${t0 ? ` at ${t0.name}` : ''}, worked out`,
+        h('div', { class: 'mr-welcome-calc' },
+          h('div', { class: 'mr-welcome-calc__fields' }, [fv, fs, fw].filter(Boolean).map((f) => f.row)),
+          h('div', { class: 'mr-welcome-calc__out' }, h('small', {}, [hasViews ? 'Views pay' : null, hasBase ? 'base pay' : null].filter(Boolean).join(' and ').replace(/^b/, 'B')), total, rows, lock)),
+        note(`Uses today's pay rules. Commission is on top and is not added in, because it depends on which plan each subscriber picks and how long they stay.${floor != null ? ' Base pay can wait until your sales cover it.' : ''}`),
+      );
+    })();
+
+    /* --- 4. the first job */
+    const job = (done, title, line, label, pane) => h('li', { class: 'mr-welcome-job', 'data-done': done || null },
+      h('span', { class: 'mr-welcome-job__tick', 'aria-hidden': 'true' }, done ? '✓' : ''),
+      h('div', {}, h('b', {}, title), h('span', {}, line)),
+      done ? h('em', {}, 'Done') : h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: go(pane) }, label));
+    const editorLine = ctx.editor === 'make'
+      ? (ctx.canBuild === false ? 'Pick a format and film one short clip per step. This browser cannot build the video: open this page in Safari or Chrome (not inside TikTok, Instagram or Discord) to finish it.' : 'Pick a format and film one short clip per step on your phone. The editor joins the clips and adds the words, pictures and music. Your clips stay on your device.')
+      : ctx.editor === 'brief' ? 'Read the brief and copy a format that already worked.' : 'Copy a format that already worked.';
+    const reward = [
+      data.first_video && data.first_video.state === 'open' && Number(data.first_video.multiplier) > 1 ? `Your first video pays ${Number(data.first_video.multiplier)}x if you post it before the clock runs out.` : null,
+      'Your wallet unlocks the moment your first video is in.',
+      iron ? `Your first ${dollars(iron.step_cents)} of views pay needs views only, no subscriber.` : null,
+    ].filter(Boolean);
+    const first = h(
+      'section',
+      { class: 'mr-panel mr-guide mr-welcome__first' },
+      h('p', { class: 'mr-guide__eyebrow' }, 'Your first job'),
+      h('h2', {}, 'Get one video out'),
+      ctx.boost || null,
+      h('ol', { class: 'mr-welcome-jobs' },
+        job(linked, 'Link your TikTok or Instagram', linked ? `Linked: ${[creator.tiktok_handle && `@${creator.tiktok_handle}`, creator.instagram_handle && `@${creator.instagram_handle}`].filter(Boolean).join(' and ')}.` : 'So your videos are found and counted for you.', 'Link it', 'connect'),
+        job(videos > 0, ctx.editor === 'make' ? 'Make it in the editor' : 'Make it', editorLine, ctx.editor === 'make' ? 'Open the editor' : `Open ${editorName}`, ctx.editor || 'videos'),
+        job(videos > 0, 'Post it', `From the linked account, with ${tag} in the caption and your link in your bio.`, 'Get my link', 'links'),
+        job(videos > 0, 'See it on your dashboard', 'It shows up under Videos by itself, with its views.', 'Videos', 'videos')),
+      h('div', { class: 'mr-welcome__reward' }, h('b', {}, 'What you get for it'), h('ul', {}, reward.map((r) => h('li', {}, r)))),
+      h('div', { class: 'mr-welcome__cta' }, h('button', { class: 'btn btn--primary', type: 'button', onclick: go(ctx.editor || 'videos') }, ctx.editor === 'make' ? 'Open the editor' : 'Start my first video')),
+    );
+
+    return [hero, flow, pay, calc, first].filter(Boolean);
+  }
+
+  cp.guides = { structure, payByRank, referral, welcome };
 })();
