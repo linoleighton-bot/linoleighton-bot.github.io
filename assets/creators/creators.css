@@ -802,7 +802,20 @@ button.mr-tile:hover { transform: translateY(-3px); }
 .mr-brief__must { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.25rem; align-items: center; }
 .mr-brief__must img { width: 100%; border-radius: 0.75rem; display: block; border: 1px solid var(--line); }
 .mr-brief__must div { display: grid; gap: 0.6rem; }
-@media (max-width: 40rem) { .mr-brief__must { grid-template-columns: 1fr; } .mr-brief__list li { grid-template-columns: 1fr; } }
+/* How viewers get to the link: the reason, one box per platform, then what comes later. */
+.mr-brief__why { background: var(--mr-accent-soft); border-radius: 0.9rem; padding: 0.9rem 1rem; }
+.mr-brief__ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.mr-brief__way { display: grid; gap: 0.5rem; align-content: start; border: 1px solid var(--line); border-radius: 0.9rem; padding: 1rem; min-width: 0; }
+.mr-brief__way > small { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.mr-brief__way h3 { font-size: 1.125rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; margin: 0; }
+.mr-brief__words { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.mr-brief__words small { color: var(--muted); font-size: 0.8125rem; margin-right: 0.2rem; }
+.mr-brief__words span { background: var(--sunk); border-radius: 999px; padding: 0.25rem 0.7rem; font-weight: 700; font-size: 0.875rem; }
+.mr-brief__yourlink { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; font-size: 0.875rem; }
+.mr-brief__yourlink code { overflow-wrap: anywhere; min-width: 0; }
+.mr-brief__jump { color: var(--mr-accent); font-weight: 600; text-decoration: underline; text-underline-offset: 0.18em; }
+#manychat[data-flash] { outline: 3px solid var(--mr-accent); outline-offset: 3px; }
+@media (max-width: 40rem) { .mr-brief__must, .mr-brief__ways { grid-template-columns: 1fr; } .mr-brief__list li { grid-template-columns: 1fr; } }
 .mr-nav[data-star] { grid-template-columns: 1.4rem minmax(0, 1fr); row-gap: 0.3rem; padding-block: 0.8rem; }
 .mr-nav[data-star] em { grid-column: 2; justify-self: start; }
 .mr-brief__thumb em { position: absolute; top: 0.45rem; left: 0.45rem; font-style: normal; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: var(--mr-accent); color: #fff; border-radius: 999px; padding: 0.2rem 0.5rem; }

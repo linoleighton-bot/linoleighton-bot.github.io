@@ -552,12 +552,24 @@
       linkLabel: 'Download the image (IMG_2819.PNG)',
     },
     tips: {
-      title: 'Send viewers to the comments, then DM them your link',
+      title: 'How viewers get from your video to your link',
+      why: 'To get more conversions, getting to the website has to be as seamless as possible for the viewer. Every extra step loses people, so set up each platform like this.',
+      tiktok: {
+        title: 'Put your commission link in your bio',
+        text: 'Use either one: your **commission link** itself in your bio, or a **Linktree** in your bio with your commission link inside it.',
+      },
+      instagram: {
+        title: 'Say "Comment the word ___"',
+        text: 'End the video with a line like: "Comment **app** and I\'ll send it to you." A viewer who is interested doesn\'t have to leave their doomscroll. They just comment the word.',
+        words: ['app', 'web', 'mind', 'book'],
+        after: 'Then DM your commission link to everyone who comments. That is how the sale gets credited to you.',
+      },
+      manychat: {
+        text: 'Later on we will set up ManyChat on your account, so those DMs send themselves.',
+        link: 'Requirements are listed here',
+      },
       items: [
-        'End every video the way the examples do: "Comment **book** and I\'ll send it to you." Pick any word, keep it the same across your videos.',
-        'Then manually DM everyone who comments your custom link. That is how a sale gets attributed to you, so tracking stays accurate.',
         'You don\'t have to do this. But if you skip it you will miss out on a lot of extra money, and sales that came from your video won\'t be credited to you.',
-        'Once you reach a certain rank, we pay for your ManyChat and the DMs become fully automated.',
       ],
     },
     closing: '**You have freedom.** If you think another format or different CTAs will perform better for your audience, do that. This is guidance on what we think will perform best, not a script.',
@@ -576,6 +588,12 @@
   };
 
   /* Pinned videos first, in the order they were placed. */
+  /*
+   * The "how viewers get to your link" part of a brief. A brief saved before
+   * that part had its own fields gets the built-in one, whole.
+   */
+  const briefTips = (brief) => (brief?.tips && brief.tips.why !== undefined ? brief.tips : defaultBrief.tips);
+
   const briefVideos = (brief) => { const items = brief?.examples?.items || []; return [...items.filter((v) => v.pinned), ...items.filter((v) => !v.pinned)]; };
 
 
@@ -1036,7 +1054,7 @@
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
     COLOR, segbar, hbars, timeChart, milestones, ladder, dollars, KINDS, fold, figure,
     /* Where an uploaded reference video is served from. */
-    defaultBrief, rich, briefImage, briefVideos,
+    defaultBrief, rich, briefImage, briefVideos, briefTips,
     live, tabbar,
     avatar, person, handleLinks, teamView,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),

@@ -1038,8 +1038,21 @@
     };
     const block = (eyebrow, title, ...body) => h('section', { class: 'mr-panel mr-brief' }, h('p', { class: 'mr-brief__eyebrow' }, eyebrow), h('h2', {}, title), ...body);
     const link = `https://getmindroll.com/start/?ref=${data.creator.code}`;
-    const ex = brief.examples || {}, ctas = brief.ctas || {}, assets = brief.assets || {}, must = brief.must || {}, tips = brief.tips || {};
+    const ex = brief.examples || {}, ctas = brief.ctas || {}, assets = brief.assets || {}, must = brief.must || {}, tips = cp.briefTips(brief) || {};
     const videos = cp.briefVideos(brief);
+    /* One platform's instructions: which platform, the one thing to do, then the detail. */
+    const way = (platform, w, extra) => (w && (w.title || w.text) ? h('div', { class: 'mr-brief__way' }, h('small', {}, platform), h('h3', {}, w.title), w.text ? h('p', {}, cp.rich(w.text)) : null, extra || null) : null);
+    /* The ManyChat card lives under Invite: go there and bring it into view. */
+    const manychatOn = (data.settings.manychat_commission_cents || 0) > 0;
+    const toManychat = (e) => {
+      e.preventDefault();
+      openPane('invite');
+      const card = document.getElementById('manychat');
+      if (!card) return;
+      card.scrollIntoView({ block: 'center' });
+      card.dataset.flash = '';
+      setTimeout(() => { delete card.dataset.flash; }, 2400);
+    };
     const card = (v) => {
       const src = cp.briefImage(v.image);
       const a = out(v.url, h('span', { class: 'mr-brief__thumb' }, src ? h('img', { src, alt: '', loading: 'lazy' }) : null, h('i', { 'aria-hidden': 'true' }, '▶'), v.pinned ? h('em', {}, 'Pinned') : v.highlight ? h('em', {}, 'Featured') : null), h('b', {}, v.title), v.note ? h('small', {}, v.note) : null);
@@ -1060,8 +1073,24 @@
       must.title || must.image
         ? block('One must-have', must.title, h('div', { class: 'mr-brief__must' }, cp.briefImage(must.image) ? h('img', { src: cp.briefImage(must.image), alt: must.title || '', loading: 'lazy' }) : null, h('div', {}, h('p', {}, cp.rich(must.text)), must.url ? out(must.url, must.linkLabel || 'Download the image') : null)))
         : null,
-      (tips.items || []).length
-        ? block('Highly recommended', tips.title, h('ul', { class: 'mr-brief__list' }, tips.items.map((text) => h('li', {}, h('span', {}, cp.rich(text))))), h('p', { class: 'cp-inline cp-small' }, h('span', { class: 'cp-muted' }, 'Your link: '), h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link)))
+      tips.title || (tips.items || []).length
+        ? block(
+          'Highly recommended',
+          tips.title,
+          tips.why ? h('p', { class: 'mr-brief__why' }, h('b', {}, 'Why: '), cp.rich(tips.why)) : null,
+          h(
+            'div',
+            { class: 'mr-brief__ways' },
+            way('TikTok', tips.tiktok),
+            way('Instagram', tips.instagram, [
+              (tips.instagram?.words || []).length ? h('div', { class: 'mr-brief__words' }, h('small', {}, 'Words you can use'), tips.instagram.words.map((w) => h('span', {}, w))) : null,
+              tips.instagram?.after ? h('p', {}, cp.rich(tips.instagram.after)) : null,
+            ]),
+          ),
+          h('p', { class: 'mr-brief__yourlink' }, h('span', { class: 'cp-muted' }, 'Your commission link'), h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link)),
+          tips.manychat?.text ? h('p', { class: 'mr-brief__next' }, cp.rich(tips.manychat.text), ' ', manychatOn && tips.manychat.link ? [h('a', { class: 'mr-brief__jump', href: '#invite', onclick: toManychat }, tips.manychat.link), '.'] : null) : null,
+          (tips.items || []).length ? h('ul', { class: 'mr-brief__list' }, tips.items.map((text) => h('li', {}, h('span', {}, cp.rich(text))))) : null,
+        )
         : null,
       brief.closing || brief.questions ? h('section', { class: 'mr-panel mr-brief' }, brief.closing ? h('p', {}, cp.rich(brief.closing)) : null, brief.questions ? h('p', { class: 'cp-muted cp-small' }, brief.questions) : null) : null,
     ];
@@ -1148,7 +1177,7 @@
     const have = Math.max(0, data.balance.commission_cents || 0);
     return h(
       'section',
-      { class: 'cp-card' },
+      { class: 'cp-card', id: 'manychat' },
       h('div', { class: 'cp-card__head' }, cp.figure('ManyChat', data.creator.manychat_at ? 'Set up' : have >= need ? 'Unlocked' : `Unlocks at ${cp.dollars(need)}`), data.creator.manychat_at ? pill('Done', 'good') : have >= need ? pill('We will contact you', 'good') : null),
       data.creator.manychat_at || have >= need ? null : progress('Commission you have earned', have, need, cp.dollars),
       h('p', { class: 'cp-muted cp-small' }, 'ManyChat messages your link to anyone who comments a keyword on your Instagram post, which turns far more viewers into subscribers. We set it up for you, free, once you have earned this much in commission.'),

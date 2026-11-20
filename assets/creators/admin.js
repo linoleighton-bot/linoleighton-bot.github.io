@@ -1230,6 +1230,9 @@
     const clone = (v) => JSON.parse(JSON.stringify(v));
     if (!briefEdit) briefEdit = clone(doc.draft || doc.published || cp.defaultBrief);
     const b = briefEdit;
+    if (!b.tips || b.tips.why === undefined) b.tips = clone(cp.defaultBrief.tips);
+    for (const key of ['tiktok', 'instagram', 'manychat']) b.tips[key] = b.tips[key] || {};
+    b.tips.instagram.words = b.tips.instagram.words || [];
     for (const key of ['examples', 'ctas', 'assets', 'tips']) { b[key] = b[key] || {}; b[key].items = b[key].items || []; }
     b.must = b.must || {};
     const unpublished = JSON.stringify(b) !== JSON.stringify(doc.published || null);
@@ -1289,6 +1292,14 @@
       }),
     );
     const assetRow = (it, i) => h('li', { class: 'mr-edit__row' }, h('div', { class: 'mr-edit__fields' }, text(it, 'title', 'Title'), text(it, 'note', 'Description'), text(it, 'url', 'Link', { type: 'url', placeholder: 'https://' })), h('div', { class: 'mr-edit__tools' }, mini(it.lead ? 'Main button' : 'Make main', () => { it.lead = !it.lead; redraw(); }, { pressed: it.lead }), mini('Up', () => move(b.assets.items, i, -1), { disabled: i === 0 }), mini('Down', () => move(b.assets.items, i, 1), { disabled: i === b.assets.items.length - 1 }), remove(b.assets.items, i)));
+
+    /* The comment words, typed as one line with commas between them. */
+    const wordsField = () => {
+      const input = h('input', { class: 'cp-input', type: 'text', placeholder: 'app, web, mind', 'aria-label': 'Instagram: words to comment' });
+      input.value = b.tips.instagram.words.join(', ');
+      input.addEventListener('input', () => { b.tips.instagram.words = input.value.split(',').map((w) => w.trim()).filter(Boolean); touch(); });
+      return h('label', { class: 'mr-edit__field' }, h('span', {}, 'Instagram: words to comment, with commas between'), input);
+    };
 
     const validate = () => {
       if (!String(b.title || '').trim()) throw new Error('The brief needs a title.');
@@ -1351,7 +1362,7 @@
         h('div', { class: 'cp-inline' }, mini('Add an asset link', () => { b.assets.items.push({ title: '', note: '', url: '' }); redraw(); })),
       ),
       section('One must-have', null, h('div', { class: 'mr-edit__row' }, imageField(b.must, 'image', 'Must-have image'), h('div', { class: 'mr-edit__fields' }, text(b.must, 'title', 'Section title'), text(b.must, 'text', 'Text', { area: true, rows: 3 }), text(b.must, 'url', 'Download link', { type: 'url', placeholder: 'https://' }), text(b.must, 'linkLabel', 'Words on the download link')))),
-      section('Highly recommended', null, text(b.tips, 'title', 'Section title'), lineList(b.tips.items, 'Point', { rows: 2 }), h('div', { class: 'cp-inline' }, mini('Add a point', () => { b.tips.items.push(''); redraw(); }))),
+      section('Highly recommended', null, h('div', { class: 'mr-edit__fields' }, text(b.tips, 'title', 'Section title'), text(b.tips, 'why', 'Why we do it this way', { area: true }), text(b.tips.tiktok, 'title', 'TikTok: what to do'), text(b.tips.tiktok, 'text', 'TikTok: the detail', { area: true }), text(b.tips.instagram, 'title', 'Instagram: what to do'), text(b.tips.instagram, 'text', 'Instagram: the detail', { area: true, rows: 3 }), wordsField(), text(b.tips.instagram, 'after', 'Instagram: after they comment', { area: true }), text(b.tips.manychat, 'text', 'ManyChat line', { area: true }), text(b.tips.manychat, 'link', 'ManyChat link text (opens the ManyChat card under Invite)')), h('p', { class: 'cp-muted cp-small' }, 'Extra points, shown underneath'), lineList(b.tips.items, 'Point', { rows: 2 }), h('div', { class: 'cp-inline' }, mini('Add a point', () => { b.tips.items.push(''); redraw(); }))),
       section('Closing', null, h('div', { class: 'mr-edit__fields' }, text(b, 'closing', 'Closing note', { area: true, rows: 3 }), text(b, 'questions', 'Last line (questions, contact)', { area: true })), h('p', { class: 'cp-muted cp-small' }, 'Put two stars either side of words to make them bold, like **this**.')),
     ];
   }
