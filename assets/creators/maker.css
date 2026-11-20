@@ -1,0 +1,98 @@
+/* "Make a video": the template filler on the creator dashboard, and its editor in admin. */
+.mk { display: grid; gap: 1.25rem; min-width: 0; }
+.mk video { width: 100%; border-radius: var(--r-md); background: #000; display: block; }
+.mk-back { justify-self: start; text-decoration: none; }
+.mk-label { font-size: 0.75rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--clay-deep); }
+.mk-warn { color: var(--danger); }
+
+.mk-pick { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+.mk-pick li { display: grid; gap: 0.7rem; align-content: start; border: 1px solid var(--line); border-radius: var(--r-md); padding: 0.9rem; min-width: 0; }
+.mk-pick li > div { display: grid; gap: 0.4rem; justify-items: start; }
+.mk-pick video { aspect-ratio: 9 / 16; object-fit: cover; max-height: 22rem; }
+
+.mk-slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+.mk-slot { border: 1px solid var(--line); border-radius: var(--r-md); padding: 0.9rem 1rem; display: grid; gap: 0.7rem; min-width: 0; }
+.mk-slot[data-done] { border-color: var(--line-strong); background: var(--tint); }
+.mk-slot__head { display: flex; align-items: center; gap: 0.6rem; }
+.mk-slot__n { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.8125rem; font-weight: 700; background: var(--clay-wash); color: var(--clay-deep); flex: none; }
+.mk-slot[data-done] .mk-slot__n { background: var(--ink); color: #fff; }
+.mk-slot__body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start; }
+.mk-slot__say { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
+.mk-line { font-size: 1.0625rem; line-height: 1.4; font-weight: 600; }
+.mk-slot__media { display: flex; gap: 0.6rem; }
+.mk-slot__media:empty { display: none; }
+.mk-slot__media figure { margin: 0; width: 6.5rem; display: grid; gap: 0.25rem; text-align: center; }
+.mk-slot__media video { aspect-ratio: 9 / 16; object-fit: cover; }
+
+.mk-build { display: grid; gap: 0.6rem; justify-items: start; }
+.mk-bar { width: 100%; height: 0.5rem; border-radius: 1rem; background: var(--line); overflow: hidden; }
+.mk-bar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: inherit; transition: width 0.2s linear; }
+
+.mk-result__in { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.mk-result__in > video { aspect-ratio: 9 / 16; object-fit: cover; }
+.mk-result__side { display: grid; gap: 0.75rem; justify-items: start; min-width: 0; }
+.mk-result__side .cp-copyrow { width: 100%; }
+.mk-caption { overflow-wrap: anywhere; font-size: 0.9375rem; }
+
+@media (max-width: 40rem) {
+  .mk-slot__body { grid-template-columns: minmax(0, 1fr); }
+  .mk-result__in { grid-template-columns: minmax(0, 1fr); }
+  .mk-result__in > video { max-width: 16rem; justify-self: center; }
+  .mk-build .btn { width: 100%; }
+}
+
+/* Admin */
+.mk-edit + .mk-edit { margin-top: 0.6rem; }
+.mk-edit__body { display: grid; gap: 0.9rem; justify-items: start; }
+.mk-edit__body > textarea { width: 100%; resize: vertical; }
+.mk-edit__ref { width: 11rem; aspect-ratio: 9 / 16; object-fit: cover; border-radius: var(--r-md); background: #000; }
+
+/* The row of pieces: one per clip, as wide as the clip is long, each locking into the next. */
+.mk-tl { display: flex; gap: 0; overflow-x: auto; padding: 0.35rem 0.9rem 0.6rem 0.1rem; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.mk-piece { position: relative; flex: 1 0 6.75rem; min-width: 6.75rem; text-align: left; font: inherit; cursor: pointer; display: grid; gap: 0.15rem; align-content: start; padding: 0.6rem 0.7rem 0.6rem 1.2rem; min-height: 4.4rem; background: var(--surface); color: var(--ink); border: 1.5px solid var(--line-strong); border-left-width: 0; scroll-snap-align: start; }
+.mk-piece:first-child { border-left-width: 1.5px; border-radius: var(--r-md) 0 0 var(--r-md); padding-left: 0.8rem; }
+.mk-piece:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; }
+.mk-piece:first-child:last-child { border-radius: var(--r-md); }
+/* The knob that sits into the next piece. */
+.mk-piece::after { content: ''; position: absolute; right: -0.62rem; top: 50%; width: 1.1rem; height: 1.1rem; margin-top: -0.55rem; border-radius: 50%; background: inherit; border: 1.5px solid var(--line-strong); border-left-color: transparent; border-bottom-color: transparent; transform: rotate(45deg); z-index: 2; }
+.mk-piece:last-child::after { display: none; }
+.mk-piece b { font-size: 0.9375rem; }
+.mk-piece__len { position: absolute; top: 0.6rem; right: 0.8rem; font-size: 0.75rem; color: var(--muted); }
+.mk-piece__text { font-size: 0.8125rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mk-piece__chips { display: flex; gap: 0.25rem; min-height: 0.5rem; }
+.mk-piece__chips i, .mk-edit__bar { --kind: var(--ink); }
+.mk-piece__chips i[data-kind='image'], .mk-edit__bar[data-kind='image'] { --kind: var(--clay-deep); }
+.mk-piece__chips i[data-kind='video'], .mk-edit__bar[data-kind='video'] { --kind: #2f7d4f; }
+.mk-piece__chips i { width: 1.1rem; height: 0.3rem; border-radius: 1rem; background: var(--kind); }
+.mk-piece__chips i[data-empty] { background: none; outline: 1.5px dashed var(--kind); outline-offset: -1.5px; }
+.mk-piece[data-done] { background: var(--tint); }
+.mk-piece[data-done] b::after { content: ' ✓'; }
+.mk-piece[aria-current] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.mk-piece[aria-current]::after { border-color: var(--ink); }
+.mk-piece[aria-current] .mk-piece__text, .mk-piece[aria-current] .mk-piece__len { color: rgba(255, 255, 255, 0.75); }
+.mk-piece[aria-current] .mk-piece__chips i { --kind: #fff; }
+.mk-piece--add { flex: 0 0 6.75rem; border-style: dashed; color: var(--clay-deep); background: none; }
+.mk-piece--add b { font-size: 1.25rem; line-height: 1; }
+.mk-piece:focus-visible { outline: 2px solid var(--clay-deep); outline-offset: 2px; z-index: 3; }
+.mk-tl--edit { width: 100%; }
+
+.mk-edit__panel { display: grid; grid-template-columns: 11.5rem minmax(0, 1fr); gap: 1.1rem; width: 100%; align-items: start; }
+.mk-edit__stage { display: grid; gap: 0.4rem; justify-items: center; position: sticky; top: 4.5rem; }
+.mk-edit__canvas { width: 100%; aspect-ratio: 9 / 16; border-radius: var(--r-md); background: #1d2028; display: block; }
+.mk-edit__scrub { width: 100%; }
+.mk-edit__clip { display: grid; gap: 0.7rem; justify-items: start; min-width: 0; }
+.mk-edit__clip > textarea, .mk-edit__layer > .cp-input { width: 100%; resize: vertical; }
+.mk-edit__track { position: relative; width: 100%; display: grid; gap: 0.3rem; padding: 0.5rem 0; border-block: 1px solid var(--line); min-height: 2.6rem; align-content: center; }
+.mk-edit__bar { font: inherit; font-size: 0.75rem; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0.3rem 0.55rem; border-radius: 0.45rem; border: 1.5px solid var(--kind); background: var(--kind); color: #fff; cursor: pointer; min-width: 0; box-sizing: border-box; }
+.mk-edit__bar[data-empty] { background: none; color: var(--kind); border-style: dashed; }
+.mk-edit__bar[aria-current] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.mk-edit__head { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--danger); pointer-events: none; }
+.mk-edit__track[data-empty] .mk-edit__head { display: none; }
+.mk-edit__layer { width: 100%; display: grid; gap: 0.6rem; justify-items: start; padding: 0.8rem 0.9rem; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--tint); }
+@media (max-width: 46rem) {
+  .mk-edit__panel { grid-template-columns: minmax(0, 1fr); }
+  .mk-edit__stage { position: static; width: 9rem; justify-self: center; }
+}
+.mk-own { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; width: 100%; }
+.mk-own input { flex: 1 1 12rem; min-width: 0; }
+.mk-own select { flex: 0 0 auto; }

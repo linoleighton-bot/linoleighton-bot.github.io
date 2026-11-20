@@ -1709,6 +1709,7 @@
       section('Your campaigns', h('span', { class: 'cp-muted' }, `${list.filter((k) => k.open).length} live · ${list.filter((k) => k.upcoming).length} coming up`), foldPlain('+ New campaign', form), h('p', { class: 'cp-muted cp-small' }, 'Creators in the tier see it straight away and press Join. Videos they post before it ends appear below for you to check against the format. When it has ended, press Pay winners. These prizes are a marketing cost: they are paid whatever the creator has sold.')),
       ...list.map(card),
       library,
+      cp.maker ? cp.maker.adminSection(state.briefs, db) : null,
       w
         ? section(
             'Top videos',

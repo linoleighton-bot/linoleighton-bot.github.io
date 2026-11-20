@@ -363,6 +363,7 @@
     book: 'M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h10M9 8h5',
     badge: 'M12 3l2.4 1.9 3-.3.9 2.9 2.5 1.7-1.1 2.8 1.1 2.8-2.5 1.7-.9 2.9-3-.3L12 21l-2.4-1.9-3 .3-.9-2.9-2.5-1.7 1.1-2.8-1.1-2.8 2.5-1.7.9-2.9 3 .3zM9 12l2 2 4-4',
     plug: 'M9 3v5m6-5v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4',
+    film: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4',
     medal: 'M8 3h8l-2.5 6h-3zM12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm0-8v4m-1.5-3.2L12 13',
   };
   const icon = (name) => {
@@ -577,6 +578,12 @@
     const hasTeam = PANES.some(([id]) => id === 'team');
     if (data.team && !hasTeam) PANES.splice(1, 0, ['team', 'My team', 'badge']);
     if (!data.team && hasTeam) PANES.splice(PANES.findIndex(([id]) => id === 'team'), 1);
+    /* "Make a video" sits under the brief once there is a template to fill in. */
+    if (cp.maker && !renderDashboard.makerAsked) {
+      renderDashboard.makerAsked = true;
+      cp.maker.load(data.briefs).then((n) => { if (!n) return; if (location.hash === '#make') pane = 'make'; renderDashboard(lastData); });
+    }
+    if (cp.maker?.count && !PANES.some(([id]) => id === 'make')) PANES.splice(PANES.findIndex(([id]) => id === 'brief') + 1, 0, ['make', 'Make a video', 'film']);
     if (location.hash === '#team' && data.team && !renderDashboard.opened) { renderDashboard.opened = true; pane = 'team'; }
     if (!PANES.some(([id]) => id === pane)) pane = 'home';
     const { creator, stats } = data;
@@ -596,6 +603,7 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
+      make: () => cp.maker.view(data),
       team: () => cp.teamView(data.team, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
