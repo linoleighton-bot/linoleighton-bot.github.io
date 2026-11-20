@@ -229,6 +229,9 @@
     if (step.kind === 'offer') {
       fillOffer();
       warmAhead?.();
+      /* No Subscribe button on this screen: the payment form is the button,
+         so it has to be put there. */
+      startCheckout?.();
     }
     if (step.kind === 'plan') {
       fillPlan();
@@ -1622,6 +1625,15 @@
    */
   let warmAhead = null;
 
+  /*
+   * Mounts the checkout on the offer screen.
+   *
+   * Set when the offer block wires itself up, called by the step change.
+   * Absent until then, so an early call is a no-op rather than an error —
+   * the same arrangement `warmAhead` uses one line above.
+   */
+  let startCheckout = null;
+
   const offerEl = stepEls.get('offer');
   if (offerEl) {
     const planButtons = [...offerEl.querySelectorAll('[data-plan-id]')];
@@ -1925,7 +1937,20 @@
     let session = 0;
     const tillOpen = () => Boolean(till) && !till.hidden;
 
-    if (checkout && boot.checkout) {
+    /*
+     * A till is enough; a Subscribe button is no longer required.
+     *
+     * This gate used to be `checkout && boot.checkout` — the whole checkout
+     * only wired itself up if a `[data-checkout]` button existed to press.
+     * Funnel 2 has no such button any more: the payment form is mounted on
+     * arrival and is itself the thing to press. Gating on the button meant
+     * removing it silently took the entire checkout with it, form and all,
+     * with no error anywhere. The till is what this block actually needs.
+     */
+    if ((checkout || till) && boot.checkout) {
+      /* How many times a cancelled checkout has been put back. */
+      let remounts = 0;
+
       const openCheckout = async () => {
         /* No account, no identity to attach a subscription to. */
         if (!user) {
@@ -2025,7 +2050,15 @@
           unfit?.();
           /* Superseded: the newer checkout owns the till now, so leave it be. */
           if (mine !== session) return;
-          if (till) till.hidden = true;
+          /*
+           * The till stays on screen.
+           *
+           * It used to hide itself here, which was right when a button
+           * underneath could reopen it. There is no button now — the
+           * payment form is the only way to pay on this screen — so hiding
+           * it on a cancelled Apple Pay sheet would strand the reader on a
+           * paywall with nothing to press. It is remounted below instead.
+           */
           for (const n of offerEl.querySelectorAll('[data-checkout]')) n.disabled = false;
 
           /*
@@ -2039,6 +2072,22 @@
             /cancel/i.test(String(error?.message || ''));
           if (cancelled) {
             say('');
+            /*
+             * Put the form back.
+             *
+             * Backing out of an Apple Pay sheet resolves the SDK's purchase
+             * as a cancellation, which leaves the mounted form spent. With
+             * no Subscribe button to press again, remounting is the only
+             * thing that keeps the screen usable. Bounded, because a mount
+             * that fails its way into a cancellation every time would
+             * otherwise spin.
+             */
+            if (remounts < 3) {
+              remounts += 1;
+              window.setTimeout(() => {
+                if (mine === session) openCheckout();
+              }, 150);
+            }
             return;
           }
 
@@ -2060,13 +2109,47 @@
         }
       };
 
+      /*
+       * Any Subscribe button still in the markup keeps working; funnel 2 no
+       * longer renders one.
+       */
       for (const node of offerEl.querySelectorAll('[data-checkout]')) {
         node.addEventListener('click', openCheckout);
       }
-      /* Now that it exists, a plan change can reopen the till on the new one. */
-      reopen = () => {
-        if (tillOpen()) openCheckout();
+
+      /*
+       * With no button, the checkout mounts itself when the screen arrives.
+       *
+       * `startCheckout` is handed outward so the step change can call it —
+       * the offer step is reached by answering, not by loading the page, and
+       * mounting a checkout for every visitor who never gets here would cost
+       * them a megabyte and create a payment session nobody asked for.
+       */
+      startCheckout = () => {
+        if (!till || till.childElementCount) return;
+        remounts = 0;
+        openCheckout();
       };
+
+      /* A plan change re-mounts the till on the newly chosen plan. */
+      reopen = () => {
+        if (tillOpen()) {
+          remounts = 0;
+          openCheckout();
+        }
+      };
+
+      /*
+       * If the offer screen is already the one on display, mount it now.
+       *
+       * This block runs when the script wires itself up, which on the
+       * ordinary path is long before anyone answers their way here — the
+       * step change then calls `startCheckout`. But a reader who arrives
+       * straight at `?q=offer` is rendered before this line runs, so that
+       * call found nothing and the screen sat with an empty payment area.
+       * Catching up here covers both arrivals with one mechanism.
+       */
+      if (byId[order[index]]?.kind === 'offer') startCheckout();
     }
   }
 
