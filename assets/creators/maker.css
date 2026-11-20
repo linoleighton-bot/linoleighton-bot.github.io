@@ -96,3 +96,8 @@
 .mk-own { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; width: 100%; }
 .mk-own input { flex: 1 1 12rem; min-width: 0; }
 .mk-own select { flex: 0 0 auto; }
+
+/* The winning video itself, on its card and above the clips. */
+.mk .mk-ref { width: 100%; aspect-ratio: 9 / 16; max-height: 26rem; border: 0; border-radius: var(--r-md); background: #000; display: block; object-fit: cover; }
+.mk-watch { width: min(100%, 14rem); }
+.mk-watch:empty { display: none; }

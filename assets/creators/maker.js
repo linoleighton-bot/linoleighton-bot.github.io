@@ -68,6 +68,19 @@
   const dropClip = (id, i) => { memory.delete(clipKey(id, i)); return store('readwrite', (s) => s.delete(clipKey(id, i))); };
   const readClip = async (id, i) => memory.get(clipKey(id, i)) || (await store('readonly', (s) => s.get(clipKey(id, i)))) || null;
 
+  /*
+   * The reference video for a format. One the team uploaded plays as a file. One
+   * kept on Google Drive plays in Drive's own player, so it is shown without
+   * being copied anywhere.
+   */
+  const driveId = (url) => { const hit = /^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]{20,})/.exec(String(url || '')); return hit ? hit[1] : null; };
+  const refPlayer = (brief, label) => {
+    const file = fileUrl(brief.video_path);
+    if (file) return h('video', { class: 'mk-ref', src: file, controls: true, preload: 'metadata', playsinline: true, 'aria-label': label });
+    const id = driveId(brief.url);
+    return id ? h('iframe', { class: 'mk-ref', src: `https://drive.google.com/file/d/${id}/preview`, title: label, loading: 'lazy', allow: 'autoplay; fullscreen', allowfullscreen: true, referrerpolicy: 'no-referrer' }) : null;
+  };
+
   /* Words a creator adds to their own video: kept on their device, per format and clip. */
   const extrasKey = (id) => `mindroll.maker.words.${id}`;
   const readExtras = (id) => { try { const v = JSON.parse(localStorage.getItem(extrasKey(id)) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
@@ -607,10 +620,9 @@
         h('span', { class: 'cp-muted' }, `${list.length} picked by the Mindroll team`),
         h('p', { class: 'cp-muted' }, 'These are formats that are working right now. Choose the one you want to copy, film each short clip, and the captions and music are added for you. You get one finished video to post.'),
         h('ul', { class: 'mk-pick' }, list.map((x) => {
-          const ref = fileUrl(x.brief.video_path);
           const total = x.slots.reduce((a, s) => a + slotLen(s), 0);
           return h('li', {},
-            ref ? h('video', { src: ref, controls: true, preload: 'metadata', playsinline: true, 'aria-label': x.brief.title }) : null,
+            refPlayer(x.brief, `The winning video: ${x.brief.title}`),
             h('div', {},
               h('span', { class: 'mk-label' }, 'Winning format'),
               h('b', {}, x.brief.title),
@@ -656,6 +668,7 @@
         cp.section(
           t.brief.title,
           cp.safeUrl(t.brief.url) ? h('a', { href: cp.safeUrl(t.brief.url), target: '_blank', rel: 'noopener noreferrer' }, 'Watch the reference') : h('span', { class: 'cp-muted' }, `${t.slots.length} clips`),
+          fileUrl(t.brief.video_path) ? null : h('div', { class: 'mk-watch' }, refPlayer(t.brief, `The winning video: ${t.brief.title}`)),
           h('p', { class: 'cp-muted' }, 'Film each clip the way the reference does it, saying the line shown. Hold your phone upright. The words on screen, pictures and music are added when you build it, and you can add words of your own to any clip.'),
           h('div', { class: 'mk-tl', role: 'list', 'aria-label': 'The clips in this video' }, t.slots.map((s, i) => piece(s, i, { role: 'listitem', 'data-done': ui.clips[i] ? true : null, 'aria-label': `Clip ${i + 1}${ui.clips[i] ? ', filmed' : ', not filmed yet'}`, onclick: () => root.querySelector(`#mk-clip-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, h('span', { class: 'mk-piece__text' }, ui.clips[i] ? 'Filmed' : 'To film'), h('span', { class: 'mk-piece__chips' }, [...s.layers.filter((l) => l.kind === 'text' || l.path), ...ownOf(i).map(() => ({ kind: 'text' }))].map((l) => h('i', { 'data-kind': l.kind })))))),
           h('ol', { class: 'mk-slots' }, t.slots.map((_, i) => slotCard(t, i))),
