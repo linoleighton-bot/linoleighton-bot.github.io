@@ -478,53 +478,71 @@
       note('Nothing here is guaranteed: no views and no sales means no pay. Bonuses are paid out of the sales you bring in, so a bonus can wait until your sales cover it.'),
     );
 
-    /* --- 3b. a first-month calculator from the live numbers */
+    /* --- 3b. one good video at each rank, from the live pay rules */
     const calc = (() => {
-      if (!iron && !(week0 > 0)) return null;
-      const field = (label, min, max, stepBy, value, fmt) => {
-        const out = h('output', {}, fmt(value));
-        const input = h('input', { type: 'range', min, max, step: stepBy, value, 'aria-label': label });
-        return { input, out, row: h('label', { class: 'mr-welcome-calc__field' }, h('span', {}, label, out), input) };
+      if (!tiers.length) return null;
+      const VIEWS = 1000000, SUBS = 250, SUB_WEEK = 1500, WEEKS = 4;
+      const sales = SUBS * SUB_WEEK; /* a week of what the 250 pay */
+      const milestones = list(data.rules).filter((r) => pos(r.amount_cents) && Number(r.threshold_views) <= VIEWS);
+      const milestoneCents = milestones.reduce((n, r) => n + Number(r.amount_cents), 0);
+      const ironViews = iron ? Math.floor(Math.min(VIEWS, Number(iron.cap_views) || VIEWS) / Number(iron.step_views)) * Number(iron.step_cents) : 0;
+      const PARTS = [
+        ['sale', `Commission, first ${WEEKS} weeks`],
+        ['views', 'Views pay'],
+        ['mile', 'View bonuses'],
+        ['rank', 'Rank-up bonus'],
+        ['base', `Base pay (posting ${minDays || 4} days a week)`],
+      ];
+      const rowsOf = (t, i) => {
+        const weekly = Math.round(sales * Number(t.commission_rate));
+        /* Bonuses inside the floor share what is left of 30% of sales after commission. */
+        const room = floor == null ? Infinity : Math.max(0, Math.round(sales * WEEKS * (1 - floor)) - weekly * WEEKS);
+        const inFloor = Math.min(room, milestoneCents + Number(t.rank_up_bonus_cents || 0) + WEEKS * weekOf(inc, t));
+        const want = { mile: milestoneCents, rank: Number(t.rank_up_bonus_cents || 0), base: WEEKS * weekOf(inc, t) };
+        const scale = want.mile + want.rank + want.base > 0 ? inFloor / (want.mile + want.rank + want.base) : 1;
+        return {
+          weekly,
+          parts: {
+            sale: weekly * WEEKS,
+            views: i === 0 ? ironViews : 0,
+            mile: scale < 1 ? Math.floor((want.mile * scale) / 100) * 100 : want.mile,
+            rank: scale < 1 ? Math.floor((want.rank * scale) / 100) * 100 : want.rank,
+            base: scale < 1 ? Math.floor((want.base * scale) / 100) * 100 : want.base,
+          },
+        };
       };
-      const fv = iron ? field(`Views across your videos (${dollars(Math.floor(Number(iron.cap_views) / Number(iron.step_views)) * Number(iron.step_cents))} at ${compact(iron.cap_views)}, the most)`, 0, Number(iron.cap_views) || 1000000, 10000, 150000, compact) : null;
-      /* What a subscriber pays each week, for the worked example. */
-      const SUB_WEEK = 1500;
-      const rate0 = t0 ? Number(t0.commission_rate) || 0 : 0;
-      const fs = field(`Subscribers through your link (${dollars(SUB_WEEK)} a week each)`, 0, 30, 1, 3, num);
-      const fw = week0 > 0 ? field(`Weeks you post on ${minDays || 'enough'} days${t0 && pos(t0.active_day_views) ? ` (${compact(t0.active_day_views)}+ views a day)` : ''}`, 0, 4, 1, 4, num) : null;
-      const rows = h('ul', { class: 'mr-guide-rows mr-welcome-calc__rows' });
-      const total = h('b', {});
-      const lock = h('p', { class: 'mr-welcome-calc__lock' });
-      const paint = () => {
-        const v = fv ? Number(fv.input.value) : 0;
-        const subs = Number(fs.input.value);
-        const w = fw ? Number(fw.input.value) : 0;
-        if (fv) fv.out.textContent = compact(v);
-        fs.out.textContent = num(subs);
-        if (fw) fw.out.textContent = num(w);
-        /* Each slider stands on its own: views pay from views alone, commission from subscribers alone. */
-        const steps = iron ? Math.floor(Math.min(v, Number(iron.cap_views) || v) / Number(iron.step_views)) : 0;
-        const viewsCents = steps * Number(iron ? iron.step_cents : 0);
-        const baseCents = w * week0;
-        const weekly = Math.round(subs * SUB_WEEK * rate0);
-        const saleCents = weekly * 4;
-        rows.replaceChildren(...[
-          iron ? h('li', { 'data-lane': 'views' }, h('span', {}, 'Views pay'), h('b', {}, dollars(viewsCents))) : null,
-          week0 > 0 ? h('li', { 'data-lane': 'base' }, h('span', {}, 'Base pay'), h('b', {}, dollars(baseCents))) : null,
-          rate0 ? h('li', { 'data-lane': 'sale' }, h('span', {}, `Commission: ${num(subs)} × ${pct(rate0)} of ${dollars(SUB_WEEK)} × 4 weeks`), h('b', {}, dollars(saleCents))) : null,
-        ].filter(Boolean));
-        total.textContent = dollars(viewsCents + baseCents + saleCents);
-        lock.textContent = rate0 && subs > 0 ? `After this month, those ${num(subs)} subscriber${subs === 1 ? '' : 's'} keep paying you ${dollars(weekly)} a week for as long as they stay.` : '';
-      };
-      [fv, fs, fw].filter(Boolean).forEach((f) => f.input.addEventListener('input', paint));
-      paint();
+      const all = tiers.map((t, i) => ({ t, ...rowsOf(t, i) }));
+      all.forEach((r) => { r.total = Object.values(r.parts).reduce((n, v) => n + v, 0); });
+      const most = Math.max(1, ...all.map((r) => r.total));
+      const used = PARTS.filter(([k]) => all.some((r) => r.parts[k] > 0));
+      const bars = h('div', { class: 'mr-welcome-rank' }, all.map((r) => h('div', { class: 'mr-welcome-rank__row' },
+        h('span', { class: 'mr-welcome-rank__name' }, h('b', {}, r.t.name), h('small', {}, pct(r.t.commission_rate))),
+        h('span', { class: 'mr-welcome-rank__track', role: 'img', 'aria-label': `${r.t.name}: ${dollars(r.total)}. ${used.filter(([k]) => r.parts[k]).map(([k, label]) => `${label} ${dollars(r.parts[k])}`).join(', ')}` },
+          used.filter(([k]) => r.parts[k] > 0).map(([k, label]) => h('i', { 'data-part': k, style: `width:${((r.parts[k] / most) * 100).toFixed(2)}%`, title: `${label}: ${dollars(r.parts[k])}` }))),
+        h('span', { class: 'mr-welcome-rank__total' }, h('b', {}, dollars(r.total)), h('small', {}, `then ${dollars(r.weekly)} a week`)))));
+      const table = h('div', { class: 'cp-tablewrap' }, h('table', { class: 'cp-table mr-welcome-rank__table' },
+        h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, ''), all.map((r) => h('th', { scope: 'col', class: 'is-num' }, r.t.name)))),
+        h('tbody', {},
+          used.map(([k, label]) => h('tr', {}, h('th', { scope: 'row' }, h('i', { class: 'mr-welcome-rank__key', 'data-part': k }), label), all.map((r) => h('td', { class: 'is-num' }, r.parts[k] ? dollars(r.parts[k]) : '–')))),
+          h('tr', { class: 'mr-welcome-rank__sum' }, h('th', { scope: 'row' }, `First ${WEEKS} weeks`), all.map((r) => h('td', { class: 'is-num' }, h('b', {}, dollars(r.total))))),
+          h('tr', {}, h('th', { scope: 'row' }, 'Every week after, while the 250 stay'), all.map((r) => h('td', { class: 'is-num' }, dollars(r.weekly)))))));
+      const prizes = tiers.filter((t) => pos(t.race_prize_cents));
       return panel(
-        'Try it',
-        `Your first month${t0 ? ` at ${t0.name}` : ''}, worked out`,
-        h('div', { class: 'mr-welcome-calc' },
-          h('div', { class: 'mr-welcome-calc__fields' }, [fv, fs, fw].filter(Boolean).map((f) => f.row)),
-          h('div', { class: 'mr-welcome-calc__out' }, h('small', {}, 'Your first month'), total, rows, lock)),
-        note(`An example using today's rates, with every subscriber on a ${dollars(SUB_WEEK)} weekly plan for the whole month. Not a promise: what you earn depends on your real views and sales.`),
+        'One good video',
+        'What one video can pay you, at every rank',
+        h('p', { class: 'mr-welcome__lead' }, `Say one video gets ${compact(VIEWS)} views and ${num(SUBS)} people subscribe through your link on a ${dollars(SUB_WEEK)} weekly plan. Here is what it pays at each rank. One video like that can be enough to move you out of ${t0 ? t0.name : 'the first rank'}.`),
+        h('div', { class: 'mr-welcome-rank__legend' }, used.map(([k, label]) => h('span', { 'data-part': k }, label))),
+        bars,
+        table,
+        note([
+          `How it adds up: ${num(SUBS)} × ${dollars(SUB_WEEK)} = ${dollars(sales)} a week from your subscribers, and you get your rank's share of it every week they stay.`,
+          iron ? `Views pay (${perKText} per 1,000 views, up to ${dollars(ironViews)}) is for ${t0.name} only.` : null,
+          milestones.length ? `View bonuses: ${milestones.map((r) => `${compact(r.threshold_views)} ${dollars(r.amount_cents)}`).join(', ')}.` : null,
+          `The rank-up bonus is paid once, the first time you reach a rank. Base pay needs you to keep posting on ${minDays || 4} days a week.`,
+          floor != null ? 'Bonuses come out of the sales you bring in, and are trimmed where those sales do not cover them.' : null,
+          prizes.length ? `Not counted: race prizes for the first creator to reach a rank (${prizes.map((t) => `${t.name} ${dollars(t.race_prize_cents)}`).join(', ')}), campaign prizes and top-video prizes.` : 'Not counted: campaign and top-video prizes.',
+          'An example, not a promise.',
+        ].filter(Boolean).join(' ')),
       );
     })();
 

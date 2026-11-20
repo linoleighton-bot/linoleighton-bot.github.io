@@ -189,24 +189,32 @@
 .mr-welcome-why b { font-size: 0.9375rem; }
 .mr-welcome-why span { font-size: 0.875rem; color: var(--muted); line-height: 1.4; }
 
-/* The calculator. */
-.mr-welcome-calc { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
-.mr-welcome-calc__fields { display: grid; gap: 1.1rem; }
-.mr-welcome-calc__field { display: grid; gap: 0.45rem; }
-.mr-welcome-calc__field > span { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9375rem; font-weight: 700; }
-.mr-welcome-calc__field output { font-variant-numeric: tabular-nums; color: var(--mr-accent); }
-.mr-welcome-calc__field input { width: 100%; accent-color: var(--mr-accent); min-height: 44px; }
-.mr-welcome-calc__out { display: grid; gap: 0.5rem; padding: 1.1rem 1.2rem; border-radius: 1.1rem; background: var(--ink); color: #fff; }
-.mr-welcome-calc__out > small { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgb(255 255 255 / 0.7); }
-.mr-welcome-calc__out > b { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.mr-welcome-calc__rows li { grid-template-columns: minmax(0, 1fr) auto; color: #fff; }
-.mr-welcome-calc__rows li::before { display: none; }
-.mr-welcome-calc__rows li span { display: flex; align-items: center; gap: 0.5rem; color: rgb(255 255 255 / 0.85); }
-.mr-welcome-calc__rows li span::before { content: ''; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--lane); flex: none; }
-.mr-welcome-calc__rows li b { text-align: right; }
-.mr-welcome-calc__lock { font-size: 0.8125rem; color: #F5C46B; margin: 0; }
-.mr-welcome-calc__lock:empty { display: none; }
-@media (max-width: 44rem) { .mr-welcome-calc { grid-template-columns: 1fr; } }
+/* One good video at each rank: one stacked bar per rank, a colour per kind of pay. */
+.mr-guide [data-part="sale"] { --part: #12A150; }
+.mr-guide [data-part="views"] { --part: #2F6BFF; }
+.mr-guide [data-part="mile"] { --part: #7C5CFF; }
+.mr-guide [data-part="rank"] { --part: #0B2A6B; }
+.mr-guide [data-part="base"] { --part: #F5A524; }
+.mr-welcome-rank__legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.8125rem; font-weight: 700; color: var(--ink-soft); }
+.mr-welcome-rank__legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.mr-welcome-rank__legend span::before, .mr-welcome-rank__key { content: ''; display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 0.2rem; background: var(--part); flex: none; }
+.mr-welcome-rank__key { margin-right: 0.45rem; vertical-align: -0.05rem; }
+.mr-welcome-rank { display: grid; gap: 0.7rem; }
+.mr-welcome-rank__row { display: grid; grid-template-columns: 6rem minmax(0, 1fr) 8.5rem; gap: 0.85rem; align-items: center; }
+.mr-welcome-rank__name, .mr-welcome-rank__total { display: grid; gap: 0.05rem; }
+.mr-welcome-rank__name b { font-size: 0.9375rem; }
+.mr-welcome-rank__name small, .mr-welcome-rank__total small { font-size: 0.75rem; color: var(--muted); }
+.mr-welcome-rank__total { text-align: right; }
+.mr-welcome-rank__total b { font-size: 1.125rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mr-welcome-rank__track { display: flex; height: 1.6rem; border-radius: 0.45rem; overflow: hidden; background: var(--sunk); }
+.mr-welcome-rank__track i { display: block; height: 100%; background: var(--part); min-width: 2px; }
+.mr-welcome-rank__track i + i { box-shadow: inset 2px 0 0 #fff; }
+.mr-welcome-rank__table th[scope="row"] { white-space: nowrap; font-weight: 600; }
+.mr-welcome-rank__sum td, .mr-welcome-rank__sum th { border-top: 2px solid var(--line-strong); }
+@media (max-width: 40rem) {
+  .mr-welcome-rank__row { grid-template-columns: 1fr auto; gap: 0.35rem 0.75rem; }
+  .mr-welcome-rank__track { grid-column: 1 / -1; grid-row: 2; }
+}
 
 /* The first job. */
 .mr-welcome__first { border: 2px solid var(--mr-accent); }
