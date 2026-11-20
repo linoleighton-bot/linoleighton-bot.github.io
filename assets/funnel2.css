@@ -2038,10 +2038,9 @@ body.page-funnel2 .fscale--worded .fscale__step[data-chosen] .fscale__word {
   font-weight: 600;
 }
 
-/* With the points stacked there is no row for the end labels to sit under. */
-body.page-funnel2 .fstep[data-kind='scale'] .fscale__ends {
-  display: none;
-}
+/* The end labels are back: the points are a row of numbers again, and
+   "Don't agree" under the first with "Agree" under the last is what tells
+   a reader which way the five run. */
 
 /* The question no longer needs pushing to the floor to meet its answers. */
 body.page-funnel2 .fstep[data-kind='scale'] .fs__title {
