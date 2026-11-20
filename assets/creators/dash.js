@@ -596,7 +596,7 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
-      team: () => cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
+      team: () => cp.teamView(data.team, { pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),

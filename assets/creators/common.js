@@ -706,7 +706,192 @@
       approve.addEventListener('click', act(approve, () => o.accounts(c, true)));
       return h('li', { class: 'mr-review__row' }, person(c), h('div', { class: 'mr-review__video' }, h('span', { class: 'cp-muted cp-small' }, 'Open each account and check it is really theirs.')), h('div', { class: 'mr-review__act', 'data-plain': '' }, approve, decline));
     };
+    /*
+     * The pitch: what a manager shows a creator to explain why to join. Every
+     * number is read from the program's live settings (ranks, bonuses, prizes,
+     * terms), so it never promises something the program does not pay. The one
+     * worked example says that it is an example.
+     */
+    const pitchPanel = () => {
+      const k = o.pitch;
+      const tiers = k && Array.isArray(k.tiers) ? k.tiers : [];
+      if (tiers.length < 2) return null;
+      const first = tiers[0], top = tiers[tiers.length - 1];
+      /*
+       * A column chart drawn as SVG: one column per row, rising left to right,
+       * the value written above it and the name below. A row's parts stack, each
+       * part in its own colour, with a hairline of background between them.
+       * rows: [{ name, parts: [{ value, color?, label? }] }]
+       */
+      const columns = (rows, fmt, o2 = {}) => {
+        const W = o2.wide ? 900 : 320, H = o2.wide ? 280 : 172;
+        const top0 = 26, base = H - 26, slot = W / rows.length, bw = Math.min(o2.wide ? 96 : 40, slot * 0.62);
+        const total = (r) => r.parts.reduce((n, x) => n + x.value, 0);
+        const most = Math.max(...rows.map(total)) || 1;
+        const id = `mrg${(columns.n = (columns.n || 0) + 1)}`;
+        const grid = [0.25, 0.5, 0.75, 1].map((f) => s('line', { x1: 0, x2: W, y1: base - (base - top0) * f, y2: base - (base - top0) * f, class: 'mr-col__grid' }));
+        const bars2 = rows.map((r, i) => {
+          const x = slot * i + (slot - bw) / 2;
+          let y = base;
+          const segs = r.parts.filter((x2) => x2.value > 0).map((part, j, all) => {
+            const hgt = Math.max(3, ((base - top0) * part.value) / most);
+            y -= hgt;
+            const last = j === all.length - 1;
+            const rect = s('path', { d: last ? `M${x},${y + hgt} V${y + 5} Q${x},${y} ${x + 5},${y} H${x + bw - 5} Q${x + bw},${y} ${x + bw},${y + 5} V${y + hgt} Z` : `M${x},${y + hgt} V${y + 1} H${x + bw} V${y + hgt} Z`, fill: part.color || `url(#${id})` }, s('title', {}, `${r.name}${part.label ? `, ${part.label}` : ''}: ${fmt(part.value)}`));
+            return rect;
+          });
+          return s('g', {}, ...segs, s('text', { x: x + bw / 2, y: y - 7, class: 'mr-col__value', 'text-anchor': 'middle' }, fmt(total(r))), s('text', { x: x + bw / 2, y: H - 8, class: 'mr-col__name', 'text-anchor': 'middle' }, r.name));
+        });
+        return s('svg', { viewBox: `0 0 ${W} ${H}`, class: `mr-col${o2.wide ? ' mr-col--wide' : ''}`, role: 'img', 'aria-label': `${o2.label || 'Chart'}: ${rows.map((r) => `${r.name} ${fmt(total(r))}`).join(', ')}` },
+          s('defs', {}, s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, s('stop', { offset: '0%', 'stop-color': '#5B8CFF' }), s('stop', { offset: '100%', 'stop-color': '#1E4FD6' }))),
+          ...grid, s('line', { x1: 0, x2: W, y1: base, y2: base, class: 'mr-col__base' }), ...bars2);
+      };
+      const pctOf2 = (rate) => `${Math.round(Number(rate || 0) * 1000) / 10}%`;
+      const champ = k.champion && k.champion.slots > 0 ? k.champion : null;
+      const base = Number((k.active && (k.active.base_amount_cents ?? k.active.amount_cents)) || 0);
+      const weekOf = (t) => Math.round(base * Number(t.bonus_multiplier ?? 1));
+      const minDays = Number((k.active && k.active.min_days) || 0);
+      const rankUps = tiers.filter((t) => t.rank_up_bonus_cents > 0);
+      const rankUpAll = rankUps.reduce((n, t) => n + Number(t.rank_up_bonus_cents), 0);
+      const prizes = ((k.race && k.race.prizes) || []).filter((x) => x.cents > 0);
+      const ref = k.referral && k.referral.bonus_cents > 0 ? k.referral : null;
+      const boost = k.first && k.first.multiplier > 1 ? k.first : null;
+      const hold = Number((k.settings && k.settings.hold_days) || 0);
+      const minPay = Number((k.settings && k.settings.min_payout_cents) || 0);
+      const SALES = 100000; /* the worked example: $1,000 of sales in a month */
+      const WEEKS = 4;
+      const monthOf = (t) => [Math.round(SALES * Number(t.commission_rate)), WEEKS * weekOf(t)];
+
+      const camp = k.campaigns || {};
+      const split = Array.isArray(camp.split) && camp.split.length ? camp.split.map(Number) : [];
+      const boards = Array.isArray(k.boards) && k.boards.length ? k.boards : ['Campaign 1', 'Campaign 2', 'Campaign 3'];
+      const pools = tiers.filter((t) => t.campaign_pool_cents > 0);
+      const ROUNDS = 26; /* two-week rounds in a year */
+      const place = (t, i) => Math.round(((t.campaign_pool_cents / boards.length) * (split[i] || 0)) / 100);
+      const nth = (i) => ['1st', '2nd', '3rd'][i] || `${i + 1}th`;
+      const SHADE = ['#0B2A6B', '#2F6BFF', '#9DB8FF', '#C9D6FF'];
+      const mostPool = Math.max(...pools.map((t) => Number(t.campaign_pool_cents))) || 1;
+      const ways = [
+        ['Commission on every sale', `${pctOf2(first.commission_rate)} to ${pctOf2(top.commission_rate)}`, `Starts at ${pctOf2(first.commission_rate)} and rises with your rank${champ ? `. The top ${champ.slots} creators get ${pctOf2(champ.rate)}` : ''}.`],
+        first.annual_flat_cents > 0 ? ['Each new yearly subscriber', `${dollars(first.annual_flat_cents)} to ${dollars(top.annual_flat_cents)}`, 'A flat amount for every yearly plan sold on your link.'] : null,
+        base > 0 ? ['Active-week bonus', `${dollars(weekOf(first))} to ${dollars(weekOf(top))} a week`, `Post on ${minDays || 'enough'} days in a week and hit your rank's daily views.`] : null,
+        rankUps.length ? ['Rank-up bonuses', `${dollars(rankUpAll)} in total`, `${rankUps.map((t) => `${t.name} ${dollars(t.rank_up_bonus_cents)}`).join(', ')}. Paid once each.`] : null,
+        pools.length && split.length ? ['Campaign prizes', `up to ${dollars(mostPool)}`, `A prize pool every two weeks from ${pools[0].name} up, shared by the top ${split.length} in ${boards.length} campaigns.`] : null,
+        prizes.length ? ['Race prizes', `up to ${dollars(Math.max(...prizes.map((x) => x.cents)))}`, `Be the first creator to reach a rank: ${prizes.map((x) => `${x.name} ${dollars(x.cents)}`).join(', ')}.`] : null,
+        ref ? ['Invite other creators', `${dollars(ref.bonus_cents)} each`, `When a creator you invite reaches ${compact(ref.views)} views.`] : null,
+        boost ? ['First video boost', `${boost.multiplier}x`, `Post in your first ${boost.hours} hours and that video pays ${boost.multiplier}x${boost.sale_days ? ` for ${boost.sale_days} days` : ''}.`] : null,
+      ].filter(Boolean);
+
+      /* One measure per chart, one colour, the value written at the end of each bar. */
+      const bars = (title, note, rows, fmt) => {
+        const most = Math.max(...rows.map((r) => r.value)) || 1;
+        return h('figure', { class: 'mr-pitch__chart' }, h('figcaption', {}, h('b', {}, title), note ? h('small', {}, note) : null),
+          h('div', { class: 'mr-pitch__bars', role: 'table', 'aria-label': title }, rows.map((r) => h('div', { class: 'mr-pitch__bar', role: 'row' }, h('span', { role: 'rowheader' }, r.name), h('span', { class: 'mr-pitch__track', role: 'presentation' }, h('i', { style: `width:${Math.max(2, (r.value / most) * 100).toFixed(1)}%` })), h('b', { role: 'cell' }, fmt(r.value))))));
+      };
+      const rateRows = [...tiers.map((t) => ({ name: t.name, value: Number(t.commission_rate) })), ...(champ ? [{ name: 'Champion', value: Number(champ.rate) }] : [])];
+      const mostMonth = Math.max(1, ...tiers.map((t) => monthOf(t)[0] + monthOf(t)[1]));
+      const growth = h('figure', { class: 'mr-pitch__chart mr-pitch__chart--wide' },
+        h('figcaption', {}, h('b', {}, `How pay scales: the same ${dollars(SALES)} of sales in a month, at each rank`), h('small', {}, base > 0 ? `An example, not a promise: commission on ${dollars(SALES)} of sales plus ${WEEKS} active weeks. Higher ranks ask for more views and videos.` : `An example, not a promise: commission on ${dollars(SALES)} of sales.`)),
+        base > 0 ? h('div', { class: 'mr-pitch__legend' }, h('span', { 'data-k': 'a' }, 'Commission'), h('span', { 'data-k': 'b' }, 'Active-week bonuses')) : null,
+        columns(tiers.map((t) => { const [c, a] = monthOf(t); return { name: t.name, parts: [{ value: c, color: '#2F6BFF', label: 'commission' }, { value: a, color: '#0B2A6B', label: 'active-week bonuses' }] }; }), dollars, { wide: true, label: 'Example month at each rank' }));
+
+      /*
+       * Campaigns, in full: each rank's prize pool for a two-week round, how it
+       * is cut into three campaigns and three places, and what that comes to.
+       */
+      const campaigns = pools.length && split.length ? [
+        h('h3', {}, 'Campaigns: prize money every two weeks'),
+        h('div', { class: 'mr-pitch__facts' },
+          [['Round length', '14 days', 'A new round starts every second Monday'], ['Campaigns per round', String(boards.length), boards.join(' · ')], ['Paid places', `Top ${split.length} in each`, `Split ${split.map((x) => `${x}%`).join(' / ')}`], ['Biggest pool', dollars(mostPool), `${pools[pools.length - 1].name}, every round`], ['Rounds a year', String(ROUNDS), `Up to ${dollars(mostPool * ROUNDS)} a year at ${pools[pools.length - 1].name}`]]
+            .map(([label, value, foot]) => h('div', {}, h('small', {}, label), h('b', {}, value), h('span', {}, foot)))),
+        h('figure', { class: 'mr-pitch__chart mr-pitch__chart--wide' },
+          h('figcaption', {}, h('b', {}, 'Prize pool per two-week round, by rank'), h('small', {}, `Each column is one round's pool, cut by place across all ${boards.length} campaigns. Hover a segment for the amount.`)),
+          h('div', { class: 'mr-pitch__legend' }, split.map((x, i) => h('span', { style: `--k:${SHADE[i] || SHADE[3]}` }, `${nth(i)} place (${x}%)`))),
+          columns(pools.map((t) => ({ name: t.name, parts: split.map((x, i2) => ({ value: Math.round((t.campaign_pool_cents * x) / 100), color: SHADE[i2] || SHADE[3], label: `${nth(i2)} place across the ${boards.length} campaigns` })) })), dollars, { wide: true, label: 'Prize pool per round by rank' })),
+        h('div', { class: 'cp-tablewrap' },
+          h('table', { class: 'cp-table mr-pitch__table' },
+            h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Rank'), h('th', { scope: 'col', class: 'is-num' }, 'Pool per round'), h('th', { scope: 'col', class: 'is-num' }, 'Per campaign'), split.map((_, i) => h('th', { scope: 'col', class: 'is-num' }, `${nth(i)} place`)), h('th', { scope: 'col', class: 'is-num' }, `Win all ${boards.length}`), h('th', { scope: 'col', class: 'is-num' }, `Pool per year (${ROUNDS} rounds)`))),
+            h('tbody', {}, pools.map((t) => h('tr', {}, h('th', { scope: 'row' }, t.name), h('td', { class: 'is-num' }, h('b', {}, dollars(t.campaign_pool_cents))), h('td', { class: 'is-num' }, dollars0(t.campaign_pool_cents / boards.length)), split.map((_, i) => h('td', { class: 'is-num' }, dollars0(place(t, i)))), h('td', { class: 'is-num' }, h('b', {}, dollars0((t.campaign_pool_cents * (split[0] || 0)) / 100))), h('td', { class: 'is-num' }, dollars(t.campaign_pool_cents * ROUNDS))))))),
+        h('p', { class: 'cp-muted cp-small' }, `How to read it: a rank's pool is shared equally by its ${boards.length} campaigns, and each campaign pays its top ${split.length}. "Win all ${boards.length}" is the most one creator can take in a round: 1st place in every campaign. You compete only against creators in your own rank${camp.min_creators > 0 ? `, and a rank's campaigns run once it has ${num(camp.min_creators)} creators` : ''}. ${tiers.filter((t) => !(t.campaign_pool_cents > 0)).map((t) => t.name).join(' and ') || 'No rank'} has no campaigns yet. Prizes are paid from the program's prize fund when a round ends, so one can pay less than shown while the fund is small.`),
+      ] : [];
+
+      const why = [
+        ['Paid on results, not per post', 'A flat fee pays once per video. Commission pays on every sale your link brings, so one good video can pay many times.'],
+        ['The rate goes up as you grow', `You start at ${pctOf2(first.commission_rate)} and move up to ${pctOf2(top.commission_rate)} by ranking up. It is not a fixed deal.`],
+        ['Bonuses stack on top', 'Weekly bonuses, rank-up bonuses, campaign and race prizes and invite rewards are all paid on top of commission.'],
+      ];
+      const pros = [
+        'Free to join. No fees.',
+        'You keep ownership of your videos.',
+        `${ways.length} separate ways to earn, all shown live on your dashboard.`,
+        `Commission rises from ${pctOf2(first.commission_rate)} to ${pctOf2(top.commission_rate)} as you rank up.`,
+        'A manager who reviews your videos and helps you grow, plus the team Discord.',
+        minPay > 0 ? `Cash out from ${dollars(minPay)}.` : null,
+      ].filter(Boolean);
+      const cons = [
+        'No guaranteed pay. No sales and no views means no money.',
+        hold > 0 ? `Commission clears after ${hold} days, so refunds can come off first.` : null,
+        minPay > 0 ? `You need at least ${dollars(minPay)} to cash out.` : null,
+        tiers[1] ? `Higher ranks take steady posting. ${tiers[1].name} needs ${[tiers[1].min_posts > 0 && `${num(tiers[1].min_posts)} videos`, tiers[1].min_views > 0 && `${compact(tiers[1].min_views)} views`].filter(Boolean).join(' and ')} in 30 days.` : null,
+        pools.length && split.length ? `Campaign prizes go to the top ${split.length} only, and can pay less than shown while the prize fund is small.` : null,
+        'Mindroll can re-post your videos, including as ads.',
+        'Rates, bonuses and prizes can change. What you already earned stays yours.',
+      ].filter(Boolean);
+
+      /*
+       * One small chart for each way to earn, with a sentence saying what the
+       * chart shows. Same bars as the rest of the pitch: one measure, one colour.
+       */
+      const byRank = (pick) => tiers.map((t) => ({ name: t.name, value: Number(pick(t)) || 0 }));
+      const boostBase = 5000; /* the worked example for the first-video boost: a $50 bonus */
+      const wayChart = {
+        'Commission on every sale': [rateRows, pctOf2, 'Your share of each sale, by rank', `Every sale made on your link pays you this share. The column gets taller each time you rank up${champ ? `, and the top ${champ.slots} creators are paid ${pctOf2(champ.rate)}` : ''}.`],
+        'Each new yearly subscriber': [byRank((t) => t.annual_flat_cents), dollars, 'Paid per yearly plan, by rank', 'When someone buys a yearly plan on your link you get this flat amount. Ten yearly subscribers pays ten times the column.'],
+        'Active-week bonus': [byRank(weekOf), dollars, 'Paid for one active week, by rank', `Post on ${minDays || 'enough'} days in a week, with each day's videos reaching your rank's views, and the week pays this. It can be earned every week.`],
+        'Rank-up bonuses': [rankUps.map((t) => ({ name: t.name, value: Number(t.rank_up_bonus_cents) })), dollars, 'One-time bonus when you reach each rank', `Each rank pays once, the moment you reach it. Reach all of them and the bonuses add up to ${dollars(rankUpAll)}.`],
+        'Campaign prizes': [pools.map((t) => ({ name: t.name, value: Number(t.campaign_pool_cents) })), dollars, 'Prize pool every two weeks, by rank', `Each rank from ${pools[0] ? pools[0].name : 'Silver'} up has its own pool every two weeks, shared by the top ${split.length} in ${boards.length} campaigns. The full breakdown is below.`],
+        'Race prizes': [prizes.map((x) => ({ name: x.name, value: Number(x.cents) })), dollars, 'Prize for the first creator to reach each rank', 'One prize per rank, won once, by whoever gets there first. Later creators still get the rank and its rank-up bonus.'],
+        'Invite other creators': ref ? [[1, 3, 5, 10].map((n) => ({ name: `${n} invited`, value: n * Number(ref.bonus_cents) })), dollars, 'Creators you invite, and what that pays', `Each creator you invite pays ${dollars(ref.bonus_cents)} once their videos reach ${compact(ref.views)} views. There is no limit on how many you invite.`] : null,
+        'First video boost': boost ? [[{ name: 'Normal', value: boostBase }, { name: 'Boosted', value: boostBase * Number(boost.multiplier) }], dollars, `Example: a ${dollars(boostBase)} bonus on your first video`, `Post within ${boost.hours} hours of joining and that video's commission and bonuses pay ${boost.multiplier}x${boost.sale_days ? ` for ${boost.sale_days} days` : ''}${boost.cap_cents > 0 ? `, up to ${dollars(boost.cap_cents)} extra` : ''}.`] : null,
+      };
+      const miniBars = (rows, fmt, label) => columns(rows.map((r) => ({ name: r.name.replace(' invited', ''), parts: [{ value: r.value }] })), fmt, { label });
+      const wayCard = ([name, value, how]) => {
+        const c = wayChart[name];
+        const drawn = c && c[0].length > 0;
+        return h('div', { class: 'mr-pitch__way' }, h('small', {}, name), h('b', {}, value), drawn ? h('em', {}, c[2]) : null, drawn ? miniBars(c[0], c[1], c[2]) : null, h('span', {}, drawn ? c[3] : how));
+      };
+
+      const text = [
+        'Why join the Mindroll creator program', '',
+        'How you get paid:', ...ways.map(([name, value, how]) => `- ${name}: ${value}. ${how}`), '',
+        'Why it pays more:', ...why.map(([name, how]) => `- ${name}. ${how}`), '',
+        'Good to know before you join:', ...cons.map((x) => `- ${x}`), '',
+        'Apply: https://getmindroll.com/creators/' + (team.manager && team.manager.code ? `?team=${team.manager.code}` : ''),
+      ].join('\n');
+      const copy = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Copy as a message');
+      copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into a DM or an email.'); } catch { toast('Could not copy on this browser.', 'error'); } });
+      const list = (items, kind) => h('ul', { class: 'mr-pitch__list', 'data-kind': kind }, items.map((x) => h('li', {}, x)));
+
+      return h('section', { class: 'mr-panel mr-pitch' },
+        h('details', { open: o.pitchOpen ? '' : null },
+          h('summary', {}, h('span', {}, h('small', {}, 'For your calls with creators'), h('b', {}, 'The pitch: why join Mindroll')), h('span', { class: 'mr-pitch__open' }, 'Open')),
+          h('div', { class: 'mr-pitch__body' },
+            h('div', { class: 'mr-pitch__tools' }, h('p', { class: 'cp-muted cp-small' }, 'Share your screen and walk through it, or copy it as a message. The numbers are the program\'s live numbers.'), copy),
+            h('h3', {}, 'How you get paid'),
+            h('div', { class: 'mr-pitch__ways' }, ways.map(wayCard)),
+            h('h3', {}, 'It grows with you'),
+            h('div', { class: 'mr-pitch__charts' }, growth),
+            ...campaigns,
+            h('h3', {}, 'Why it pays more'),
+            h('div', { class: 'mr-pitch__why' }, why.map(([name, how]) => h('div', {}, h('b', {}, name), h('span', {}, how)))),
+            h('h3', {}, 'The honest pros and cons'),
+            h('div', { class: 'mr-pitch__sides' }, h('div', {}, h('b', {}, 'Pros'), list(pros, 'pro')), h('div', {}, h('b', {}, 'Cons'), list(cons, 'con'))),
+          ),
+        ),
+      );
+    };
     return [
+      pitchPanel(),
       o.accounts && toApprove.length
         ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Accounts to approve'), h('b', {}, num(toApprove.length))), h('ul', { class: 'mr-review__list' }, toApprove.map(accountRow)), h('p', { class: 'cp-muted cp-small' }, 'Videos and views are only counted from accounts you have approved.'))
         : null,
