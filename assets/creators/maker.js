@@ -159,7 +159,7 @@
     const kind = KIND_LABEL[l.kind] ? l.kind : 'text';
     const from = Math.max(0, Number(l.from) || 0);
     const to = l.to == null || l.to === '' || !(Number(l.to) > from) ? null : Number(l.to);
-    return { kind, text: String(l.text || ''), path: kind === 'text' ? null : l.path || null, note: String(l.note || ''), pos: POS[l.pos] ? l.pos : kind === 'text' ? 'bottom' : 'middle', size: SIZE[l.size] ? l.size : 'm', from, to, box: cleanBox(l.box) };
+    return { kind, text: String(l.text || ''), path: kind === 'text' ? null : l.path || null, note: String(l.note || ''), pos: POS[l.pos] ? l.pos : kind === 'text' ? 'bottom' : 'middle', size: SIZE[l.size] ? l.size : 'm', from, to, box: cleanBox(l.box), app: kind !== 'text' && l.app === true };
   };
   const cleanSlot = (s) => {
     let layers = Array.isArray(s.layers) ? s.layers : [];
@@ -860,6 +860,89 @@
       return path;
     };
 
+    /*
+     * Fills the pictures and recordings in by itself, straight after a draft.
+     *
+     * The analysis says, for each one, whether it is the plugged app (Mindroll's
+     * own footage goes there) or anything else (it is lifted out of the
+     * reference: the exact rectangle the analysis found, as a still for a
+     * picture and as a short silent clip for a recording). Whatever cannot be
+     * filled is left empty for the team, as before.
+     */
+    const OWN = { clips: ['mindroll-app-clip-1.mp4', 'mindroll-app-clip-2.mp4', 'mindroll-app-clip-3.mp4'], screen: 'mindroll-screen-1.jpg', store: 'mindroll-app-store.jpg' };
+    const recordCrop = (v, canvas, ctx, [x, y, w, hh], from, to) => new Promise((resolve) => {
+      let rec;
+      const parts = [];
+      const mime = pickMime();
+      try { rec = new MediaRecorder(canvas.captureStream(FPS), { mimeType: mime, videoBitsPerSecond: 2500000 }); } catch { return resolve(null); }
+      let done = false;
+      const finish = () => { if (done) return; done = true; v.pause(); try { rec.stop(); } catch { resolve(null); } };
+      rec.ondataavailable = (event) => { if (event.data && event.data.size) parts.push(event.data); };
+      rec.onstop = () => resolve(parts.length ? new Blob(parts, { type: mime.split(';')[0] }) : null);
+      const tick = () => {
+        if (done) return;
+        ctx.drawImage(v, x, y, w, hh, 0, 0, w, hh);
+        if (v.currentTime >= to || v.ended) return finish();
+        requestAnimationFrame(tick);
+      };
+      setTimeout(finish, (to - from + 4) * 1000);
+      v.currentTime = from;
+      once(v, 'seeked', ['error'], 10000).then(() => { ctx.drawImage(v, x, y, w, hh, 0, 0, w, hh); rec.start(); return v.play(); }).then(tick, () => { done = true; resolve(null); });
+    });
+    async function attachOverlays(url, slots, say) {
+      const empty = () => slots.flatMap((sl) => sl.layers.filter((l) => l.kind !== 'text' && !l.path).map((l) => [sl, l]));
+      let filled = 0;
+      let nextClip = 0;
+      const lift = [];
+      for (const [sl, l] of empty()) {
+        if (l.app) { l.path = l.kind === 'video' ? OWN.clips[nextClip++ % OWN.clips.length] : /app store|download|store page/i.test(l.note) ? OWN.store : OWN.screen; filled++; }
+        else if (l.box || l.size === 'full') lift.push([sl, l]);
+      }
+      if (lift.length && url && !cp.demo) {
+        const v = document.createElement('video');
+        v.crossOrigin = 'anonymous';
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = 'auto';
+        v.src = url;
+        const opened = await once(v, 'loadeddata', ['error'], 30000).then(() => true, () => false);
+        if (opened && v.videoWidth) {
+          const [vw, vh] = [v.videoWidth, v.videoHeight];
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          for (const [i, [sl, l]] of lift.entries()) {
+            say(`Taking the pictures out of the reference… ${i + 1} of ${lift.length}`);
+            const b = l.size === 'full' || !l.box ? { x: 0.5, y: 0.5, w: 1, h: 1 } : l.box;
+            const w = Math.max(16, Math.min(vw, Math.round(b.w * vw) & ~1));
+            const hh = Math.max(16, Math.min(vh, Math.round(b.h * vh) & ~1));
+            const x = Math.max(0, Math.min(vw - w, Math.round(b.x * vw - w / 2)));
+            const y = Math.max(0, Math.min(vh - hh, Math.round(b.y * vh - hh / 2)));
+            const from = sl.start + l.from;
+            const to = Math.min(v.duration - 0.05, sl.start + (l.to ?? slotLen(sl)));
+            canvas.width = w;
+            canvas.height = hh;
+            try {
+              let blob = l.kind === 'video' && canBuild && to - from >= 0.6 ? await recordCrop(v, canvas, ctx, [x, y, w, hh], from, Math.min(to, from + 12)) : null;
+              if (!blob) {
+                v.pause();
+                v.currentTime = Math.min(to, from + Math.min(0.4, Math.max(0, (to - from) / 2)));
+                await once(v, 'seeked', ['error'], 10000);
+                ctx.drawImage(v, x, y, w, hh, 0, 0, w, hh);
+                blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+                if (blob) l.kind = 'image';
+              }
+              if (!blob) continue;
+              l.path = await upload(new File([blob], 'edit', { type: blob.type }), /^(image\/jpeg|video\/(mp4|webm))$/, 30);
+              filled++;
+            } catch { /* this one stays empty for the team */ }
+          }
+        }
+        v.removeAttribute('src');
+        v.load();
+      }
+      return { filled, left: empty().length };
+    }
+
     /* The preview: the reference frame for this moment, with the clip's edits drawn the way the builder draws them. */
     const ref = fileUrl(brief.video_path);
     const canvas = h('canvas', { class: 'mk-edit__canvas', width: String(W / 2), height: String(H / 2), 'aria-label': 'Preview of this clip' });
@@ -1012,15 +1095,18 @@
       analyze.textContent = READ;
       const run = async (url) => {
         let out;
+        let got = { filled: 0, left: 0 };
         try {
           const shots = await framesOf(url, (n, of) => { analyze.textContent = `Reading the video… ${n} of ${of}`; });
           out = await draftWithAI({ title: brief.title, ...shots }, (label) => { analyze.textContent = label; });
+          if (!out.slots || !out.slots.length) throw new Error('The analysis came back empty. Try again.');
+          t.slots = out.slots.slice(0, MAX_SLOTS).map(cleanSlot);
+          /* Every picture and recording the reference has is put in place without anyone uploading it. */
+          got = await attachOverlays(url, t.slots, (label) => { analyze.textContent = label; }).catch(() => ({ filled: 0, left: 0 }));
         } finally { analyze.textContent = READ; }
-        if (!out.slots || !out.slots.length) throw new Error('The analysis came back empty. Try again.');
-        t.slots = out.slots.slice(0, MAX_SLOTS).map(cleanSlot);
         sel = 0; selLayer = -1; at = 0;
         paint();
-        toast(`Draft ready: ${t.slots.length} clips. Check each one, fill the empty spots, then save.`);
+        toast(`Draft ready: ${t.slots.length} clips.${got.filled ? ` ${got.filled} picture${got.filled === 1 ? '' : 's'} and recording${got.filled === 1 ? '' : 's'} put in place.` : ''}${got.left ? ` ${got.left} still empty: add those by hand.` : ''} Check each clip, then save.`);
       };
       /* A file picked here is read on this computer only: its frames go to the AI, the file is not stored. */
       const local = h('input', { type: 'file', accept: 'video/*', hidden: true });
