@@ -941,12 +941,21 @@ body.page-funnel .site-footer {
 
 .fhook__head {
   font-family: var(--font-display);
-  font-size: clamp(2.1rem, 8.5vw, 3rem);
-  line-height: 1.04;
-  letter-spacing: -0.04em;
+  /*
+   * Sized so "Replace doomscrolling" holds one line.
+   *
+   * It was clamp(2.1rem, 8.5vw, 3rem), which on a 390px phone is 33px —
+   * wide enough that the first line broke after "Replace" and the headline
+   * came out over three lines. The model it follows sets 32px in a 375
+   * column and keeps it to two. `balance` is off because the break is
+   * explicit now, and balancing fights it.
+   */
+  font-size: clamp(1.55rem, 7.1vw, 2.6rem);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
   font-weight: 600;
   margin: 0;
-  text-wrap: balance;
+  text-wrap: nowrap;
 }
 
 /*
