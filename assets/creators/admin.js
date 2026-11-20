@@ -161,7 +161,7 @@
     const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
-    const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, helpButton(), tab === 'alerts' ? null : bellButton));
+    const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, cp.viewSwitch([['creator', 'Creator', () => location.assign(cp.demo ? '/creators/?demo' : '/creators/')], ['manager', 'Manager', () => location.assign(cp.demo ? '/creators/?demo#team' : '/creators/#team')], ['admin', 'Admin', null]], 'admin'), helpButton(), tab === 'alerts' ? null : bellButton));
     view.replaceChildren(h('div', { class: 'mr-shell' }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))));
     cp.tabbar({ label: 'Admin', items: TABS.map(([id, label, glyph]) => [id, label, glyph, count[id]]), main: ['overview', 'creators', 'videos', 'payouts'], current: tab, open: (id) => go(id)(), icon });
     cp.live.drawn();

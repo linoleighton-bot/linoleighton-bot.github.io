@@ -91,7 +91,8 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team, picture, discordName, boost, added] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false)]);
+      const [data, brief, team, picture, discordName, boost, added, adminNow] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false), cp.rpc('is_creator_admin').catch(() => false)]);
+      isAdmin = adminNow === true;
       /* A manager is a creator too: their first sign-in makes their own creator page, then loads it. */
       if (team && data && !data.creator && !cp.demo && !joinTried) { joinTried = true; if ((await cp.rpc('creator_manager_join').catch(() => null)) === 'joined') return load(quiet); }
       /* Their TikTok or Instagram profile picture, copied over once their accounts are approved. */
@@ -379,6 +380,41 @@
   const helpOn = () => keep('mindroll.creator.help') === 'on';
 
   let pane = PANES.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  /*
+   * A manager has two dashboards on this page: their own as a creator, and
+   * their team's. `mode` is which one is on screen. An admin sees the same
+   * switch, with Admin as a third stop, and can open any manager's dashboard.
+   */
+  const MGR = [['team', 'My team', 'badge'], ['pitch', 'The pitch', 'flag'], ['structure', 'Agency structure', 'users'], ['payrank', 'Pay by rank', 'trophy'], ['refrules', 'Referral rules', 'link']];
+  const GUIDE = { structure: 'structure', payrank: 'payByRank', refrules: 'referral' };
+  const mgrPanes = () => MGR.filter(([id]) => !GUIDE[id] || typeof cp.guides?.[GUIDE[id]] === 'function');
+  let mode = MGR.some(([id]) => id === location.hash.slice(1)) ? 'manager' : 'creator';
+  if (mode === 'manager') pane = location.hash.slice(1);
+  let isAdmin = false;
+  /* For an admin who is looking at the manager dashboard: every manager's team, and the one picked. */
+  let allTeams = null;
+  let asManager = null;
+  function setMode(next) {
+    mode = next;
+    pane = next === 'manager' ? 'team' : 'home';
+    try { history.replaceState(null, '', next === 'manager' ? '#team' : location.pathname + location.search); } catch { /* a sandboxed frame may refuse */ }
+    renderDashboard(lastData);
+    window.scrollTo(0, 0);
+  }
+  /* The team on screen in manager mode: their own, or the one an admin picked. */
+  const teamOf = (data) => data.team || (allTeams || []).find((t) => t.manager?.id === asManager) || (allTeams || [])[0] || null;
+  /* What the explainer pages read: the program's live pay numbers, nothing hardcoded. */
+  const guideCtx = (data) => {
+    const inc = data.incentives || {};
+    const pay = teamOf(data)?.pay || null;
+    return {
+      tiers: inc.tiers || [], champion: inc.champion?.slots > 0 ? inc.champion : null, active: inc.active || null, rules: data.rules || [],
+      referral: data.referrals?.bonus_cents > 0 ? { bonus_cents: data.referrals.bonus_cents, views: data.referrals.views } : null,
+      manager: pay ? { cut_rate: pay.cut_rate, rate_cap: teamOf(data)?.manage?.rate_cap, rankup_rate: pay.rankup_rate, active_cents: pay.active_cents, views_cents: pay.views_cents, referral_cents: pay.referral_cents } : null,
+      campaigns: data.campaigns ? { split: data.campaigns.split, min_creators: data.campaigns.min_creators } : null,
+      settings: { hold_days: data.settings?.hold_days, min_payout_cents: data.settings?.min_payout_cents },
+    };
+  };
   let lastData = null;
   function openPane(id) {
     pane = id;
@@ -574,22 +610,40 @@
     );
   }
 
+  /*
+   * The team page in manager mode. A manager gets their own team with every
+   * control. An admin who is not a manager picks one and sees it read-only:
+   * reviewing and moving creators stays on the admin pages.
+   */
+  function teamPage(data, own) {
+    if (data.team) return cp.teamView(data.team, { ...own, noPitch: true });
+    if (!allTeams || !allTeams.length) return [h('p', { class: 'cp-empty' }, allTeams === null || !lastData ? 'Loading…' : 'There are no managers yet. Add one in Admin, under Managers.')];
+    const team = teamOf(data);
+    const pick = h('select', { class: 'cp-input', 'aria-label': 'Manager to view' }, allTeams.map((t) => h('option', { value: t.manager.id, selected: t.manager.id === team.manager.id }, t.manager.display_name)));
+    pick.addEventListener('change', () => { asManager = pick.value; renderDashboard(lastData); });
+    return [h('section', { class: 'mr-panel mr-viewas' }, h('span', {}, h('b', {}, 'Viewing as a manager'), h('small', {}, 'You are an admin, so this is read-only. Pick whose dashboard to see.')), pick), ...cp.teamView(team, { noPitch: true })];
+  }
+
   function renderDashboard(data) {
-    const hasTeam = PANES.some(([id]) => id === 'team');
-    if (data.team && !hasTeam) PANES.splice(1, 0, ['team', 'My team', 'badge']);
-    if (!data.team && hasTeam) PANES.splice(PANES.findIndex(([id]) => id === 'team'), 1);
+    /* Manager mode needs a team to show: their own, or, for an admin, any manager's (fetched once). */
+    const canManage = !!data.team || isAdmin;
+    if (mode === 'manager' && !canManage) mode = 'creator';
+    if (mode === 'manager' && !data.team && allTeams === null) {
+      allTeams = [];
+      (cp.demo ? Promise.resolve([]) : cp.rpc('creator_admin_managers')).then((list) => { allTeams = (list || []).filter((t) => t.manager && t.manager.active !== false); renderDashboard(lastData); }, () => renderDashboard(lastData));
+    }
+    const panes = mode === 'manager' ? mgrPanes() : PANES;
     /* "Make a video" sits under the brief once there is a template to fill in. */
     if (cp.maker && !renderDashboard.makerAsked) {
       renderDashboard.makerAsked = true;
       cp.maker.load(data.briefs).then((n) => { if (!n) return; if (location.hash === '#make') pane = 'make'; renderDashboard(lastData); });
     }
     if (cp.maker?.count && !PANES.some(([id]) => id === 'make')) PANES.splice(PANES.findIndex(([id]) => id === 'brief') + 1, 0, ['make', 'Make a video', 'film']);
-    if (location.hash === '#team' && data.team && !renderDashboard.opened) { renderDashboard.opened = true; pane = 'team'; }
-    if (!PANES.some(([id]) => id === pane)) pane = 'home';
+    if (!panes.some(([id]) => id === pane)) pane = mode === 'manager' ? 'team' : 'home';
     const { creator, stats } = data;
     lastData = data;
     /* First visit: start the demo run. */
-    if (tourStep === null && !keep('mindroll.creator.toured') && !renderDashboard.started) {
+    if (mode === 'creator' && tourStep === null && !keep('mindroll.creator.toured') && !renderDashboard.started) {
       renderDashboard.started = true;
       tourStep = 0;
       pane = tourSteps(data)[0][0];
@@ -604,7 +658,11 @@
       home: () => homeView(data),
       brief: () => briefView(data),
       make: () => cp.maker.view(data),
-      team: () => cp.teamView(data.team, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
+      team: () => teamPage(data, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
+      pitch: () => (teamOf(data) ? cp.teamView(teamOf(data), { ...({ inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }), only: 'pitch', pitchOpen: true }) : [h('p', { class: 'cp-empty' }, 'Loading…')]),
+      structure: () => cp.guides.structure(guideCtx(data)),
+      payrank: () => cp.guides.payByRank(guideCtx(data)),
+      refrules: () => cp.guides.referral(guideCtx(data)),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
@@ -616,11 +674,12 @@
       invite: () => [...(referralCard(data) || []), manychatCard(data)],
     }[pane]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
-    const nav = h('nav', { class: 'mr-side', 'aria-label': 'Your dashboard' }, PANES.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
+    const views = [['creator', 'Creator', () => setMode('creator')], canManage ? ['manager', 'Manager', () => setMode('manager')] : null, isAdmin ? ['admin', 'Admin', () => location.assign(cp.demo ? '/admin/?demo' : '/admin/')] : null].filter(Boolean);
+    const nav = h('nav', { class: 'mr-side', 'aria-label': mode === 'manager' ? 'Manager dashboard' : 'Your dashboard' }, panes.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
-    const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : PANES.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, bellButton));
+    const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : panes.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, cp.viewSwitch(views, mode), mode === 'manager' ? null : bellButton));
     show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
-    cp.tabbar({ label: 'Your dashboard', items: PANES.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
+    cp.tabbar({ label: mode === 'manager' ? 'Manager dashboard' : 'Your dashboard', items: panes.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: mode === 'manager' ? panes.slice(0, 4).map(([id]) => id) : ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
     cp.live.drawn();
   }
 
@@ -1953,6 +2012,7 @@
     cp.loadEmpty().then((data) => (data.dashboard.creator.terms_accepted === false ? renderTerms(data.dashboard) : renderDashboard(data.dashboard)), (error) => show(h('p', { class: 'cp-empty' }, error.message)));
   } else if (cp.demo) {
     setWho('Sample data');
+    isAdmin = true;
     renderDashboard(demoData());
   } else if (!cp.client) {
     show(h('p', { class: 'cp-empty' }, 'This page could not load. Please refresh.'));

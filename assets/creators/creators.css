@@ -1397,3 +1397,15 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-pitch__abouthead b { display: block; font-size: 1.0625rem; }
 .mr-pitch__abouthead small { color: var(--muted); font-size: 0.8125rem; }
 .mr-pitch__about p { margin: 0; font-size: 0.9375rem; color: var(--ink-soft); line-height: 1.5; }
+
+/* Creator / Manager / Admin: the switch between dashboards. */
+.mr-switch { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--sunk); border: 1px solid var(--line); }
+.mr-switch__btn { font: inherit; font-size: 0.875rem; font-weight: 600; border: 0; background: none; color: var(--ink-soft); padding: 0.4rem 0.9rem; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.mr-switch__btn:hover { color: var(--ink); }
+.mr-switch__btn[aria-pressed='true'] { background: var(--ink); color: #fff; cursor: default; }
+.mr-switch__btn:focus-visible { outline: 2px solid var(--mr-accent); outline-offset: 2px; }
+.mr-viewas { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.mr-viewas span { display: grid; gap: 0.15rem; }
+.mr-viewas small { color: var(--muted); font-size: 0.8125rem; }
+.mr-viewas .cp-input { max-width: 18rem; }
+@media (max-width: 40rem) { .mr-switch__btn { padding: 0.4rem 0.65rem; font-size: 0.8125rem; } .mr-head:has(.mr-switch) { flex-wrap: wrap; } }

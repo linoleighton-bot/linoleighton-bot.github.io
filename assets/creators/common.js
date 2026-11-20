@@ -935,8 +935,9 @@
         ),
       );
     };
+    if (o.only === 'pitch') return [pitchPanel() || h('p', { class: 'cp-empty' }, 'The pitch needs the program\'s pay numbers, which did not load. Refresh the page.')];
     return [
-      pitchPanel(),
+      o.noPitch ? null : pitchPanel(),
       o.accounts && toApprove.length
         ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Accounts to approve'), h('b', {}, num(toApprove.length))), h('ul', { class: 'mr-review__list' }, toApprove.map(accountRow)), h('p', { class: 'cp-muted cp-small' }, 'Videos and views are only counted from accounts you have approved.'))
         : null,
@@ -1007,6 +1008,17 @@
   }
 
   /*
+   * Creator / Manager / Admin: one row of buttons for moving between the
+   * dashboards a person is allowed to see. Only the views in `items` are shown,
+   * and nothing is drawn when there is just one.
+   * items: [id, label, go]; current: the id that is on screen.
+   */
+  function viewSwitch(items, current) {
+    if (items.length < 2) return null;
+    return h('div', { class: 'mr-switch', role: 'group', 'aria-label': 'Switch dashboard' }, items.map(([id, label, go]) => h('button', { class: 'mr-switch__btn', type: 'button', 'aria-pressed': String(id === current), onclick: id === current ? null : go }, label)));
+  }
+
+  /*
    * Phones: a bar fixed to the bottom with the main pages, and "More", which
    * opens every page as a sheet. It sits under the root, outside the redrawn
    * view, and is refreshed on each draw; creators.css shows it on narrow screens
@@ -1056,7 +1068,7 @@
     /* Where an uploaded reference video is served from. */
     defaultBrief, rich, briefImage, briefVideos, briefTips,
     live, tabbar,
-    avatar, person, handleLinks, teamView,
+    avatar, person, handleLinks, teamView, s, viewSwitch,
     briefVideoUrl: (path) => (path && url ? `${url}/storage/v1/object/public/creator-briefs/${encodeURIComponent(path)}` : null),
   };
 })();
