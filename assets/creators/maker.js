@@ -693,6 +693,35 @@
   const editors = new Map();
   let adminRows = null;
 
+  /*
+   * The sound of the reference, as a small mono recording, so the helper on the
+   * Mac can write down what is said. Left out when the video has no sound or the
+   * browser cannot read it; the draft then goes by the pictures alone.
+   */
+  async function soundOf(url) {
+    try {
+      const raw = await (await fetch(url)).arrayBuffer();
+      const probe = new AC();
+      const heard = await probe.decodeAudioData(raw);
+      probe.close().catch(() => {});
+      const rate = 16000;
+      const seconds = Math.min(heard.duration, 180);
+      const off = new OfflineAudioContext(1, Math.ceil(seconds * rate), rate);
+      const src = off.createBufferSource();
+      src.buffer = heard;
+      src.connect(off.destination);
+      src.start();
+      const mono = (await off.startRendering()).getChannelData(0);
+      const wav = new DataView(new ArrayBuffer(44 + mono.length * 2));
+      const tag = (at, text) => [...text].forEach((c, i) => wav.setUint8(at + i, c.charCodeAt(0)));
+      tag(0, 'RIFF'); wav.setUint32(4, 36 + mono.length * 2, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+      wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true); wav.setUint32(24, rate, true);
+      wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); tag(36, 'data'); wav.setUint32(40, mono.length * 2, true);
+      for (let i = 0; i < mono.length; i++) wav.setInt16(44 + i * 2, Math.max(-1, Math.min(1, mono[i])) * 32767, true);
+      return await new Promise((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1] || null); reader.onerror = () => resolve(null); reader.readAsDataURL(new Blob([wav])); });
+    } catch { return null; }
+  }
+
   /* Still frames from the reference, for the AI to read: about two a second, small. */
   async function framesOf(url, onProgress) {
     const v = document.createElement('video');
@@ -721,7 +750,7 @@
     }
     v.removeAttribute('src');
     v.load();
-    return { duration: Math.round(duration * 10) / 10, frames };
+    return { duration: Math.round(duration * 10) / 10, frames, audio: await soundOf(url) };
   }
 
   /*
@@ -741,7 +770,7 @@
   };
   async function draftWithAI(payload, say) {
     if (await helperUp()) {
-      say('Claude on this Mac is working out the clips… a few minutes');
+      say(payload.audio ? 'Claude on this Mac is listening and working out the clips… a few minutes' : 'Claude on this Mac is working out the clips… a few minutes');
       const res = await fetch(`${HELPER}/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => { throw new Error('The helper on the Mac stopped answering. Check it is still running.'); });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.error || 'The helper on the Mac could not draft it.');
@@ -750,7 +779,8 @@
     /* The Mac is off, asleep, or this is another computer: tell the team on Discord, then try the server. */
     const told = cp.demo ? false : await cp.rpc('creator_admin_draft_ping', { p_title: payload.title || null }).then(() => true, () => false);
     say('Working out the clips… about a minute');
-    try { return await cp.fn('creator-analyze', payload); } catch (error) {
+    /* The server reads pictures only, so the sound stays behind. */
+    try { return await cp.fn('creator-analyze', { ...payload, audio: undefined }); } catch (error) {
       if (/AI key has not been added|preview/.test(error.message)) throw new Error(`The Mac that drafts templates is not reachable from here.${told ? ' The team has been pinged on Discord to draft this one.' : ''} You can still set the clips up by hand.`);
       throw error;
     }
