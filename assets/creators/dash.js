@@ -596,7 +596,7 @@
     const body = {
       home: () => homeView(data),
       brief: () => briefView(data),
-      team: () => cp.teamView(data.team, { pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
+      team: () => cp.teamView(data.team, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
       connect: () => connectView(data),
       alerts: () => alertsView(data),
       campaigns: () => campaignsView(data),
@@ -1252,7 +1252,7 @@
         { class: 'mr-briefhero mr-ref__hero' },
         h('p', { class: 'mr-brief__eyebrow' }, 'Invite a creator'),
         h('h2', {}, `Get ${cp.dollars(r.bonus_cents)} for every creator you bring in`),
-        h('p', {}, `Share your invite link. When they join, get accepted and their videos reach ${compact(goal)} views in total, ${cp.dollars(r.bonus_cents)} goes into your wallet.`),
+        h('p', {}, `Share your invite link. When they join, get accepted and their videos reach ${compact(goal)} views in total, ${cp.dollars(r.bonus_cents)} goes into your wallet.${data.team ? ' Because you are a manager, they are also put on your team.' : ''}`),
         h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link, 'Copy')),
       ),
       h(

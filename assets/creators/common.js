@@ -891,7 +891,7 @@
         'How you get paid:', ...ways.map(([name, value, how]) => `- ${name}: ${value}. ${how}`), '',
         'Why it pays more:', ...why.map(([name, how]) => `- ${name}. ${how}`), '',
         'Good to know before you join:', ...cons.map((x) => `- ${x}`), '',
-        'Apply: https://getmindroll.com/creators/' + (team.manager && team.manager.code ? `?team=${team.manager.code}` : ''),
+        'Apply: https://getmindroll.com/creators/' + (o.inviteCode ? `?invite=${o.inviteCode}` : team.manager && team.manager.code ? `?team=${team.manager.code}` : ''),
       ].join('\n');
       const copy = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Copy as a message');
       copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(text); toast('Copied. Paste it into a DM or an email.'); } catch { toast('Could not copy on this browser.', 'error'); } });
@@ -963,7 +963,8 @@
           h('li', {}, h('span', {}, h('b', {}, 'Views'), h('small', {}, `${dollars0(pay.views_cents)} for every 100K views your team gains`)), h('b', {}, dollars0(pay.from_views_cents))),
           pay.referral_cents > 0 && team.manager?.code
             ? h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Creators you bring in'), h('small', {}, `${dollars0(pay.referral_cents)} for each creator who joins on your link and reaches ${compact(pay.referral_views)} views. Added as soon as their views are counted. Tap for your link.`)), h('b', {}, dollars0(pay.from_referral_cents))),
-                h('p', { class: 'cp-small', style: 'margin:0.5rem 0.75rem' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, `getmindroll.com/creators/?team=${team.manager.code}`)),
+                h('p', { class: 'cp-small', style: 'margin:0.5rem 0.75rem' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, o.inviteCode ? `getmindroll.com/creators/?invite=${o.inviteCode}` : `getmindroll.com/creators/?team=${team.manager.code}`)),
+                o.inviteCode ? h('p', { class: 'cp-small cp-muted', style: 'margin:0 0.75rem 0.5rem' }, 'One link for everything: it is the same link as on your Invite page. Whoever joins on it counts as your referral and is put on your team. Your older team link still works.') : null,
                 (pay.referrals || []).length
                   ? h('ul', { class: 'mr-rankups' }, pay.referrals.map((r) => h('li', {}, h('span', {}, h('b', {}, r.display_name), h('small', {}, r.paid ? 'Reached the goal' : r.status === 'pending' ? 'Waiting for approval' : `${compact(r.views)} of ${compact(pay.referral_views)} views`)), h('b', {}, r.paid ? dollars0(pay.referral_cents) : '–'))))
                   : h('p', { class: 'cp-small cp-muted' }, 'Nobody has joined on your link yet.')))
