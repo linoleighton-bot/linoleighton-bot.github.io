@@ -1253,7 +1253,25 @@
 
   if (boot.accounts && boot.supabase && window.supabase) {
     client = window.supabase.createClient(boot.supabase.url, boot.supabase.key, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        /*
+         * Pinned, so the session survives the move to `auth.getmindroll.com`.
+         *
+         * supabase-js derives its storage key from the project ref in the
+         * URL when none is given — today that yields
+         * `sb-ruvsikvpldhtiwesoxjo-auth-token`, confirmed as the live key by
+         * reading it out of the browser on getmindroll.com. Point the client
+         * at the custom domain and the derived key changes: every signed-in
+         * reader silently appears logged out, their session orphaned under
+         * the old name. Naming it makes the hostname irrelevant. It is the
+         * exact value already in use, so writing it down changes nothing
+         * today and keeps everyone signed in on the day the URL moves.
+         */
+        storageKey: 'sb-ruvsikvpldhtiwesoxjo-auth-token',
+      },
     });
 
     /*
