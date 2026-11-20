@@ -486,8 +486,11 @@
         const input = h('input', { type: 'range', min, max, step: stepBy, value, 'aria-label': label });
         return { input, out, row: h('label', { class: 'mr-welcome-calc__field' }, h('span', {}, label, out), input) };
       };
-      const fv = iron ? field('Views across your videos', 0, Number(iron.cap_views) || 1000000, 10000, 150000, compact) : null;
-      const fs = field('Subscribers through your link', 0, 30, 1, 3, num);
+      const fv = iron ? field(`Views across your videos (${dollars(Math.floor(Number(iron.cap_views) / Number(iron.step_views)) * Number(iron.step_cents))} at ${compact(iron.cap_views)}, the most)`, 0, Number(iron.cap_views) || 1000000, 10000, 150000, compact) : null;
+      /* What a subscriber pays each week, for the worked example. */
+      const SUB_WEEK = 1500;
+      const rate0 = t0 ? Number(t0.commission_rate) || 0 : 0;
+      const fs = field(`Subscribers through your link (${dollars(SUB_WEEK)} a week each)`, 0, 30, 1, 3, num);
       const fw = week0 > 0 ? field(`Weeks you post on ${minDays || 'enough'} days${t0 && pos(t0.active_day_views) ? ` (${compact(t0.active_day_views)}+ views a day)` : ''}`, 0, 4, 1, 4, num) : null;
       const rows = h('ul', { class: 'mr-guide-rows mr-welcome-calc__rows' });
       const total = h('b', {});
@@ -499,23 +502,19 @@
         if (fv) fv.out.textContent = compact(v);
         fs.out.textContent = num(subs);
         if (fw) fw.out.textContent = num(w);
-        const byViews = iron ? Math.floor(Math.min(v, Number(iron.cap_views) || v) / Number(iron.step_views)) : 0;
-        const allowed = 1 + subs;
-        const steps = Math.min(byViews, allowed);
+        /* Each slider stands on its own: views pay from views alone, commission from subscribers alone. */
+        const steps = iron ? Math.floor(Math.min(v, Number(iron.cap_views) || v) / Number(iron.step_views)) : 0;
         const viewsCents = steps * Number(iron ? iron.step_cents : 0);
         const baseCents = w * week0;
-        /* Base pay is paid out of sales: with no subscriber yet it waits, so it is not counted as earned. */
-        const baseWaits = floor != null && subs === 0 && baseCents > 0;
+        const weekly = Math.round(subs * SUB_WEEK * rate0);
+        const saleCents = weekly * 4;
         rows.replaceChildren(...[
           iron ? h('li', { 'data-lane': 'views' }, h('span', {}, 'Views pay'), h('b', {}, dollars(viewsCents))) : null,
-          week0 > 0 ? h('li', { 'data-lane': 'base' }, h('span', {}, baseWaits ? 'Base pay (waits for your first sale)' : 'Base pay'), h('b', {}, dollars(baseCents))) : null,
-          rates ? h('li', { 'data-lane': 'sale' }, h('span', {}, `Commission on ${num(subs)} subscriber${subs === 1 ? '' : 's'}`), h('b', {}, `+ ${t0 ? pct(t0.commission_rate) : rates} of each payment, every week`)) : null,
+          week0 > 0 ? h('li', { 'data-lane': 'base' }, h('span', {}, 'Base pay'), h('b', {}, dollars(baseCents))) : null,
+          rate0 ? h('li', { 'data-lane': 'sale' }, h('span', {}, `Commission: ${num(subs)} × ${pct(rate0)} of ${dollars(SUB_WEEK)} × 4 weeks`), h('b', {}, dollars(saleCents))) : null,
         ].filter(Boolean));
-        total.textContent = dollars(viewsCents + (baseWaits ? 0 : baseCents));
-        lock.textContent = [
-          byViews > allowed ? `You would have the views for ${dollars(byViews * Number(iron.step_cents))} of views pay. ${byViews - allowed === 1 ? '1 more subscriber unlocks' : `${num(byViews - allowed)} more subscribers unlock`} the rest.` : '',
-          baseWaits ? `The ${dollars(baseCents)} of base pay is earned but waits until your sales cover it.` : '',
-        ].filter(Boolean).join(' ');
+        total.textContent = dollars(viewsCents + baseCents + saleCents);
+        lock.textContent = rate0 && subs > 0 ? `After this month, those ${num(subs)} subscriber${subs === 1 ? '' : 's'} keep paying you ${dollars(weekly)} a week for as long as they stay.` : '';
       };
       [fv, fs, fw].filter(Boolean).forEach((f) => f.input.addEventListener('input', paint));
       paint();
@@ -524,8 +523,8 @@
         `Your first month${t0 ? ` at ${t0.name}` : ''}, worked out`,
         h('div', { class: 'mr-welcome-calc' },
           h('div', { class: 'mr-welcome-calc__fields' }, [fv, fs, fw].filter(Boolean).map((f) => f.row)),
-          h('div', { class: 'mr-welcome-calc__out' }, h('small', {}, [hasViews ? 'Views pay' : null, hasBase ? 'base pay' : null].filter(Boolean).join(' and ').replace(/^b/, 'B')), total, rows, lock)),
-        note(`Uses today's pay rules. Commission is on top and is not added in, because it depends on which plan each subscriber picks and how long they stay.${floor != null ? ' Base pay can wait until your sales cover it.' : ''}`),
+          h('div', { class: 'mr-welcome-calc__out' }, h('small', {}, 'Your first month'), total, rows, lock)),
+        note(`An example using today's rates, with every subscriber on a ${dollars(SUB_WEEK)} weekly plan for the whole month. Not a promise: what you earn depends on your real views and sales.`),
       );
     })();
 
