@@ -142,11 +142,24 @@
     ],
   }];
 
+  /*
+   * Where an edit sits, exactly: the centre (x, y) and the size (w, h) as
+   * fractions of the frame, read off the reference video by the analysis. An
+   * edit without one falls back to the rough top / middle / bottom and
+   * small / medium / large.
+   */
+  const cleanBox = (b) => {
+    if (!b || typeof b !== 'object') return null;
+    const [x, y, w, hh] = ['x', 'y', 'w', 'h'].map((k) => Number(b[k]));
+    if (![x, y, w, hh].every(Number.isFinite) || x < 0 || x > 1 || y < 0 || y > 1 || w < 0.03 || w > 1 || hh < 0.02 || hh > 1) return null;
+    const r = (n) => Math.round(n * 1000) / 1000;
+    return { x: r(x), y: r(y), w: r(w), h: r(hh) };
+  };
   const cleanLayer = (l) => {
     const kind = KIND_LABEL[l.kind] ? l.kind : 'text';
     const from = Math.max(0, Number(l.from) || 0);
     const to = l.to == null || l.to === '' || !(Number(l.to) > from) ? null : Number(l.to);
-    return { kind, text: String(l.text || ''), path: kind === 'text' ? null : l.path || null, note: String(l.note || ''), pos: POS[l.pos] ? l.pos : kind === 'text' ? 'bottom' : 'middle', size: SIZE[l.size] ? l.size : 'm', from, to };
+    return { kind, text: String(l.text || ''), path: kind === 'text' ? null : l.path || null, note: String(l.note || ''), pos: POS[l.pos] ? l.pos : kind === 'text' ? 'bottom' : 'middle', size: SIZE[l.size] ? l.size : 'm', from, to, box: cleanBox(l.box) };
   };
   const cleanSlot = (s) => {
     let layers = Array.isArray(s.layers) ? s.layers : [];
@@ -222,13 +235,28 @@
     ctx.restore();
   };
 
+  /* The biggest type that keeps the words inside the box the reference gave them. */
+  const fitWords = (ctx, text, box) => {
+    const maxW = Math.max(120, W * box.w);
+    const maxH = H * box.h * 1.12;
+    for (let size = 110; size >= 22; size -= 2) {
+      ctx.font = `800 ${size}px ${FONT}`;
+      const lines = wrap(ctx, text, maxW);
+      const widest = Math.max(...lines.map((line) => ctx.measureText(line).width));
+      if (lines.length * size * 1.22 <= maxH && widest <= maxW * 1.04) return [size, lines];
+    }
+    ctx.font = `800 22px ${FONT}`;
+    return [22, wrap(ctx, text, maxW)];
+  };
+
   function drawWords(ctx, layer, t) {
     if (!layer.text) return;
-    const size = SIZE[layer.size].font;
-    ctx.font = `800 ${size}px ${FONT}`;
-    const lines = wrap(ctx, layer.text, W * 0.84);
+    let size = SIZE[layer.size].font;
+    let lines;
+    if (layer.box) [size, lines] = fitWords(ctx, layer.text, layer.box);
+    else { ctx.font = `800 ${size}px ${FONT}`; lines = wrap(ctx, layer.text, W * 0.84); }
     const lead = size * 1.22;
-    popIn(ctx, t, W / 2, H * POS[layer.pos], () => {
+    popIn(ctx, t, layer.box ? W * layer.box.x : W / 2, H * (layer.box ? layer.box.y : POS[layer.pos]), () => {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.lineJoin = 'round';
@@ -275,9 +303,18 @@
       ctx.restore();
       return;
     }
-    const [w, hh] = layer.size === 'full' ? [W * 0.9, H * 0.9] : boxOf(layer, el);
-    const cy = layer.size === 'full' ? H / 2 : H * POS[layer.pos];
-    popIn(ctx, t, W / 2, cy, () => {
+    let [w, hh] = layer.size === 'full' ? [W * 0.9, H * 0.9] : boxOf(layer, el);
+    let cx = W / 2;
+    let cy = layer.size === 'full' ? H / 2 : H * POS[layer.pos];
+    if (layer.box && layer.size !== 'full') {
+      /* The reference's own rectangle; the file keeps its shape and fills as much of it as it can. */
+      const [ew, eh] = el ? sizeOf(el) : [W * layer.box.w, H * layer.box.h];
+      const k = Math.min((W * layer.box.w) / (ew || 1), (H * layer.box.h) / (eh || 1));
+      [w, hh] = [(ew || 1) * k, (eh || 1) * k];
+      cx = W * layer.box.x;
+      cy = H * layer.box.y;
+    }
+    popIn(ctx, t, cx, cy, () => {
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(-w / 2, -hh / 2, w, hh, 22); else ctx.rect(-w / 2, -hh / 2, w, hh);
       if (!el) {
@@ -745,10 +782,11 @@
     const duration = v.duration;
     if (!Number.isFinite(duration) || duration <= 0) throw new Error('The reference video has no readable length.');
     if (duration > 120) throw new Error('Analyze works on reference videos up to two minutes long.');
-    const count = Math.min(48, Math.max(4, Math.ceil(duration * 2)));
+    /* About three frames a second, so a cut or an edit is caught within a third of a second. */
+    const count = Math.min(96, Math.max(4, Math.ceil(duration * 3)));
     const canvas = document.createElement('canvas');
-    canvas.width = 288;
-    canvas.height = Math.round((288 * (v.videoHeight || 16)) / (v.videoWidth || 9));
+    canvas.width = 360;
+    canvas.height = Math.round((360 * (v.videoHeight || 16)) / (v.videoWidth || 9));
     const ctx = canvas.getContext('2d');
     const frames = [];
     for (let i = 0; i < count; i++) {
@@ -791,7 +829,9 @@
     const told = cp.demo ? false : await cp.rpc('creator_admin_draft_ping', { p_title: payload.title || null }).then(() => true, () => false);
     say('Working out the clips… about a minute');
     /* The server reads pictures only, so the sound stays behind. */
-    try { return await cp.fn('creator-analyze', { ...payload, audio: undefined }); } catch (error) {
+    /* It also takes fewer pictures than the Mac does. */
+    const fewer = payload.frames.length > 48 ? payload.frames.filter((_, i) => i % Math.ceil(payload.frames.length / 48) === 0).slice(0, 48) : payload.frames;
+    try { return await cp.fn('creator-analyze', { ...payload, frames: fewer, audio: undefined }); } catch (error) {
       if (/AI key has not been added|preview/.test(error.message)) throw new Error(`The Mac that drafts templates is not reachable from here.${told ? ' The team has been pinged on Discord to draft this one.' : ''} You can still set the clips up by hand.`);
       throw error;
     }
@@ -928,9 +968,16 @@
             h('div', { class: 'cp-inline' }, h('b', {}, KIND_LABEL[layer.kind]), h('button', { class: 'cp-link', type: 'button', onclick: () => { slot.layers.splice(selLayer, 1); selLayer = -1; paint(); } }, 'Remove')),
             text,
             media ? h('div', { class: 'cp-inline' }, file, pickFile, layer.path ? h('span', { class: 'cp-small cp-muted' }, 'File added') : h('span', { class: 'cp-small mk-warn' }, 'Empty: left out of the video until a file is added')) : null,
+            layer.box && !(layer.size === 'full' && media)
+              ? h('div', { class: 'cp-inline mk-exact' },
+                  h('b', { class: 'cp-small' }, 'Exact placement'),
+                  ...[['x', 'across'], ['y', 'down'], ['w', 'wide'], ['h', 'tall']].map(([key, label]) => { const i = h('input', { class: 'cp-input cp-input--num', type: 'number', min: key === 'w' || key === 'h' ? '3' : '0', max: '100', step: '1', value: String(Math.round(layer.box[key] * 100)), 'aria-label': `Percent ${label}` }); i.addEventListener('change', () => { const next = cleanBox({ ...layer.box, [key]: Number(i.value) / 100 }); if (next) layer.box = next; i.value = String(Math.round(layer.box[key] * 100)); preview(); }); return h('label', { class: 'cp-inline cp-small' }, i, `% ${label}`); }),
+                  h('button', { class: 'cp-link', type: 'button', onclick: () => { layer.box = null; paint(); } }, 'Use rough placement'),
+                )
+              : layer.size === 'full' && media ? null : h('div', { class: 'cp-inline' }, h('button', { class: 'cp-link', type: 'button', onclick: () => { const sz = SIZE[layer.size] || SIZE.m; layer.box = cleanBox({ x: 0.5, y: POS[layer.pos], w: media ? sz.w : 0.84, h: media ? sz.h : 0.12 }); paint(); } }, 'Set the exact placement')),
             h('div', { class: 'cp-inline' },
-              layer.size === 'full' && media ? null : choice(layer.pos, POS_LABEL, (v) => (layer.pos = v), 'Where it goes'),
-              choice(layer.size === 'full' && !media ? 'l' : layer.size, media ? SIZE_LABEL : { s: 'Small', m: 'Medium', l: 'Large' }, (v) => { layer.size = v; paint(); }, 'How big'),
+              layer.box || (layer.size === 'full' && media) ? null : choice(layer.pos, POS_LABEL, (v) => (layer.pos = v), 'Where it goes'),
+              layer.box && layer.size !== 'full' ? (media ? h('button', { class: 'cp-link', type: 'button', onclick: () => { layer.size = 'full'; paint(); } }, 'Make it full screen') : null) : choice(layer.size === 'full' && !media ? 'l' : layer.size, media ? SIZE_LABEL : { s: 'Small', m: 'Medium', l: 'Large' }, (v) => { layer.size = v; paint(); }, 'How big'),
               h('label', { class: 'cp-inline cp-small' }, 'shows from', num(layer.from, (v) => (layer.from = v || 0), 'Shows from, seconds into the clip')),
               h('label', { class: 'cp-inline cp-small' }, 'to', num(layer.to, (v) => (layer.to = v), 'Until, seconds into the clip', { placeholder: 'end' })),
               h('span', { class: 'cp-small cp-muted' }, 'seconds into the clip'),
