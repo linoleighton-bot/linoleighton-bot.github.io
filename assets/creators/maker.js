@@ -681,6 +681,36 @@
     return { duration: Math.round(duration * 10) / 10, frames };
   }
 
+  /*
+   * Who drafts a template. A helper running on the team's own Mac hands the
+   * frames to the Claude Code signed in there; when it is not running, the
+   * server function does it with an API key instead.
+   */
+  const HELPER = 'http://127.0.0.1:8796';
+  const helperUp = async () => {
+    try {
+      const stop = new AbortController();
+      const timer = setTimeout(() => stop.abort(), 1500);
+      const res = await fetch(`${HELPER}/health`, { signal: stop.signal });
+      clearTimeout(timer);
+      return res.ok;
+    } catch { return false; }
+  };
+  async function draftWithAI(payload, say) {
+    if (await helperUp()) {
+      say('Claude on this Mac is working out the clips… a few minutes');
+      const res = await fetch(`${HELPER}/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => { throw new Error('The helper on the Mac stopped answering. Check it is still running.'); });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || 'The helper on the Mac could not draft it.');
+      return out;
+    }
+    say('Working out the clips… about a minute');
+    try { return await cp.fn('creator-analyze', payload); } catch (error) {
+      if (/AI key has not been added|preview/.test(error.message)) throw new Error('Drafting needs the helper running on the Mac, or an AI key added in Supabase. Neither was found.');
+      throw error;
+    }
+  }
+
   function editor(brief, db) {
     const el = h('details', { class: 'cp-fold mk-edit' }, h('summary', {}, brief.title, ' ', h('span', { class: 'mk-edit__state cp-small cp-muted' })));
     const stateEl = el.querySelector('.mk-edit__state');
@@ -848,12 +878,10 @@
       const READ = ref ? 'Draft it from the reference with AI' : 'Draft it with AI from a video file';
       analyze.textContent = READ;
       const run = async (url) => {
-        if (cp.demo) throw new Error('This is a preview, so the analysis is switched off.');
         let out;
         try {
           const shots = await framesOf(url, (n, of) => { analyze.textContent = `Reading the video… ${n} of ${of}`; });
-          analyze.textContent = 'Working out the clips… about a minute';
-          out = await cp.fn('creator-analyze', { title: brief.title, ...shots });
+          out = await draftWithAI({ title: brief.title, ...shots }, (label) => { analyze.textContent = label; });
         } finally { analyze.textContent = READ; }
         if (!out.slots || !out.slots.length) throw new Error('The analysis came back empty. Try again.');
         t.slots = out.slots.slice(0, MAX_SLOTS).map(cleanSlot);
