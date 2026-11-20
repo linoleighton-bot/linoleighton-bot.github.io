@@ -776,15 +776,25 @@
       const boost = k.first && k.first.multiplier > 1 ? k.first : null;
       const hold = Number((k.settings && k.settings.hold_days) || 0);
       const minPay = Number((k.settings && k.settings.min_payout_cents) || 0);
-      const SALES = 100000; /* the worked example: $1,000 of sales in a month */
+      /*
+       * The scaling example: a month of sales at each rank's own goal. Most
+       * bonuses are only paid out of what a creator's sales leave room for (the
+       * program keeps `floor` of every sale), so the bonus part is capped at that.
+       */
+      const floor = k.margin != null && Number(k.margin) > 0 && Number(k.margin) < 1 ? Number(k.margin) : null;
+      const share = floor == null ? null : Math.round((1 - floor) * 100);
+      const salesOf = (t) => Number(t.min_revenue_cents) > 0 ? Number(t.min_revenue_cents) : 60000;
       const WEEKS = 4;
-      const monthOf = (t) => [Math.round(SALES * Number(t.commission_rate)), WEEKS * weekOf(t)];
+      const monthOf = (t) => {
+        const commission = Math.round(salesOf(t) * Number(t.commission_rate));
+        const room = floor == null ? Infinity : Math.max(0, Math.round(salesOf(t) * (1 - floor)) - commission);
+        return [commission, Math.min(WEEKS * weekOf(t), room)];
+      };
 
       const camp = k.campaigns || {};
       const split = Array.isArray(camp.split) && camp.split.length ? camp.split.map(Number) : [];
       const boards = Array.isArray(k.boards) && k.boards.length ? k.boards : ['Campaign 1', 'Campaign 2', 'Campaign 3'];
       const pools = tiers.filter((t) => t.campaign_pool_cents > 0);
-      const ROUNDS = 26; /* two-week rounds in a year */
       const place = (t, i) => Math.round(((t.campaign_pool_cents / boards.length) * (split[i] || 0)) / 100);
       const nth = (i) => ['1st', '2nd', '3rd'][i] || `${i + 1}th`;
       const SHADE = ['#0B2A6B', '#2F6BFF', '#9DB8FF', '#C9D6FF'];
@@ -809,7 +819,7 @@
       const rateRows = [...tiers.map((t) => ({ name: t.name, value: Number(t.commission_rate) })), ...(champ ? [{ name: 'Champion', value: Number(champ.rate) }] : [])];
       const mostMonth = Math.max(1, ...tiers.map((t) => monthOf(t)[0] + monthOf(t)[1]));
       const growth = h('figure', { class: 'mr-pitch__chart mr-pitch__chart--wide' },
-        h('figcaption', {}, h('b', {}, `How pay scales: the same ${dollars(SALES)} of sales in a month, at each rank`), h('small', {}, base > 0 ? `An example, not a promise: commission on ${dollars(SALES)} of sales plus ${WEEKS} active weeks. Higher ranks ask for more views and videos.` : `An example, not a promise: commission on ${dollars(SALES)} of sales.`)),
+        h('figcaption', {}, h('b', {}, 'How pay scales: a month at each rank\'s own sales goal'), h('small', {}, `An example, not a promise. Sales in the month: ${tiers.map((t) => `${t.name} ${dollars(salesOf(t))}`).join(', ')}. ${base > 0 ? `Commission, plus up to ${WEEKS} active-week bonuses. ` : ''}${share != null ? `Commission and these bonuses together cannot come to more than about ${share}% of the sales you bring in, so a bonus can be smaller than its full amount, or wait.` : ''}`)),
         base > 0 ? h('div', { class: 'mr-pitch__legend' }, h('span', { 'data-k': 'a' }, 'Commission'), h('span', { 'data-k': 'b' }, 'Active-week bonuses')) : null,
         columns(tiers.map((t) => { const [c, a] = monthOf(t); return { name: t.name, parts: [{ value: c, color: '#2F6BFF', label: 'commission' }, { value: a, color: '#0B2A6B', label: 'active-week bonuses' }] }; }), dollars, { wide: true, label: 'Example month at each rank' }));
 
@@ -820,7 +830,7 @@
       const campaigns = pools.length && split.length ? [
         h('h3', {}, 'Campaigns: prize money every two weeks'),
         h('div', { class: 'mr-pitch__facts' },
-          [['Round length', '14 days', 'A new round starts every second Monday'], ['Campaigns per round', String(boards.length), boards.join(' · ')], ['Paid places', `Top ${split.length} in each`, `Split ${split.map((x) => `${x}%`).join(' / ')}`], ['Biggest pool', dollars(mostPool), `${pools[pools.length - 1].name}, every round`], ['Rounds a year', String(ROUNDS), `Up to ${dollars(mostPool * ROUNDS)} a year at ${pools[pools.length - 1].name}`]]
+          [['Round length', '14 days', 'A new round starts every second Monday'], ['Campaigns per round', String(boards.length), boards.join(' · ')], ['Paid places', `Top ${split.length} in each`, `Split ${split.map((x) => `${x}%`).join(' / ')}`], ['Biggest pool', dollars(mostPool), `${pools[pools.length - 1].name}, when the prize fund covers it`]]
             .map(([label, value, foot]) => h('div', {}, h('small', {}, label), h('b', {}, value), h('span', {}, foot)))),
         h('figure', { class: 'mr-pitch__chart mr-pitch__chart--wide' },
           h('figcaption', {}, h('b', {}, 'Prize pool per two-week round, by rank'), h('small', {}, `Each column is one round's pool, cut by place across all ${boards.length} campaigns. Hover a segment for the amount.`)),
@@ -828,15 +838,15 @@
           columns(pools.map((t) => ({ name: t.name, parts: split.map((x, i2) => ({ value: Math.round((t.campaign_pool_cents * x) / 100), color: SHADE[i2] || SHADE[3], label: `${nth(i2)} place across the ${boards.length} campaigns` })) })), dollars, { wide: true, label: 'Prize pool per round by rank' })),
         h('div', { class: 'cp-tablewrap' },
           h('table', { class: 'cp-table mr-pitch__table' },
-            h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Rank'), h('th', { scope: 'col', class: 'is-num' }, 'Pool per round'), h('th', { scope: 'col', class: 'is-num' }, 'Per campaign'), split.map((_, i) => h('th', { scope: 'col', class: 'is-num' }, `${nth(i)} place`)), h('th', { scope: 'col', class: 'is-num' }, `Win all ${boards.length}`), h('th', { scope: 'col', class: 'is-num' }, `Pool per year (${ROUNDS} rounds)`))),
-            h('tbody', {}, pools.map((t) => h('tr', {}, h('th', { scope: 'row' }, t.name), h('td', { class: 'is-num' }, h('b', {}, dollars(t.campaign_pool_cents))), h('td', { class: 'is-num' }, dollars0(t.campaign_pool_cents / boards.length)), split.map((_, i) => h('td', { class: 'is-num' }, dollars0(place(t, i)))), h('td', { class: 'is-num' }, h('b', {}, dollars0((t.campaign_pool_cents * (split[0] || 0)) / 100))), h('td', { class: 'is-num' }, dollars(t.campaign_pool_cents * ROUNDS))))))),
+            h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Rank'), h('th', { scope: 'col', class: 'is-num' }, 'Pool per round'), h('th', { scope: 'col', class: 'is-num' }, 'Per campaign'), split.map((_, i) => h('th', { scope: 'col', class: 'is-num' }, `${nth(i)} place`)), h('th', { scope: 'col', class: 'is-num' }, `Win all ${boards.length}`))),
+            h('tbody', {}, pools.map((t) => h('tr', {}, h('th', { scope: 'row' }, t.name), h('td', { class: 'is-num' }, h('b', {}, dollars(t.campaign_pool_cents))), h('td', { class: 'is-num' }, dollars0(t.campaign_pool_cents / boards.length)), split.map((_, i) => h('td', { class: 'is-num' }, dollars0(place(t, i)))), h('td', { class: 'is-num' }, h('b', {}, dollars0((t.campaign_pool_cents * (split[0] || 0)) / 100)))))))),
         h('p', { class: 'cp-muted cp-small' }, `How to read it: a rank's pool is shared equally by its ${boards.length} campaigns, and each campaign pays its top ${split.length}. "Win all ${boards.length}" is the most one creator can take in a round: 1st place in every campaign. You compete only against creators in your own rank${camp.min_creators > 0 ? `, and a rank's campaigns run once it has ${num(camp.min_creators)} creators` : ''}. ${tiers.filter((t) => !(t.campaign_pool_cents > 0)).map((t) => t.name).join(' and ') || 'No rank'} has no campaigns yet. Prizes are paid from the program's prize fund when a round ends, so one can pay less than shown while the fund is small.`),
       ] : [];
 
       const why = [
         ['Paid on results, not per post', 'A flat fee pays once per video. Commission pays on every sale your link brings, so one good video can pay many times.'],
         ['The rate goes up as you grow', `You start at ${pctOf2(first.commission_rate)} and move up to ${pctOf2(top.commission_rate)} by ranking up. It is not a fixed deal.`],
-        ['Bonuses stack on top', 'Weekly bonuses, rank-up bonuses, campaign and race prizes and invite rewards are all paid on top of commission.'],
+        ['Bonuses stack on top', 'Weekly bonuses, rank-up bonuses, campaign and race prizes and invite rewards are all paid on top of commission. Most bonuses are paid out of the sales you bring in.'],
       ];
       const pros = [
         'Free to join. No fees.',
@@ -848,6 +858,7 @@
       ].filter(Boolean);
       const cons = [
         'No guaranteed pay. No sales and no views means no money.',
+        share != null ? `Most bonuses are paid out of your own sales. Commission and bonuses together cannot pass about ${share}% of the sales you bring in; a bonus you reach early waits until your sales cover it.` : null,
         hold > 0 ? `Commission clears after ${hold} days, so refunds can come off first.` : null,
         minPay > 0 ? `You need at least ${dollars(minPay)} to cash out.` : null,
         tiers[1] ? `Higher ranks take steady posting. ${tiers[1].name} needs ${[tiers[1].min_posts > 0 && `${num(tiers[1].min_posts)} videos`, tiers[1].min_views > 0 && `${compact(tiers[1].min_views)} views`].filter(Boolean).join(' and ')} in 30 days.` : null,
@@ -865,7 +876,7 @@
       const wayChart = {
         'Commission on every sale': [rateRows, pctOf2, 'Your share of each sale, by rank', `Every sale made on your link pays you this share. The column gets taller each time you rank up${champ ? `, and the top ${champ.slots} creators are paid ${pctOf2(champ.rate)}` : ''}.`],
         'Each new yearly subscriber': [byRank((t) => t.annual_flat_cents), dollars, 'Paid per yearly plan, by rank', 'When someone buys a yearly plan on your link you get this flat amount. Ten yearly subscribers pays ten times the column.'],
-        'Active-week bonus': [byRank(weekOf), dollars, 'Paid for one active week, by rank', `Post on ${minDays || 'enough'} days in a week, with each day's videos reaching your rank's views, and the week pays this. It can be earned every week.`],
+        'Active-week bonus': [byRank(weekOf), dollars, 'Paid for one active week, by rank', `Post on ${minDays || 'enough'} days in a week, with each day's videos reaching your rank's views, and the week pays this. It can be earned every week, and it is paid out of the sales you bring in: if your sales do not cover it yet, it waits.`],
         'Rank-up bonuses': [rankUps.map((t) => ({ name: t.name, value: Number(t.rank_up_bonus_cents) })), dollars, 'One-time bonus when you reach each rank', `Each rank pays once, the moment you reach it. Reach all of them and the bonuses add up to ${dollars(rankUpAll)}.`],
         'Campaign prizes': [pools.map((t) => ({ name: t.name, value: Number(t.campaign_pool_cents) })), dollars, 'Prize pool every two weeks, by rank', `Each rank from ${pools[0] ? pools[0].name : 'Silver'} up has its own pool every two weeks, shared by the top ${split.length} in ${boards.length} campaigns. The full breakdown is below.`],
         'Race prizes': [prizes.map((x) => ({ name: x.name, value: Number(x.cents) })), dollars, 'Prize for the first creator to reach each rank', 'One prize per rank, won once, by whoever gets there first. Later creators still get the rank and its rank-up bonus.'],
@@ -983,7 +994,7 @@
           pay.referral_cents > 0 && team.manager?.code
             ? h('li', { class: 'mr-team__fold' }, h('details', {}, h('summary', {}, h('span', {}, h('b', {}, 'Creators you bring in'), h('small', {}, `${dollars0(pay.referral_cents)} for each creator who joins on your link and reaches ${compact(pay.referral_views)} views. Added as soon as their views are counted. Tap for your link.`)), h('b', {}, dollars0(pay.from_referral_cents))),
                 h('p', { class: 'cp-small', style: 'margin:0.5rem 0.75rem' }, 'Your invite link: ', h('code', { class: 'cp-mono' }, o.inviteCode ? `getmindroll.com/creators/?invite=${o.inviteCode}` : `getmindroll.com/creators/?team=${team.manager.code}`)),
-                o.inviteCode ? h('p', { class: 'cp-small cp-muted', style: 'margin:0 0.75rem 0.5rem' }, 'One link for everything: it is the same link as on your Invite page. Whoever joins on it counts as your referral and is put on your team. Your older team link still works.') : null,
+                o.inviteCode ? h('p', { class: 'cp-small cp-muted', style: 'margin:0 0.75rem 0.5rem' }, 'One link for everything: it is the same link as on your Invite page. Whoever joins on it is put on your team, and the reward for them goes into your creator wallet and is listed on your Invite page, not in the total above. The total above only counts people who joined on your older team link, which still works.') : null,
                 (pay.referrals || []).length
                   ? h('ul', { class: 'mr-rankups' }, pay.referrals.map((r) => h('li', {}, h('span', {}, h('b', {}, r.display_name), h('small', {}, r.paid ? 'Reached the goal' : r.status === 'pending' ? 'Waiting for approval' : `${compact(r.views)} of ${compact(pay.referral_views)} views`)), h('b', {}, r.paid ? dollars0(pay.referral_cents) : '–'))))
                   : h('p', { class: 'cp-small cp-muted' }, 'Nobody has joined on your link yet.')))
