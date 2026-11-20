@@ -19,7 +19,8 @@
   const db = cp.client;
 
   /* One accent, used for every chart and button in the admin. */
-  Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
+  /* Chart colours follow the theme's one accent (theme.css), with ink and grey. */
+  Object.assign(cp.COLOR, { ready: (getComputedStyle(cp.root || document.documentElement).getPropertyValue('--mr-accent') || '').trim() || '#2F6BFF', paid: '#111316', wait: '#C9CDD4' });
   const TABS = [['overview', 'Home', 'home'], ['alerts', 'Notifications', 'bell'], ['creators', 'Creators', 'users'], ['links', 'Links', 'link'], ['referrals', 'Referrals', 'users'], ['managers', 'Managers', 'badge'], ['brief', 'UGC Brief', 'book'], ['videos', 'Videos', 'play'], ['campaigns', 'Campaigns', 'flag'], ['rankings', 'Leaderboard', 'trophy'], ['revenue', 'Money', 'chart'], ['payouts', 'Payouts', 'wallet'], ['bonuses', 'Pay rules', 'sliders'], ['settings', 'Settings', 'gear']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',

@@ -1,0 +1,78 @@
+/*
+ * Calm theme for the creator, manager and admin dashboards. Loaded last.
+ * White cards, near-black type, greys, and ONE accent (--mr-accent). Green
+ * and red are kept only where they mean something: paid / done, and errors.
+ * Swap the accent here and the whole dashboard follows.
+ */
+[data-creators] {
+  --mr-accent: #2F6BFF;
+  --mr-accent-soft: color-mix(in srgb, var(--mr-accent) 9%, #fff);
+  --mr-accent-mid: color-mix(in srgb, var(--mr-accent) 45%, #fff);
+  --mr-ink: #111316;
+  --mr-grey: #C9CDD4;
+  --mr-grey-soft: #EEF0F3;
+  --tint: #F6F7F8;
+  background: var(--tint);
+}
+/* The Start here lanes, rank parts and charts: one hue in shades, plus ink. */
+[data-creators] .mr-guide { --lane-views: var(--mr-accent); --lane-base: var(--mr-accent-mid); --lane-sale: var(--mr-ink); --lane-once: var(--mr-grey); }
+[data-creators] .mr-guide [data-part="mile"] { --part: color-mix(in srgb, var(--mr-accent) 25%, #fff); }
+[data-creators] .mr-guide [data-part="rank"] { --part: #8B9099; }
+
+/* Buttons: accent for the one main action, outline for the rest. */
+[data-creators] .btn--primary { background: var(--mr-accent); color: #fff; border-color: var(--mr-accent); box-shadow: none; }
+[data-creators] .btn--primary:hover { background: color-mix(in srgb, var(--mr-accent) 85%, #000); box-shadow: none; }
+
+/* Banners: no gradients. A white card with a thin rule and an accent eyebrow. */
+[data-creators] .mr-boost, [data-creators] .mr-boost[data-discord], [data-creators] .mr-boost[data-locked] { background: #fff; color: var(--mr-ink); border: 1px solid var(--line); box-shadow: none; }
+[data-creators] .mr-boost__text small { color: var(--mr-accent); }
+[data-creators] .mr-boost__text h2 { color: var(--mr-ink); }
+[data-creators] .mr-boost__text p { color: var(--muted); }
+[data-creators] .mr-boost__text .btn { background: var(--mr-accent); color: #fff; border-color: var(--mr-accent); }
+[data-creators] .mr-boost__clock { background: var(--sunk); border: 0; color: var(--mr-ink); }
+[data-creators] .mr-boost__clock span { color: var(--muted); }
+[data-creators] .mr-boost__clock b { color: var(--mr-ink); }
+[data-creators] .mr-panel.mr-welcome__hero { background: #fff; color: var(--mr-ink); border: 1px solid var(--line); }
+[data-creators] .mr-welcome__hero h2 { color: var(--mr-ink); }
+[data-creators] .mr-welcome__hero .mr-guide__eyebrow { color: var(--mr-accent); }
+[data-creators] .mr-welcome__hero .btn--primary { background: var(--mr-accent); color: #fff; border-color: var(--mr-accent); }
+[data-creators] .mr-welcome__hero .btn--ghost { color: var(--mr-ink); border-color: var(--line-strong); }
+[data-creators] .mr-wl-hero__stack span, [data-creators] .mr-wl-hero__stack span[data-lane="base"] { background: var(--mr-grey-soft); color: var(--mr-ink); }
+[data-creators] .mr-wl-hero__stack span::before { content: ''; display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--lane); margin-right: 0.4rem; }
+
+/* Tiles: all white. The highlighted one only gets its number in the accent. */
+[data-creators] .mr-tile[data-tone], [data-creators] .mr-tile[data-tone='amber'], [data-creators] .mr-tile[data-tone='ink'], [data-creators] .mr-tile[data-tone='clay'] { background: #fff; color: var(--mr-ink); border: 1px solid var(--line); }
+[data-creators] .mr-tile[data-tone] .mr-tile__label, [data-creators] .mr-tile[data-tone] .mr-tile__foot { color: var(--muted); }
+[data-creators] .mr-tile[data-tone='amber'] .mr-tile__value { color: var(--mr-accent); }
+[data-creators] .mr-tile[data-tone='ink'] .mr-tile__row b { color: var(--mr-ink); }
+[data-creators] .mr-spark i { background: var(--mr-grey-soft); }
+[data-creators] .mr-spark i[data-today] { background: var(--mr-accent); }
+
+/* Side menu: one black "you are here"; no blue or green slabs. */
+[data-creators] .mr-nav[data-star], [data-creators] .mr-nav[data-glow] { background: transparent; color: var(--mr-ink); box-shadow: none; font-weight: 700; }
+[data-creators] .mr-nav[data-star]:hover, [data-creators] .mr-nav[data-glow]:hover { background: var(--sunk); }
+[data-creators] .mr-nav[data-star] em { background: var(--mr-accent-soft); color: var(--mr-accent); }
+[data-creators] .mr-nav[data-glow] { box-shadow: inset 0 0 0 1px var(--line-strong); }
+[data-creators] .mr-nav[aria-current], [data-creators] .mr-nav[data-star][aria-current], [data-creators] .mr-nav[data-glow][aria-current] { background: var(--mr-ink); color: #fff; }
+[data-creators] .mr-nav[data-star][aria-current] em { background: rgb(255 255 255 / 0.15); color: #fff; }
+
+/* Counts: accent, not red. */
+[data-creators] .mr-bell b, [data-creators] .mr-tab b, [data-creators] .mr-nav b, [data-creators] .mr-sheet__item b { background: var(--mr-accent); }
+[data-creators] .mr-todo button b { background: var(--mr-accent-soft); color: var(--mr-accent); }
+
+/* Charts: the blue gradients become the accent; extra hues become greys. */
+[data-creators] :is(.mr-col, .mr-guide-col) stop { stop-color: var(--mr-accent); }
+[data-creators] [fill='#0B2A6B'] { fill: var(--mr-ink); }
+[data-creators] [fill='#9DB8FF'], [data-creators] [fill='#C9D6FF'] { fill: var(--mr-accent-mid); }
+[data-creators] .mr-pitch__way { background: #fff; }
+
+/* Small things that were extra colours. */
+[data-creators] .cp-pill[data-tone='warn'] { background: var(--mr-grey-soft); color: var(--ink-soft); }
+[data-creators] .mr-tour { background: var(--mr-ink); }
+[data-creators] .mr-welcome__first { border: 1px solid var(--line); }
+[data-creators] .mr-wl-jobs li[data-next] { background: var(--mr-accent-soft); box-shadow: inset 0 0 0 1px var(--mr-accent-mid); }
+[data-creators] .mr-wl-flow__coin { background: var(--mr-accent); box-shadow: 0 0 0 3px var(--mr-accent-soft); }
+[data-creators] .mr-wl-flow__track::before { background: var(--mr-grey); opacity: 1; }
+[data-creators] .mr-guide-funnel__band[data-step] { background: var(--mr-accent-soft); }
+[data-creators] .mr-boost[data-discord] .mr-boost__text small, [data-creators] .mr-boost[data-locked] .mr-boost__text small { color: var(--mr-accent); }
+[data-creators] .mr-boost[data-discord] .mr-boost__text p, [data-creators] .mr-boost[data-discord] .mr-boost__clock span { color: var(--muted); }

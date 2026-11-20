@@ -10,6 +10,8 @@
   'use strict';
 
   const root = document.querySelector('[data-creators]');
+  /* Local preview only: try another accent colour (set by /phone-preview.html). Ignored on the real site. */
+  try { const pick = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && localStorage.getItem('mindroll.preview.accent'); if (root && pick) root.style.setProperty('--mr-accent', pick); } catch { /* storage blocked */ }
   if (!root) return;
 
   /*

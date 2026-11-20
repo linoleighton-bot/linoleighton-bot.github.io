@@ -350,7 +350,8 @@
    */
   /* Which of the two panes is showing, and the data to redraw it from. */
   /* The same plain scheme as the admin: one accent for every chart and button. */
-  Object.assign(cp.COLOR, { ready: '#2F6BFF', paid: '#111827', wait: '#F5A524' });
+  /* Chart colours follow the theme's one accent (theme.css), with ink and grey. */
+  Object.assign(cp.COLOR, { ready: (getComputedStyle(cp.root || document.documentElement).getPropertyValue('--mr-accent') || '').trim() || '#2F6BFF', paid: '#111316', wait: '#C9CDD4' });
   const PANES = [['home', 'Home', 'home'], ['brief', 'UGC Brief', 'book'], ['alerts', 'Notifications', 'bell'], ['campaigns', 'Campaigns', 'flag'], ['videos', 'Videos', 'play'], ['links', 'Links', 'link'], ['wallet', 'Wallet', 'wallet'], ['pay', 'Ranks', 'trophy'], ['race', 'Race', 'medal'], ['invite', 'Invite', 'users'], ['connect', 'Connect accounts', 'plug']];
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
