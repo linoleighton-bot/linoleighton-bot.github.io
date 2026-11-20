@@ -1008,13 +1008,6 @@ body.page-funnel2 .pw2__lead small {
   color: var(--muted);
 }
 
-body.page-funnel2 .pw2__billed {
-  margin-top: 0.4rem;
-  font-size: 0.73rem;
-  line-height: 1.3;
-  color: var(--muted);
-}
-
 /* The chosen card is already bordered and tinted; the tick is for the reader
    who cannot tell those apart, and for the one who is colour-blind. */
 body.page-funnel2 .pw2__tick {
