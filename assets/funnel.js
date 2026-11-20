@@ -861,7 +861,7 @@
         if (when && PHRASE[chosen]) when.textContent = PHRASE[chosen];
 
         if (!art) return;
-        const next = `/assets/img/funnel2/when-${chosen}.svg`;
+        const next = `/assets/img/funnel2/when-${chosen}.webp`;
         if (art.getAttribute('src') === next) return;
         const probe = new Image();
         probe.onload = () => { art.src = next; };
