@@ -74,11 +74,22 @@
    * being copied anywhere.
    */
   const driveId = (url) => { const hit = /^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]{20,})/.exec(String(url || '')); return hit ? hit[1] : null; };
+  /* A post on TikTok or Instagram plays in that platform's own player. */
+  const postEmbed = (url) => {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, '');
+      if (host.endsWith('tiktok.com')) { const hit = u.pathname.match(/\/video\/(\d+)/); return hit ? `https://www.tiktok.com/embed/v2/${hit[1]}` : null; }
+      if (host.endsWith('instagram.com')) { const hit = u.pathname.match(/\/(reel|reels|p|tv)\/([\w-]+)/); return hit ? `https://www.instagram.com/${hit[1] === 'reels' ? 'reel' : hit[1]}/${hit[2]}/embed` : null; }
+    } catch { /* not a link */ }
+    return null;
+  };
   const refPlayer = (brief, label) => {
     const file = fileUrl(brief.video_path);
     if (file) return h('video', { class: 'mk-ref', src: file, controls: true, preload: 'metadata', playsinline: true, 'aria-label': label });
     const id = driveId(brief.url);
-    return id ? h('iframe', { class: 'mk-ref', src: `https://drive.google.com/file/d/${id}/preview`, title: label, loading: 'lazy', allow: 'autoplay; fullscreen', allowfullscreen: true, referrerpolicy: 'no-referrer' }) : null;
+    const src = id ? `https://drive.google.com/file/d/${id}/preview` : postEmbed(brief.url);
+    return src ? h('iframe', { class: 'mk-ref', src, title: label, loading: 'lazy', allow: 'autoplay; fullscreen; encrypted-media', allowfullscreen: true, referrerpolicy: 'no-referrer' }) : null;
   };
 
   /* Words a creator adds to their own video: kept on their device, per format and clip. */
@@ -1051,5 +1062,45 @@
     );
   }
 
-  cp.maker = { load, view, adminSection, canBuild, get count() { return list.length; }, _build: build, _start: start, _clean: clean, _frames: framesOf };
+  /**
+   * Admin > Campaigns: videos creators have already posted with the hashtag, best first,
+   * each with a button that adds it to Reference videos. From there it gets a template
+   * like any other reference.
+   */
+  function adminPosted(videos, briefs, db, reload, creatorOf) {
+    const have = new Set((briefs || []).map((b) => b.url).filter(Boolean));
+    const rows = (videos || []).filter((v) => cp.safeUrl(v.url) && v.status !== 'rejected').sort((a, b) => Number(b.views || 0) - Number(a.views || 0)).slice(0, 30);
+    const nameOf = (v) => (creatorOf && v.creator_id ? creatorOf(v.creator_id).display_name : v.creator) || 'A creator';
+    const add = (v) => {
+      if (have.has(v.url)) return cp.pill('Added', 'good');
+      const button = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Use as a reference');
+      button.addEventListener('click', cp.act(button, async () => {
+        if (cp.demo) throw new Error('This is a preview, so nothing was added.');
+        const title = String(v.title || '').trim().slice(0, 120) || `${nameOf(v)}'s video`;
+        const { error } = await db.from('creator_briefs').insert({ title, url: v.url, note: `Posted by ${nameOf(v)} · ${cp.compact(v.views)} views`.slice(0, 300) });
+        if (error) throw new Error(error.message);
+        toast('Added to Reference videos. Open it under Video templates to turn it into a winning format.');
+        await reload();
+      }));
+      return button;
+    };
+    return cp.section(
+      'Posted videos you can reuse',
+      h('span', { class: 'cp-muted' }, 'From creators, with the hashtag'),
+      h('p', { class: 'cp-muted cp-small' }, 'Videos your creators have already posted, most viewed first. Add one as a reference video, then give it a template so other creators can copy it.'),
+      rows.length
+        ? cp.table(
+            [
+              { label: 'Video', cell: (v) => h('div', {}, h('a', { href: cp.safeUrl(v.url), target: '_blank', rel: 'noopener noreferrer' }, String(v.title || '').trim() || 'Untitled video'), h('div', { class: 'cp-small cp-muted' }, `${nameOf(v)} · ${cp.PLATFORM?.[v.platform] || v.platform || ''}`)) },
+              { label: 'Views', num: true, cell: (v) => cp.compact(v.views) },
+              { label: '', cell: add },
+            ],
+            rows,
+            '',
+          )
+        : h('p', { class: 'cp-empty' }, 'No posted videos yet. They appear here as creators post with the hashtag.'),
+    );
+  }
+
+  cp.maker = { load, view, adminSection, adminPosted, canBuild, get count() { return list.length; }, _build: build, _start: start, _clean: clean, _frames: framesOf };
 })();

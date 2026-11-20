@@ -1710,6 +1710,7 @@
       ...list.map(card),
       library,
       cp.maker ? cp.maker.adminSection(state.briefs, db) : null,
+      cp.maker?.adminPosted ? cp.maker.adminPosted(state.videos, state.briefs, db, reload, creatorOf) : null,
       w
         ? section(
             'Top videos',
