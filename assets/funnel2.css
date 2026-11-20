@@ -4342,3 +4342,17 @@ body.page-funnel2 .fstep[data-step='gender'] .fq__option:nth-child(3)[data-chose
   color: var(--f2-accent);
   font-weight: 600;
 }
+
+/* Apple Pay / Google Pay, drawn for the selected plan as soon as the offer
+   shows. When it is there it is the buy button; the card route steps back. */
+.pw__express {
+  width: 100%;
+  margin: 1rem 0 0.5rem;
+  min-height: 48px;
+}
+.fstep[data-wallet='on'] [data-checkout] {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--ink);
+  box-shadow: none;
+}

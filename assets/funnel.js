@@ -1698,9 +1698,13 @@
          * markup shipped one label and the reader saw another, and changing
          * the copy in the funnel data appeared to do nothing at all.
          */
-        button.textContent = chosen.trialDays
-          ? `Start my ${chosen.trialDays} days free`
-          : byId['offer']?.cta || 'Subscribe';
+        /* With Apple Pay / Google Pay showing, the wallet button is the buy
+           button and this one is the way to pay by card instead. */
+        button.textContent = offerEl.dataset.wallet === 'on'
+          ? 'Pay with card instead'
+          : chosen.trialDays
+            ? `Start my ${chosen.trialDays} days free`
+            : byId['offer']?.cta || 'Subscribe';
       }
 
       const echo = offerEl.querySelector('[data-plan-echo]');
@@ -2081,10 +2085,134 @@
       for (const node of offerEl.querySelectorAll('[data-checkout]')) {
         node.addEventListener('click', openCheckout);
       }
+      /* ------------------------------------------------- express (wallet) */
+
+      /*
+       * One tap to the Apple Pay sheet.
+       *
+       * The browser only opens Apple Pay from a tap on the wallet's own button
+       * (Stripe draws it in an iframe), so a plan card or our own CTA cannot
+       * open the sheet by itself. The next best thing is to have that button
+       * already drawn, for the selected plan, the moment the offer is on
+       * screen: pick weekly or annual, tap Apple Pay, the sheet is up. Picking
+       * another plan swaps the package on the mounted button rather than
+       * drawing a second one.
+       *
+       * Where no wallet is available (no Apple Pay set up, a browser without
+       * Google Pay) the button never reports ready and the page stays exactly
+       * as it was: "Start My Transformation" opens the card form.
+       *
+       * Off switch: `"express": false` in the funnel's checkout config.
+       */
+      const expressAllowed = boot.checkout.express !== false;
+      const expressEl = document.createElement('div');
+      expressEl.className = 'pw__express';
+      expressEl.hidden = true;
+      checkout.before(expressEl);
+
+      let expressHandle = null;
+      let expressMounting = false;
+      let expressPkgs = null;
+
+      const pkgFor = (id) => {
+        const wanted = boot.plans.find((p) => p.id === id)?.packageId;
+        return expressPkgs?.find((c) => c.identifier === wanted) || null;
+      };
+
+      const walletOff = () => {
+        delete offerEl.dataset.wallet;
+        expressEl.hidden = true;
+        paint();
+      };
+
+      const mountExpress = async () => {
+        if (!expressAllowed || !user || expressMounting || expressHandle) return;
+        if (typeof window.PaymentRequest === 'undefined' && !window.ApplePaySession) return;
+        expressMounting = true;
+        try {
+          const Purchases = await loadSdk();
+          const purchases = await instance(Purchases);
+          if (!offerings) offerings = purchases.getOfferings();
+          let current;
+          try {
+            current = (await offerings)?.current;
+          } catch {
+            offerings = purchases.getOfferings();
+            current = (await offerings)?.current;
+          }
+          expressPkgs = current?.availablePackages || [];
+          const pkg = pkgFor(plan);
+          if (!pkg) throw new Error('No package for the selected plan.');
+
+          const target = document.createElement('div');
+          expressEl.replaceChildren(target);
+
+          const result = await purchases.presentExpressPurchaseButton({
+            rcPackage: pkg,
+            htmlTarget: target,
+            customerEmail: user.email || undefined,
+            walletButtonTheme: 'black',
+            onButtonReady: (handle, available) => {
+              expressHandle = handle;
+              if (!available) return walletOff();
+              /* The plan may have changed while the button was loading. */
+              const now = pkgFor(plan);
+              if (now && now !== pkg) handle.updatePurchase(now, now.webBillingProduct.defaultPurchaseOption);
+              expressEl.hidden = false;
+              offerEl.dataset.wallet = 'on';
+              paint();
+            },
+            listener: {
+              onPurchaseStarted: () => say(''),
+              /* Closing the sheet is not an error; the button stays ready. */
+              onPurchaseCancelled: () => say(''),
+            },
+          });
+
+          const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
+          if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
+          if (till) till.hidden = true;
+          next();
+        } catch (error) {
+          /*
+           * The button's promise settles once, so after a decline it could
+           * never report a later success. Draw a fresh one; if that cannot be
+           * done the card form is still there.
+           */
+          const hadButton = Boolean(expressHandle);
+          expressHandle = null;
+          expressEl.replaceChildren();
+          console.error('[express]', error);
+          if (hadButton && !/No package/.test(String(error?.message || ''))) {
+            const declined = /card|declin|insufficient|expired|billing/i.test(String(error?.message || ''));
+            say(declined ? error.message : 'That payment did not go through. Nothing has been charged — try again or pay by card.');
+            /* After `finally` has released the flag. */
+            setTimeout(mountExpress, 0);
+            return;
+          }
+          walletOff();
+        } finally {
+          expressMounting = false;
+        }
+      };
+
+      /* Warm-up now also draws the wallet button when the offer is on screen. */
+      warmAhead = () => {
+        warmCheckout();
+        if (order[index] === 'offer') mountExpress();
+      };
+
       /* Now that it exists, a plan change can reopen the till on the new one. */
       reopen = () => {
         if (tillOpen()) openCheckout();
       };
+      /* …and move the wallet button to the plan now selected. */
+      for (const button of planButtons) {
+        button.addEventListener('click', () => {
+          const pkg = pkgFor(plan);
+          if (expressHandle && pkg) expressHandle.updatePurchase(pkg, pkg.webBillingProduct.defaultPurchaseOption);
+        });
+      }
     }
   }
 
