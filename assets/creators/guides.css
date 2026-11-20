@@ -276,3 +276,9 @@
 .mr-welcome__first .mr-boost__text p { display: none; }
 .mr-welcome__first .mr-boost__clock { padding: 0.6rem 1rem; min-width: 0; }
 @media (max-width: 40rem) { .mr-guide .mr-wl-flow__coin { display: none; animation: none; } }
+@media (max-width: 640px) {
+  .mr-wl-eq { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -1.125rem; padding-inline: 1.125rem; }
+  .mr-wl-eq::-webkit-scrollbar { display: none; }
+  .mr-wl-chip { flex: none; font-size: 0.8125rem; padding: 0.4rem 0.7rem; }
+  .mr-guide-tree__top { display: none; }
+}

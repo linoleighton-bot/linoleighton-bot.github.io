@@ -394,7 +394,7 @@
    * their team's. `mode` is which one is on screen. An admin sees the same
    * switch, with Admin as a third stop, and can open any manager's dashboard.
    */
-  const MGR = [['team', 'My team', 'badge'], ['pitch', 'The pitch', 'flag'], ['structure', 'Agency structure', 'users'], ['payrank', 'Pay by rank', 'trophy'], ['refrules', 'Referral rules', 'link']];
+  const MGR = [['team', 'My team', 'badge'], ['pitch', 'The pitch', 'flag'], ['structure', 'Structure', 'users'], ['payrank', 'Pay by rank', 'trophy'], ['refrules', 'Referral rules', 'link']];
   const GUIDE = { structure: 'structure', payrank: 'payByRank', refrules: 'referral' };
   const mgrPanes = () => MGR.filter(([id]) => !GUIDE[id] || typeof cp.guides?.[GUIDE[id]] === 'function');
   let mode = MGR.some(([id]) => id === location.hash.slice(1)) ? 'manager' : 'creator';

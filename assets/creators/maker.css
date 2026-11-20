@@ -101,3 +101,7 @@
 .mk .mk-ref { width: 100%; aspect-ratio: 9 / 16; max-height: 26rem; border: 0; border-radius: var(--r-md); background: #000; display: block; object-fit: cover; }
 .mk-watch { width: min(100%, 14rem); }
 .mk-watch:empty { display: none; }
+@media (max-width: 640px) {
+  .mk-pick li > div .btn { width: 100%; }
+  .mk-pick video, .mk-pick iframe { max-height: 15rem; }
+}

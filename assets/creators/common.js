@@ -264,7 +264,7 @@
         'table',
         { class: 'cp-table' },
         h('thead', {}, h('tr', {}, columns.map((col) => h('th', { class: col.num && 'is-num', scope: 'col' }, col.label)))),
-        h('tbody', {}, rows.map((row) => h('tr', {}, columns.map((col) => h('td', { class: col.num && 'is-num', 'data-label': col.label }, col.cell(row)))))),
+        h('tbody', {}, rows.map((row) => h('tr', {}, columns.map((col) => (() => { const v = col.cell(row); return h('td', { class: col.num && 'is-num', 'data-label': col.label, 'data-empty': v == null || v === '' || null }, v); })())))),
       ),
     );
   }
@@ -378,7 +378,9 @@
    * 'columns' (one bar per period). points: [{ label, value }].
    */
   function timeChart(kind, points, fmt, name, tickFmt = fmt, color = COLOR.ready) {
-    const W = 600, H = 210, L = 46, R = 12, T = 10, B = 26;
+    /* Drawn narrower on a phone, so the axis labels stay readable once scaled to the screen. */
+    const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 640px)').matches;
+    const W = phone ? 340 : 600, H = phone ? 190 : 210, L = phone ? 40 : 46, R = 12, T = 10, B = 26;
     const axis = ticks(Math.max(...points.map((p) => p.value)));
     /* Nothing earned yet: keep a scale so the baseline still draws. */
     const top = axis[axis.length - 1] || 1;
