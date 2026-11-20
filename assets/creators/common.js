@@ -959,7 +959,7 @@
         'section',
         { class: 'mr-briefhero mr-team__hero' },
         h('div', {}, h('p', { class: 'mr-brief__eyebrow' }, o.eyebrow || 'Your team'), h('h2', {}, team.manager?.display_name || 'Team'), h('p', {}, `${num(t.creators || 0)} creator${t.creators === 1 ? '' : 's'} · ${num(t.active_7d || 0)} posted this week${t.pending ? ` · ${num(t.pending)} waiting for approval` : ''}`), h('p', { class: 'mr-team__cutline' }, cut > 0 ? ['Your cut: ', h('b', {}, share(cut)), ' of what your team leaves after your creators are paid'] : 'Your cut has not been set yet. Agree it with Mindroll.')),
-        h('div', { class: 'mr-team__pay' }, h('span', {}, 'Your pay, last 30 days'), h('b', {}, dollars0(pay.total_cents)), h('small', {}, 'Your cut plus bonuses. Estimate, paid out by Mindroll at month end.')),
+        h('div', { class: 'mr-team__pay' }, h('span', {}, 'Your pay, last 30 days'), h('b', {}, dollars0(pay.total_cents)), h('small', {}, 'Your cut plus bonuses. An estimate. Paid out once the money reaches Mindroll from Stripe, usually 3 to 7 days.')),
       ),
       h('div', { class: 'mr-grid' }, tile('paper', 'Team views, 30 days', compact(t.views_30d || 0), `${num(t.videos_30d || 0)} videos`), tile('paper', 'Subscribers brought in', num(t.subscribers || 0), 'by your creators'), tile('paper', 'Paid to your creators', dollars0(pay.paid_out_cents), 'commission and bonuses, 30 days'), tile('amber', 'Active weeks, 30 days', num(t.active_weeks_30d || 0), 'weeks a creator posted 4 days')),
       h(

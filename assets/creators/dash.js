@@ -1594,9 +1594,16 @@
     const WEEKS = 4, days = inc.window_days || 30;
     /* Iron has no goal; $600 is about where its own posting bonuses are fully covered. */
     const salesOf = (t) => t.min_revenue_cents || 60000;
+    /*
+     * Bonuses are paid out of what a creator's sales leave room for: the program
+     * keeps `margin.rate` of every sale. So the example never shows more bonus
+     * than the sales at that tier's goal would actually cover.
+     */
+    const keepRate = inc.margin?.rate != null && Number(inc.margin.rate) > 0 && Number(inc.margin.rate) < 1 ? Number(inc.margin.rate) : null;
+    const roomOf = (t) => (keepRate == null ? Infinity : Math.max(0, Math.round(salesOf(t) * (1 - keepRate)) - Math.round(salesOf(t) * t.commission_rate)));
     const sample = (t) => [
       { label: 'Commission', value: Math.round(salesOf(t) * t.commission_rate), color: cp.COLOR.ready },
-      { label: 'Posting bonuses', value: WEEKS * Math.round(baseActive * mult(t)) + volumeAll(t), color: cp.COLOR.wait, dark: true },
+      { label: 'Posting bonuses', value: Math.min(WEEKS * Math.round(baseActive * mult(t)) + volumeAll(t), roomOf(t)), color: cp.COLOR.wait, dark: true },
     ];
     const total = (t) => sample(t).reduce((sum, part) => sum + part.value, 0);
     const champ = inc.champion?.slots > 0 ? inc.champion : null;
