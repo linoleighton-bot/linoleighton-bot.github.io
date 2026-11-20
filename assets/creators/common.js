@@ -861,8 +861,33 @@
         return h('div', { class: 'mr-pitch__way' }, h('small', {}, name), h('b', {}, value), drawn ? h('em', {}, c[2]) : null, drawn ? miniBars(c[0], c[1], c[2]) : null, h('span', {}, drawn ? c[3] : how));
       };
 
+      /*
+       * What Mindroll is, in words a manager can paste: once for the creator
+       * (what they would be promoting) and once for the creator's viewers (how
+       * to describe it in a video or a caption). Taken from the app's own site.
+       */
+      const ABOUT = [
+        ['For the creator', 'Send this so they know what they would be promoting.', [
+          'Mindroll is a reading app for people who want to learn from books but do not have hours to read.',
+          'Every day it gives you five ideas from books, essays, talks and research. Each one takes about a minute, and the session ends when the five are done. There is no endless feed.',
+          'The ideas you save come back after 1, 3, 7, 16 and 35 days, so you actually remember them instead of forgetting the book a week later.',
+          'You can also listen to ideas, scan a book you own to get its ideas, and keep a library of what you saved.',
+          'It is a paid subscription, on iPhone and Android. Every subscription bought on your link pays you commission.',
+          'It is easy to make videos about: pick one idea from a book and share it. Book, self-improvement, productivity and study content all fit.',
+        ]],
+        ['For their viewers', 'How a creator can describe it in a video or a caption.', [
+          'Name one idea from the last book you finished. Most people cannot, because you read it once and nothing ever asked you about it again.',
+          'Mindroll fixes that. It gives you five ideas a day from great books, about a minute each, and then you are done.',
+          'The ideas you save come back until they stick, so you keep what you read.',
+          'Link in my bio.',
+        ]],
+      ];
+      const copier = (label, body) => { const b = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, label); b.addEventListener('click', async () => { try { await navigator.clipboard.writeText(body); toast('Copied. Paste it into a DM or a caption.'); } catch { toast('Could not copy on this browser.', 'error'); } }); return b; };
+      const about = h('div', { class: 'mr-pitch__about' }, ABOUT.map(([title, note, lines]) => h('div', {}, h('div', { class: 'mr-pitch__abouthead' }, h('span', {}, h('b', {}, title), h('small', {}, note)), copier('Copy', lines.join('\n\n'))), lines.map((line) => h('p', {}, line)))));
+
       const text = [
         'Why join the Mindroll creator program', '',
+        'What Mindroll is:', ...ABOUT[0][2].map((x) => `- ${x}`), '',
         'How you get paid:', ...ways.map(([name, value, how]) => `- ${name}: ${value}. ${how}`), '',
         'Why it pays more:', ...why.map(([name, how]) => `- ${name}. ${how}`), '',
         'Good to know before you join:', ...cons.map((x) => `- ${x}`), '',
@@ -877,6 +902,8 @@
           h('summary', {}, h('span', {}, h('small', {}, 'For your calls with creators'), h('b', {}, 'The pitch: why join Mindroll')), h('span', { class: 'mr-pitch__open' }, 'Open')),
           h('div', { class: 'mr-pitch__body' },
             h('div', { class: 'mr-pitch__tools' }, h('p', { class: 'cp-muted cp-small' }, 'Share your screen and walk through it, or copy it as a message. The numbers are the program\'s live numbers.'), copy),
+            h('h3', {}, 'What Mindroll is'),
+            about,
             h('h3', {}, 'How you get paid'),
             h('div', { class: 'mr-pitch__ways' }, ways.map(wayCard)),
             h('h3', {}, 'It grows with you'),
