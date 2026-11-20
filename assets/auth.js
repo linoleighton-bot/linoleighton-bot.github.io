@@ -181,12 +181,12 @@
        */
       const lapsed = Boolean(row) && row.state === 'expired';
 
-      if (name) name.textContent = 'Free';
+      if (name) name.textContent = 'No subscription';
       if (badge) badge.hidden = true;
       if (detail) {
         detail.textContent = lapsed
           ? 'Your subscription has ended. Everything you saved is still here, waiting for you.'
-          : 'You can read the whole catalogue on the free plan. Pro adds audio, downloads and unlimited saves.';
+          : 'You do not have a subscription yet. Mindroll Pro gives you five ideas a day, audio, downloads and unlimited saves.';
       }
       if (manageRow) manageRow.hidden = true;
       if (seePlans && lapsed) {

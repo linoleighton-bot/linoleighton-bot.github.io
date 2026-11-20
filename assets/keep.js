@@ -710,8 +710,8 @@
 
         paint(4, [
           h('p', { class: 'keep__step', text: 'Before you decide' }),
-          h('h2', { class: 'keep__title', id: 'keep-title', text: 'What changes on the free plan' }),
-          h('p', { class: 'keep__lead', text: 'The free plan keeps working. These are the parts that stop.' }),
+          h('h2', { class: 'keep__title', id: 'keep-title', text: 'What changes when you cancel' }),
+          h('p', { class: 'keep__lead', text: 'These are the parts that stop.' }),
           h(
             'ul',
             { class: 'keep__lose' },
