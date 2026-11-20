@@ -704,9 +704,11 @@
       if (!res.ok) throw new Error(out.error || 'The helper on the Mac could not draft it.');
       return out;
     }
+    /* The Mac is off, asleep, or this is another computer: tell the team on Discord, then try the server. */
+    const told = cp.demo ? false : await cp.rpc('creator_admin_draft_ping', { p_title: payload.title || null }).then(() => true, () => false);
     say('Working out the clips… about a minute');
     try { return await cp.fn('creator-analyze', payload); } catch (error) {
-      if (/AI key has not been added|preview/.test(error.message)) throw new Error('Drafting needs the helper running on the Mac, or an AI key added in Supabase. Neither was found.');
+      if (/AI key has not been added|preview/.test(error.message)) throw new Error(`The Mac that drafts templates is not reachable from here.${told ? ' The team has been pinged on Discord to draft this one.' : ''} You can still set the clips up by hand.`);
       throw error;
     }
   }
