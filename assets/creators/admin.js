@@ -2229,7 +2229,37 @@
     };
     if (cp.demo) drawAlerts({ channels: [{ id: '1', name: 'admin' }, { id: '2', name: 'announcements' }], roles: [{ id: '1', name: 'Admin' }, { id: '2', name: 'Manager' }], channel: { id: '1', name: 'admin' }, role: { id: '1', name: 'Admin' }, chosen: { channel: null, role: null } });
     else cp.fn('creator-discord', { action: 'alerts' }).then(drawAlerts, (e) => alertsBody.replaceChildren(h('p', { class: 'cp-bad' }, e.message || 'Could not reach Discord.')));
-    return [h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Discord alerts for the team'), alertsBody), h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Program settings'), form)];
+    /*
+     * Who is an admin. Any admin can add another by email; they get in when they
+     * sign in with that address using Google or Apple. The owners cannot be
+     * removed here, and nobody can remove themselves. The database checks all of it.
+     */
+    const adminsBody = h('div', { class: 'cp-form' }, h('p', { class: 'cp-muted' }, 'Loading…'));
+    const drawAdmins = (list) => {
+      const email = h('input', { class: 'cp-input', type: 'email', placeholder: 'Email they sign in with (Google or Apple)', 'aria-label': 'New admin email', autocapitalize: 'none', spellcheck: 'false' });
+      const add = confirmButton('Add admin', 'Confirm: give full admin access', 'btn btn--primary btn--sm', async () => {
+        const value = email.value.trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) throw new Error('That does not look like an email address.');
+        if (cp.demo) { if (!list.some((x) => x.email === value)) list.push({ email: value, owner: false, me: false, signed_in: false, added_by: 'you@example.com', created_at: new Date().toISOString() }); toast('Added. (Sample data: nothing was saved.)'); return drawAdmins(list); }
+        const reply = await cp.rpc('creator_admin_add_admin', { p_email: value });
+        toast(reply === 'already' ? `${value} is already an admin.` : `${value} is an admin. They sign in at getmindroll.com/admin with that email.`);
+        drawAdmins(await cp.rpc('creator_admin_admins'));
+      });
+      const remove = (x) => confirmButton('Remove', 'Confirm: take away admin access', 'cp-link', async () => {
+        if (cp.demo) { toast('Removed. (Sample data: nothing was saved.)'); return drawAdmins(list.filter((y) => y !== x)); }
+        await cp.rpc('creator_admin_remove_admin', { p_email: x.email });
+        toast(`${x.email} is no longer an admin.`);
+        drawAdmins(await cp.rpc('creator_admin_admins'));
+      });
+      adminsBody.replaceChildren(
+        h('ul', { class: 'mr-added' }, list.map((x) => h('li', {}, h('span', {}, h('b', {}, x.email), h('small', { class: 'cp-muted' }, ` · ${x.owner ? 'owner' : `added ${day(x.created_at)}${x.added_by ? ` by ${x.added_by}` : ''}`}${x.me ? ' · you' : ''}${x.signed_in ? '' : ' · has not signed in yet'}`)), x.owner || x.me ? null : remove(x)))),
+        h('div', { class: 'mr-addrow mr-addrow--one' }, email, add),
+        h('small', { class: 'cp-hint' }, 'An admin can do everything on this page: approve and remove creators, change pay rules, send payouts, and add or remove other admins. They must sign in with Google or Apple; a password sign-in is never accepted.'),
+      );
+    };
+    if (cp.demo) drawAdmins([{ email: 'you@example.com', owner: true, me: true, signed_in: true }, { email: 'partner@example.com', owner: true, me: false, signed_in: true }, { email: 'ops@example.com', owner: false, me: false, signed_in: false, added_by: 'you@example.com', created_at: new Date(Date.now() - 3 * 864e5).toISOString() }]);
+    else cp.rpc('creator_admin_admins').then(drawAdmins, (e) => adminsBody.replaceChildren(h('p', { class: 'cp-bad' }, e.message || 'Could not load the admins.')));
+    return [h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Discord alerts for the team'), alertsBody), h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Admins'), adminsBody), h('div', { class: 'cp-card cp-narrow cp-narrow--left' }, h('h2', {}, 'Program settings'), form)];
   }
 
   /* ------------------------------------------------------------ sample data */
