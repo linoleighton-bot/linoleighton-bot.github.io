@@ -862,6 +862,7 @@
                     h('p', { class: 'cp-small cp-muted' }, c.discord_name ? `Discord: ${c.discord_name} (roles follow their rank)` : 'Discord not connected'),
                     h('p', { class: 'cp-small cp-muted' }, `Code ${c.code} · ${num(c.stats.clicks)} clicks · ${num(c.stats.signups)} sign-ups · ${money(c.balance.pending_cents)} still clearing · ${money(c.balance.paid_cents)} paid so far`),
                     c.status === 'active' ? setStatus(c, 'paused', 'Pause this creator', 'cp-link') : setStatus(c, 'active', c.status === 'rejected' ? (c.approved_at ? 'Let back in' : 'Approve') : 'Resume', 'cp-link'),
+                    c.accepted_by_manager ? h('p', { class: 'cp-small cp-muted' }, `Accepted by manager ${((state.managers || []).map((m) => m.manager).find((m) => m && m.id === c.accepted_by_manager) || {}).display_name || 'no longer listed'}`) : null,
                     c.status !== 'rejected' ? kick(c) : h('p', { class: 'cp-small cp-muted' }, c.approved_at ? 'Removed from the program' : 'Application declined'),
                   ),
                 ),
@@ -2115,6 +2116,7 @@
     const appFee = h('input', { type: 'number', min: '0', max: '99', step: '0.5', value: String(Math.round(s.app_store_fee_rate * 1000) / 10) });
     const webFee = h('input', { type: 'number', min: '0', max: '99', step: '0.1', value: String(Math.round(s.web_fee_rate * 1000) / 10) });
     const open = h('input', { type: 'checkbox', checked: s.applications_open });
+    const mgrAccept = h('input', { type: 'checkbox', checked: s.managers_can_accept !== false });
     const tag = h('input', { type: 'text', maxlength: '30', value: s.hashtag || 'mindroll', autocapitalize: 'none', spellcheck: 'false' });
     const scan = h('input', { type: 'number', min: '15', max: '1440', step: '15', value: String(s.scan_minutes || 60) });
     const slots = h('input', { type: 'number', min: '0', max: '50', step: '1', value: String(s.champion_slots ?? 3) });
@@ -2170,6 +2172,7 @@
       field('Creator terms', terms, 'Every creator accepts these before their dashboard opens. Have the wording checked before you rely on it.'),
       h('label', { class: 'cp-check' }, again, 'I changed the terms: ask every creator to accept them again'),
       h('label', { class: 'cp-check' }, open, 'Accept new creator applications'),
+      'managers_can_accept' in s ? h('label', { class: 'cp-check' }, mgrAccept, 'Managers accept their own applicants (off: every application waits for an admin)') : null,
       save,
     );
     form.addEventListener(
@@ -2196,6 +2199,7 @@
           ...(again.checked ? { terms_version: (s.terms_version || 1) + 1 } : {}),
           referral_bonus_cents: Math.max(0, Math.round(Number(refPay.value) * 100)),
           referral_views: Math.max(0, Math.round(Number(refViews.value))),
+          ...('managers_can_accept' in s ? { managers_can_accept: mgrAccept.checked } : {}),
           ...('manager_referral_cents' in s ? { manager_referral_cents: Math.max(0, Math.round(Number(mgrRefPay.value) * 100)) } : {}),
           iron_step_cents: Math.max(0, Math.round(Number(ironPay.value) * 100)),
           iron_step_views: Math.max(1000, Math.round(Number(ironStep.value))),

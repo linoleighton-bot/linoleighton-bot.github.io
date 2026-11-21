@@ -179,6 +179,8 @@
   let wantsToApply = false;
   /* What the applicant has answered so far; kept while they move between the steps. */
   const applyDraft = { step: 0 };
+  /* The managers an applicant can name as their representative; fetched once. */
+  let managerList = null;
   function renderManager(data) {
     show(h('div', { class: 'mr-shell mr-shell--solo' }, h('div', { class: 'mr-main' }, h('header', { class: 'mr-head' }, h('h1', {}, 'My team'), h('div', { class: 'mr-head__tools' }, h('button', { class: 'mr-tool', type: 'button', onclick: () => { wantsToApply = true; renderApply(data); } }, 'Become a creator too'))), discordBox(data.team.discord_name, () => { data.team.discord_name = 'you'; toast('Connected. (Sample data: nothing was saved.)'); renderManager(data); }, true), ...cp.teamView(data.team, { review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }))));
   }
@@ -233,14 +235,25 @@
 
     const tiktok = handle('tiktok');
     const instagram = handle('instagram');
-    const yes = h('input', { type: 'radio', name: 'spoke', value: 'yes' });
-    const no = h('input', { type: 'radio', name: 'spoke', value: 'no' });
-    const repName = h('input', { name: 'representative', maxlength: '80', placeholder: 'Their name', autocomplete: 'off' });
+    /*
+     * Their representative: picked from the list of managers, so the application
+     * goes straight to that manager to accept. "Nobody" and "someone else" stay
+     * with the admins, as before. The list is fetched once and filled in when it
+     * arrives; without it the two fixed choices still work.
+     */
+    const NOBODY = 'nobody', OTHER = 'other';
+    const rep = h('select', { name: 'representative', 'aria-label': 'Your Mindroll representative' }, h('option', { value: '' }, 'Choose one'), h('option', { value: NOBODY }, 'Nobody: I found Mindroll myself'), h('option', { value: OTHER }, 'Someone who is not on this list'));
+    const fillReps = (list) => { const before = [...rep.options].find((x) => x.value === NOBODY); (list || []).forEach((m) => rep.insertBefore(h('option', { value: m.id }, m.name), before)); if (answers.rep) rep.value = answers.rep; };
+    if (managerList) fillReps(managerList);
+    else if (cp.demo) fillReps((managerList = [{ id: 'm1', name: 'Alex Rivera' }, { id: 'm2', name: 'Sam Lee' }]));
+    else cp.rpc('creator_manager_list').then((list) => { managerList = Array.isArray(list) ? list : []; fillReps(managerList); }, () => {});
+    const repName = h('input', { name: 'representative_name', maxlength: '80', placeholder: 'Their name', autocomplete: 'off', value: answers.repName || '' });
     const repField = field('Who did you talk with?', repName);
-    repField.hidden = true;
-    const syncRep = () => { repField.hidden = !yes.checked; };
-    yes.addEventListener('change', syncRep);
-    no.addEventListener('change', syncRep);
+    const syncRep = () => { repField.hidden = rep.value !== OTHER; answers.rep = rep.value; };
+    rep.addEventListener('change', syncRep);
+    repName.addEventListener('input', () => { answers.repName = repName.value; });
+    if (answers.rep) rep.value = answers.rep;
+    syncRep();
     for (const input of [tiktok, instagram]) input.addEventListener('input', () => { answers[input.name] = input.value; });
     /* Left empty by people; filled in by scripts that fill every field. */
     const trap = h('input', { name: 'website', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true', class: 'cp-trap' });
@@ -257,7 +270,8 @@
       field('TikTok', tiktok),
       field('Instagram', instagram),
       h('p', { class: 'cp-hint' }, 'You only need one of the two.'),
-      h('fieldset', { class: 'cp-choice' }, h('legend', {}, 'Have you talked with a Mindroll representative?'), h('label', { class: 'cp-check' }, yes, 'Yes'), h('label', { class: 'cp-check' }, no, 'No')),
+      field('Who is your Mindroll representative?', rep),
+      h('p', { class: 'cp-hint' }, 'Pick the person who told you about the program. They are the one who lets you in.'),
       repField,
       trap,
       status,
@@ -268,17 +282,20 @@
       act(submit, async () => {
         status.hidden = true;
         if (!tiktok.value.trim() && !instagram.value.trim()) return fail(REPLY.no_handle);
-        if (!yes.checked && !no.checked) return fail('Tell us whether you have talked with a representative.');
-        if (yes.checked && !repName.value.trim()) return fail('Enter the name of the person you talked with.');
+        if (!rep.value) return fail('Choose your representative, or "Nobody" if you found Mindroll yourself.');
+        if (rep.value === OTHER && !repName.value.trim()) return fail('Enter the name of the person you talked with.');
+        const picked = rep.value !== NOBODY && rep.value !== OTHER ? rep.value : null;
         if (trap.value) return renderWaiting({ status: 'pending' });
         if (cp.demo) return renderWaiting({ status: 'pending' }, 'This is a preview, so nothing was saved or emailed.');
-        const note = yes.checked ? `Talked with a representative: ${repName.value.trim()}` : 'Has not talked with a representative';
+        const note = rep.value === NOBODY ? 'Has not talked with a representative' : `Talked with a representative: ${picked ? rep.selectedOptions[0].textContent : repName.value.trim()}`;
         await noteInvite();
         const reply = await cp.rpc('creator_apply', { p_tiktok: tiktok.value, p_instagram: instagram.value, p_note: note, p_invite: INVITE });
         if (reply === 'applied' || reply === 'exists') {
           try { localStorage.setItem(APPLIED, String(Date.now())); } catch { /* private window */ }
           /* The answers and the follower check are extras: the application stands without them. */
           if (reply === 'applied') {
+            /* The application now belongs to the manager they named, who accepts it. */
+            if (picked) await cp.rpc('creator_pick_manager', { p_manager: picked }).catch(() => {});
             await cp.rpc('creator_apply_details', { p_niche: answers.niche || null, p_followers: answers.followers || null, p_freq: answers.freq || null, p_ugc: answers.ugc ?? null }).catch(() => {});
             cp.fn('creator-lead').catch(() => {});
           }
@@ -620,6 +637,16 @@
     );
   }
 
+  /* A manager lets in, or turns away, someone who named them as their representative. */
+  async function reviewApplicant(data, c, accept) {
+    if (cp.demo) { c.status = accept ? 'active' : 'rejected'; if (!accept) data.team.creators = data.team.creators.filter((x) => x !== c); toast(`${accept ? `${c.display_name} is in.` : 'Declined.'} (Sample data: nothing was saved.)`); return renderDashboard(data); }
+    const reply = await cp.rpc('creator_manager_review', { p_creator: c.id, p_accept: accept });
+    if (reply === 'off') throw new Error('An admin is reviewing applications at the moment, so this one waits for them.');
+    if (reply === 'not_yours' || reply === 'not_pending') throw new Error('This application has already been dealt with. Refresh the page.');
+    toast(reply === 'accepted' ? `${c.display_name} is in. They can start posting.` : `Declined. ${c.display_name} has been told their application was not accepted.`);
+    await load();
+  }
+
   /*
    * The team page in manager mode. A manager gets their own team with every
    * control. An admin who is not a manager picks one and sees it read-only:
@@ -686,7 +713,7 @@
       },
       brief: () => briefView(data),
       make: () => cp.maker.view(data),
-      team: () => teamPage(data, { inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, margin: data.incentives?.margin?.rate, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
+      team: () => teamPage(data, { applicant: (c, ok) => reviewApplicant(data, c, ok), inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, margin: data.incentives?.margin?.rate, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }),
       pitch: () => (teamOf(data) ? cp.teamView(teamOf(data), { ...({ inviteCode: data.creator?.status === 'active' ? data.creator.code : null, pitch: { tiers: data.incentives?.tiers, active: data.incentives?.active, champion: data.incentives?.champion, race: data.incentives?.race, referral: data.referrals, first: data.first_video, settings: data.settings, margin: data.incentives?.margin?.rate, campaigns: data.campaigns, boards: Object.values(BOARDS).map(([title]) => title) }, review: (v, ok, reason) => reviewVideo(data, v, ok, reason), accounts: (c, ok) => reviewAccounts(data, c, ok), manage: teamActions(data) }), only: 'pitch', pitchOpen: true }) : [h('p', { class: 'cp-empty' }, 'Loading…')]),
       structure: () => cp.guides.structure(guideCtx(data)),
       payrank: () => cp.guides.payByRank(guideCtx(data)),

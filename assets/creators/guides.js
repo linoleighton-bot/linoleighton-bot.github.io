@@ -99,8 +99,8 @@
     const chain = h(
       'div',
       { class: 'mr-guide-chain' },
-      level('Mindroll', [['Mindroll', 'Approves creators, sets the pay rules, sends payouts']], 'top'),
-      level('Creator managers', [['Manager', null], ['Manager', 'Recruits and runs a team', true], ['Manager', null]]),
+      level('Mindroll', [['Mindroll', 'Sets the pay rules, sends payouts']], 'top'),
+      level('Creator managers', [['Manager', null], ['Manager', 'Recruits, accepts and runs a team', true], ['Manager', null]]),
       level("Creators on one manager's team", [['Creator', null], ['Creator', 'Posts with #Mindroll, shares their link', true], ['Creator', null]]),
       level('App users', [['Paying user', null], ['Paying user', 'Subscribed through the creator’s link', true], ['Paying user', null]]),
     );

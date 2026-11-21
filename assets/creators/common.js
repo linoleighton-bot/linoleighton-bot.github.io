@@ -951,8 +951,22 @@
       );
     };
     if (o.only === 'pitch') return [pitchPanel() || h('p', { class: 'cp-empty' }, 'The pitch needs the program\'s pay numbers, which did not load. Refresh the page.')];
+    /*
+     * People who named this manager as their representative and are waiting to
+     * be let in. The manager decides; every decision is reported to the admins.
+     */
+    const applicants = list.filter((c) => c.status === 'pending');
+    const applicantRow = (c) => {
+      const accept = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, 'Accept');
+      accept.addEventListener('click', act(accept, () => o.applicant(c, true)));
+      const decline = confirmButton('Decline', 'Confirm: turn them away', 'btn btn--ghost btn--sm', () => o.applicant(c, false));
+      return h('li', { class: 'mr-review__row' }, person(c), h('div', { class: 'mr-review__video' }, h('span', { class: 'cp-muted cp-small' }, `${c.created_at ? `Applied ${day(c.created_at)}. ` : ''}Open their accounts and check they are real before you accept.`)), h('span', { class: 'cp-inline' }, accept, decline));
+    };
     return [
       o.noPitch ? null : pitchPanel(),
+      o.applicant && applicants.length
+        ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Waiting for you'), h('b', {}, num(applicants.length))), h('ul', { class: 'mr-review__list' }, applicants.map(applicantRow)), h('p', { class: 'cp-muted cp-small' }, 'These people named you as their representative. Accepting lets them into the program on your team. The Mindroll team is told about every decision and can undo it.'))
+        : null,
       o.accounts && toApprove.length
         ? h('section', { class: 'mr-panel mr-review' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Accounts to approve'), h('b', {}, num(toApprove.length))), h('ul', { class: 'mr-review__list' }, toApprove.map(accountRow)), h('p', { class: 'cp-muted cp-small' }, 'Videos and views are only counted from accounts you have approved.'))
         : null,
