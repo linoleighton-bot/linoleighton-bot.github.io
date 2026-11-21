@@ -2377,11 +2377,22 @@ body.page-funnel .funnel__body {
     padding-top: 0;
   }
 
+  /*
+   * The drawing is held to 5:4 on a phone.
+   *
+   * At its own 1:1 it is 390px tall on a 390px screen, which is 97px more
+   * than the slot has and pushes the quote under the button at rest. The
+   * subject is centred, so `cover` takes the crop off the top and bottom
+   * — a little paper and a little duvet — and nothing that carries the
+   * picture. Full width either way.
+   */
   .fhook__art {
     width: 100%;
-    height: auto;
     max-width: none;
+    aspect-ratio: 5 / 4;
+    height: auto;
     max-height: none;
+    object-fit: cover;
   }
 
   .fhook__quote {

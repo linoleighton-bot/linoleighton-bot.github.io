@@ -566,6 +566,10 @@ body.page-funnel2 .fs__cta {
   border-radius: 0.7rem;
 }
 
+body.page-funnel2 .fs__cta:not(:disabled):active {
+  background: color-mix(in srgb, var(--f2-accent) 86%, #000);
+}
+
 body.page-funnel2 .fs__cta:disabled {
   background: color-mix(in srgb, var(--ink) 20%, var(--f2-bg));
   color: color-mix(in srgb, #fff 70%, transparent);
@@ -1828,12 +1832,26 @@ body.page-funnel2 .fstep[data-asking] .fbuild__line:not([data-done]) { opacity: 
 
 /* ------------------------------------------------------------- the press */
 
+/*
+ * The button is the brand's orange, not near-black.
+ *
+ * Every step ended on an ink button, which made the one thing the reader
+ * is meant to press the only cold object on a warm page, and left the
+ * accent doing nothing but underline headlines. The paywall's buy button
+ * was already clay, so the funnel spent twenty screens in one colour and
+ * then asked for money in another.
+ *
+ * Note for whoever edits this next: there is an earlier
+ * `body.page-funnel2 .fs__cta` block further up this file that sets
+ * `--f2-dark`. It loses to this one on source order, so changing it does
+ * nothing. This is the rule that paints the button.
+ */
 body.page-funnel2 .fs__cta {
   width: 100%;
   min-height: 3.25rem;
   margin-top: 1.5rem;
   border-radius: 0.75rem;
-  background: var(--f2-ink);
+  background: var(--f2-accent);
   color: #fff;
   font-family: inherit;
   font-size: 1rem;
