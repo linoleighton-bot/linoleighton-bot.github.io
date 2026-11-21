@@ -262,13 +262,43 @@
      * from a past visit. Showing the form again reads as the sign-in not having
      * worked, and somebody who thinks it did not work does not then pay.
      */
+    /*
+     * A reader holding a purchase never sees the offer again.
+     *
+     * Independent of the order: it also covers somebody who paid, closed
+     * the tab before making an account, and came back — without it the
+     * funnel would walk them onto the paywall and invite a second
+     * charge for a subscription they already own.
+     */
+    if (step.kind === 'offer' && alreadyPaid()) {
+      persist();
+      const at = index + 1;
+      if (at < order.length) {
+        index = at;
+        render({ push });
+        return;
+      }
+    }
+
     if (step.kind === 'account' && user) {
       /* Signed in already, so the configure and the offerings can be done now
          rather than on the press. */
       warmAhead?.();
       persist();
-      const at = order.indexOf('offer');
-      if (at !== -1 && at !== index) {
+      /*
+       * Where "already signed in" leads depends on which side of the
+       * till this screen is on.
+       *
+       * Before the offer, the next thing a reader needs is the price, so
+       * jumping to it is right. After the offer the price has already
+       * been paid, and sending them back to the paywall is the worst
+       * thing this funnel can do — it reads as the payment not having
+       * worked. This jumped to `offer` unconditionally, which is exactly
+       * what happened on the first real purchase: paid, signed in with
+       * Google, landed back on the paywall.
+       */
+      const at = payFirst ? index + 1 : order.indexOf('offer');
+      if (at !== -1 && at < order.length && at !== index) {
         index = at;
         render({ push });
         return;
@@ -1321,6 +1351,13 @@
    */
   let claimPurchase = null;
 
+  /*
+   * Whether this reader is already holding a purchase. Replaced by the
+   * checkout block; false until then, so a build without checkout simply
+   * never skips anything.
+   */
+  let alreadyPaid = () => false;
+
   if (boot.accounts && boot.supabase && window.supabase) {
     client = window.supabase.createClient(boot.supabase.url, boot.supabase.key, {
       auth: {
@@ -1473,7 +1510,20 @@
     };
 
     const oauth = window.mindrollOAuth;
-    const returnTo = `${location.origin}${location.pathname}?q=account`;
+    /*
+     * The provider has to bring back the switch as well as the step.
+     *
+     * `?payfirst=1` turns the new order on for one visit, and signing in
+     * with Google leaves the page entirely — so a return URL that names
+     * only the step comes back with the switch gone, the old order
+     * restored, and the reader advanced from the account screen to the
+     * paywall they already paid at. That is precisely what the first
+     * real purchase hit. The build flag does not have this problem, but
+     * the thing being tested has to survive the test.
+     */
+    const returnTo =
+      `${location.origin}${location.pathname}?q=account` +
+      (/[?&]payfirst=1(&|$)/.test(location.search) ? '&payfirst=1' : '');
 
     /*
      * A provider that cannot work is taken off the screen before it is clicked.
@@ -2003,6 +2053,8 @@
      * no access — so nothing is forgotten until the alias has actually
      * returned, and the marker surviving means a later visit tries again.
      */
+    alreadyPaid = () => Boolean(unclaimed());
+
     claimPurchase = async (account) => {
       const held = unclaimed();
       if (!held || !account?.id || held === account.id) return false;
