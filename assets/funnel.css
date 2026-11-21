@@ -1134,12 +1134,13 @@ body.page-funnel .site-footer {
   flex: 0 0 auto;
 }
 
+/* The wreath is tall and narrow (106x284), so it is sized by height. */
 .fhook__laurel {
-  width: 1.5rem;
-  height: auto;
+  height: 2.6rem;
+  width: auto;
   flex: 0 0 auto;
-  color: var(--clay);
-  opacity: 0.8;
+  color: var(--ink);
+  opacity: 0.9;
 }
 
 .fhook__laurel.is-flipped {
