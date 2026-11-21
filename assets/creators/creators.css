@@ -1521,3 +1521,10 @@ a.mr-handle:hover { color: var(--mr-accent); }
 /* The representative picker on the application: a select that matches the text fields beside it. */
 .auth-field select { font: inherit; width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--line-strong, var(--line)); border-radius: 0.75rem; background: #fff; color: var(--ink); appearance: auto; }
 .auth-field select:focus-visible { outline: 2px solid var(--mr-accent); outline-offset: 2px; }
+
+/* UGC brief: the place to drop example videos, and an example lighting up when a file is dragged over it. */
+.mr-drop { display: grid; gap: 0.25rem; place-items: center; text-align: center; padding: 1.4rem 1rem; border: 2px dashed var(--line-strong, var(--line)); border-radius: 1rem; background: var(--surface); color: var(--ink-soft); cursor: pointer; width: 100%; }
+.mr-drop b { font-size: 1.0625rem; color: var(--ink); }
+.mr-drop span { font-size: 0.875rem; max-width: 34rem; }
+.mr-drop:hover, .mr-drop:focus-visible { border-color: var(--mr-accent); outline: none; }
+.mr-drop[data-drop], .mr-edit__row[data-drop] { border-color: var(--mr-accent); border-style: dashed; background: var(--mr-accent-soft); }

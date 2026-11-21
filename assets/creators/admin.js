@@ -1295,7 +1295,7 @@
       v.onerror = () => done(null);
       setTimeout(() => done(null), 15000);
     });
-    const uploadVideo = async (v, f) => {
+    const uploadVideo = async (v, f, quiet) => {
       if (!/^video\/(mp4|quicktime|webm)$/.test(f.type)) throw new Error('Upload an MP4, MOV or WebM video.');
       if (f.size > 50 * 1024 * 1024) throw new Error(`That video is ${Math.round(f.size / 1048576)} MB. Videos can be up to 50 MB.`);
       if (cp.demo) throw new Error('This is a preview, so uploads are switched off.');
@@ -1314,6 +1314,7 @@
           if (!up.error) v.image = `upload:${tpath}`;
         }
       }
+      if (quiet) return;
       redraw();
       toast('Video uploaded. Save a draft or publish to show it to creators.');
     };
@@ -1324,8 +1325,44 @@
       return h('span', { class: 'cp-inline' }, pick, file);
     };
 
+    /* Video files dragged in from the computer: the drop is caught here, not opened by the browser. */
+    const videoFiles = (event) => [...(event.dataTransfer?.files || [])].filter((f) => /^video\//.test(f.type) || /\.(mp4|mov|m4v|webm)$/i.test(f.name));
+    const dropTarget = (el, onFiles) => {
+      let depth = 0;
+      const has = (event) => [...(event.dataTransfer?.types || [])].includes('Files');
+      el.addEventListener('dragenter', (event) => { if (!has(event)) return; event.preventDefault(); depth++; el.dataset.drop = ''; });
+      el.addEventListener('dragover', (event) => { if (!has(event)) return; event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; });
+      el.addEventListener('dragleave', () => { depth = Math.max(0, depth - 1); if (!depth) delete el.dataset.drop; });
+      el.addEventListener('drop', (event) => {
+        if (!has(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        depth = 0;
+        delete el.dataset.drop;
+        const files = videoFiles(event);
+        if (!files.length) return toast('Drop a video file: MP4, MOV or WebM.', 'error');
+        onFiles(files);
+      });
+      return el;
+    };
+    /* Several videos at once go up one after the other, each as a new example at the top. */
+    let uploading = 0;
+    const addVideos = async (files) => {
+      if (uploading) return toast('Still uploading the last videos. Drop these again in a moment.', 'error');
+      uploading = files.length;
+      let done = 0;
+      try {
+        for (const f of files) {
+          toast(`Uploading ${f.name}${files.length > 1 ? ` (${done + 1} of ${files.length})` : ''}…`);
+          const v = { title: '', note: '', url: '', image: null };
+          try { await uploadVideo(v, f, true); vids.unshift(v); done++; } catch (error) { toast(`${f.name}: ${error.message}`, 'error'); }
+        }
+      } finally { uploading = 0; }
+      if (done) { redraw(); toast(`${done} video${done === 1 ? '' : 's'} uploaded. Save a draft or publish to show ${done === 1 ? 'it' : 'them'} to creators.`); }
+    };
+
     const vids = b.examples.items;
-    const videoRow = (v, i) => h(
+    const videoRow = (v, i) => dropTarget(h(
       'li',
       { class: 'mr-edit__row', 'data-on': v.highlight ? 'highlight' : v.pinned ? 'pin' : null },
       imageField(v, 'image', `Thumbnail for ${v.title || 'video'}`),
@@ -1339,7 +1376,7 @@
         mini('Down', () => move(vids, i, 1), { disabled: i === vids.length - 1 }),
         remove(vids, i),
       ),
-    );
+    ), (files) => { toast(`Uploading ${files[0].name}…`); uploadVideo(v, files[0]).catch((error) => toast(error.message || 'The upload did not go through.', 'error')); });
     const lineList = (list, label, o = {}) => h(
       'ul',
       { class: 'mr-edit__list' },
@@ -1400,8 +1437,9 @@
         'Videos',
         h('span', { class: 'cp-muted' }, `${vids.length} · pinned show first`),
         h('div', { class: 'mr-edit__fields' }, text(b.examples, 'title', 'Section title'), text(b.examples, 'note', 'Text under it', { area: true, rows: 3 })),
+        h('div', {}, (() => { const file = h('input', { type: 'file', accept: 'video/mp4,video/quicktime,video/webm', multiple: true, hidden: true }); file.addEventListener('change', () => { const fs = [...(file.files || [])]; file.value = ''; if (fs.length) addVideos(fs); }); return dropTarget(h('div', { class: 'mr-drop', role: 'button', tabindex: '0', onclick: () => file.click(), onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.click(); } } }, h('b', {}, 'Drop videos here'), h('span', {}, 'or click to choose them. MP4, MOV or WebM, up to 50 MB each. Each one becomes a new example at the top. To replace one example\'s video, drop the file on that example.'), file), addVideos); })()),
         vids.length ? h('ul', { class: 'mr-edit__list' }, vids.map(videoRow)) : h('p', { class: 'cp-muted' }, 'No videos yet.'),
-        h('div', { class: 'cp-inline' }, mini('Add a video', () => { vids.unshift({ title: '', note: '', url: '', image: null }); redraw(); }), (() => { const file = h('input', { type: 'file', accept: 'video/mp4,video/quicktime,video/webm', hidden: true }); const pick = mini('Upload a video', () => file.click()); file.addEventListener('change', act(pick, async () => { const f = file.files[0]; if (!f) return; const v = { title: '', note: '', url: '', image: null }; await uploadVideo(v, f); vids.unshift(v); redraw(); })); return h('span', { class: 'cp-inline' }, pick, file); })()),
+        h('div', { class: 'cp-inline' }, mini('Add a video by link', () => { vids.unshift({ title: '', note: '', url: '', image: null }); redraw(); })),
         text(b.examples, 'allUrl', '"All examples" link (leave empty to hide it)', { type: 'url', placeholder: 'https://' }),
       ),
       section(
