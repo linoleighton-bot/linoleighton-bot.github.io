@@ -1162,10 +1162,33 @@ body.page-funnel .site-footer {
   padding: 1.25rem 0 0;
 }
 
+/*
+ * The drawing is capped against the VIEWPORT, not just the column.
+ *
+ * There used to be a `max-height: 30svh` here and removing it was a
+ * mistake that took three rounds to surface, because every automated
+ * check ran at 390x844 or 1280x900 and the fault only shows in a SHORT
+ * window. A browser window 630px tall — which is an ordinary unmaximised
+ * window, and roughly a phone in landscape — has room for the wordmark,
+ * the headline, the badges and the caption, and then the sticky dock
+ * lands on top of the picture. All you could see of the mascot was the
+ * top of its head behind the button.
+ *
+ * A flat `svh` fraction cannot fix it on its own: everything above the
+ * drawing — wordmark, headline, badges — and the dock below it are a
+ * fixed PIXEL height, so on a short window a percentage of the viewport
+ * is still too much. The cap subtracts that chrome instead, and the
+ * `min()` keeps the drawing from swallowing a tall screen.
+ *
+ * `contain` is free here: the drawing's own ground is the page's cream,
+ * so the letterboxing it leaves at the sides is invisible.
+ */
 .fhook__art {
   display: block;
   width: 100%;
   height: auto;
+  max-height: max(150px, min(44svh, calc(100svh - 470px)));
+  object-fit: contain;
 }
 
 /*
@@ -2404,7 +2427,6 @@ body.page-funnel .funnel__body {
     width: 100%;
     height: auto;
     max-width: none;
-    max-height: none;
   }
 
   .fhook__quote {
