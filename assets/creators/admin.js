@@ -1269,12 +1269,67 @@
       return h('div', { class: 'mr-edit__image' }, src ? h('img', { src, alt: '' }) : h('span', { class: 'cp-muted cp-small' }, 'No image'), h('div', { class: 'cp-inline' }, pick, obj[key] ? mini('Remove', () => { obj[key] = null; redraw(); }) : null), file, h('span', { class: 'cp-visually-hidden' }, label));
     };
 
+    /*
+     * Uploading an example video straight into the brief (admins only: the
+     * storage bucket only takes uploads from an admin). The file is stored in
+     * the brief's own storage and its address becomes the video's link, so
+     * creators tap it and it plays. When the video has no thumbnail yet, one
+     * is taken from a frame near the start.
+     */
+    const publicOf = (path) => (cp.client ? cp.client.storage.from('creator-briefs').getPublicUrl(path).data.publicUrl : null);
+    const thumbOf = (f) => new Promise((resolve) => {
+      const v = document.createElement('video');
+      const src = URL.createObjectURL(f);
+      const done = (blob) => { URL.revokeObjectURL(src); resolve(blob); };
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = src;
+      v.onloadeddata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 3); };
+      v.onseeked = () => {
+        try {
+          const c = document.createElement('canvas');
+          const k = Math.min(1, 540 / (v.videoWidth || 540));
+          c.width = Math.round((v.videoWidth || 540) * k); c.height = Math.round((v.videoHeight || 960) * k);
+          c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+          c.toBlob(done, 'image/jpeg', 0.85);
+        } catch { done(null); }
+      };
+      v.onerror = () => done(null);
+      setTimeout(() => done(null), 15000);
+    });
+    const uploadVideo = async (v, f) => {
+      if (!/^video\/(mp4|quicktime|webm)$/.test(f.type)) throw new Error('Upload an MP4, MOV or WebM video.');
+      if (f.size > 50 * 1024 * 1024) throw new Error(`That video is ${Math.round(f.size / 1048576)} MB. Videos can be up to 50 MB.`);
+      if (cp.demo) throw new Error('This is a preview, so uploads are switched off.');
+      const stamp = Date.now();
+      const path = `brief/videos/${stamp}-${f.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-60)}`;
+      const { error } = await db.storage.from('creator-briefs').upload(path, f, { contentType: f.type, cacheControl: '31536000' });
+      if (error) throw new Error(`The upload did not go through: ${error.message}`);
+      v.url = publicOf(path);
+      v.video = `upload:${path}`;
+      if (!v.title) v.title = f.name.replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim().slice(0, 80);
+      if (!v.image) {
+        const shot = await thumbOf(f);
+        if (shot) {
+          const tpath = `brief/${stamp}-thumb.jpg`;
+          const up = await db.storage.from('creator-briefs').upload(tpath, shot, { contentType: 'image/jpeg', cacheControl: '31536000' });
+          if (!up.error) v.image = `upload:${tpath}`;
+        }
+      }
+      redraw();
+      toast('Video uploaded. Save a draft or publish to show it to creators.');
+    };
+    const videoPicker = (v, label) => {
+      const file = h('input', { type: 'file', accept: 'video/mp4,video/quicktime,video/webm', hidden: true });
+      const pick = mini(label, () => file.click());
+      file.addEventListener('change', act(pick, async () => { const f = file.files[0]; if (f) await uploadVideo(v, f); }));
+      return h('span', { class: 'cp-inline' }, pick, file);
+    };
+
     const vids = b.examples.items;
     const videoRow = (v, i) => h(
       'li',
       { class: 'mr-edit__row', 'data-on': v.highlight ? 'highlight' : v.pinned ? 'pin' : null },
       imageField(v, 'image', `Thumbnail for ${v.title || 'video'}`),
-      h('div', { class: 'mr-edit__fields' }, text(v, 'title', 'Title', { placeholder: 'What the video is' }), text(v, 'note', 'Description', { placeholder: 'What makes it work' }), text(v, 'url', 'Video link', { type: 'url', placeholder: 'https://' })),
+      h('div', { class: 'mr-edit__fields' }, text(v, 'title', 'Title', { placeholder: 'What the video is' }), text(v, 'note', 'Description', { placeholder: 'What makes it work' }), text(v, 'url', 'Video link', { type: 'url', placeholder: 'https:// or upload a video' }), h('div', { class: 'cp-inline' }, videoPicker(v, v.video ? 'Replace the uploaded video' : 'Upload a video instead'), v.video ? h('span', { class: 'cp-small cp-muted' }, 'Uploaded video: creators tap it and it plays') : null)),
       h(
         'div',
         { class: 'mr-edit__tools' },
@@ -1307,7 +1362,7 @@
       if (!String(b.title || '').trim()) throw new Error('The brief needs a title.');
       vids.forEach((v, i) => {
         if (!String(v.title || '').trim()) throw new Error(`Video ${i + 1} needs a title.`);
-        if (!cp.safeUrl(v.url)) throw new Error(`"${v.title}" needs a link that starts with https://`);
+        if (!cp.safeUrl(v.url)) throw new Error(`"${v.title}" needs a link that starts with https://, or an uploaded video`);
       });
       b.assets.items.forEach((it) => { if (!String(it.title || '').trim() || !cp.safeUrl(it.url)) throw new Error('Every asset needs a title and a link that starts with https://'); });
       b.ctas.items = b.ctas.items.map((t) => String(t || '').trim()).filter(Boolean);
@@ -1346,7 +1401,7 @@
         h('span', { class: 'cp-muted' }, `${vids.length} · pinned show first`),
         h('div', { class: 'mr-edit__fields' }, text(b.examples, 'title', 'Section title'), text(b.examples, 'note', 'Text under it', { area: true, rows: 3 })),
         vids.length ? h('ul', { class: 'mr-edit__list' }, vids.map(videoRow)) : h('p', { class: 'cp-muted' }, 'No videos yet.'),
-        h('div', { class: 'cp-inline' }, mini('Add a video', () => { vids.unshift({ title: '', note: '', url: '', image: null }); redraw(); })),
+        h('div', { class: 'cp-inline' }, mini('Add a video', () => { vids.unshift({ title: '', note: '', url: '', image: null }); redraw(); }), (() => { const file = h('input', { type: 'file', accept: 'video/mp4,video/quicktime,video/webm', hidden: true }); const pick = mini('Upload a video', () => file.click()); file.addEventListener('change', act(pick, async () => { const f = file.files[0]; if (!f) return; const v = { title: '', note: '', url: '', image: null }; await uploadVideo(v, f); vids.unshift(v); redraw(); })); return h('span', { class: 'cp-inline' }, pick, file); })()),
         text(b.examples, 'allUrl', '"All examples" link (leave empty to hide it)', { type: 'url', placeholder: 'https://' }),
       ),
       section(
