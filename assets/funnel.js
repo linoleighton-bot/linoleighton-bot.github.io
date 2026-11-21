@@ -1251,6 +1251,19 @@
   let client = null;
   let user = null;
 
+  /*
+   * Set by the checkout block, called by the auth block.
+   *
+   * It has to live out here beside `user` because those two blocks are
+   * separate `if` bodies and a `let` inside one is invisible to the other
+   * — which is exactly the mistake that threw `claimPurchase is not
+   * defined` on load and, because the error aborted the rest of init,
+   * left the funnel's own header drawn on the opening screen. A mutable
+   * hook rather than a direct call, so a build with checkout switched off
+   * simply leaves it null.
+   */
+  let claimPurchase = null;
+
   if (boot.accounts && boot.supabase && window.supabase) {
     client = window.supabase.createClient(boot.supabase.url, boot.supabase.key, {
       auth: {
@@ -1350,6 +1363,24 @@
       if (!user) return;
       claimCreator(user);
       showSignedIn();
+      /*
+       * An account has appeared and a subscription may be waiting for it.
+       *
+       * Runs on every session, not only new ones: coming back from Google
+       * reloads the page, so the session that matters arrives on load and
+       * looks no different from any other. `claimPurchase` decides for
+       * itself whether there is anything to do, and keeps the marker if it
+       * fails so the next visit tries again.
+       */
+      if (claimPurchase) {
+        claimPurchase(user)
+          .then((moved) => {
+            if (moved && byId[order[index]]?.kind === 'account') render({ push: false });
+          })
+          .catch((error) => {
+            console.error('[checkout] could not attach the subscription', error);
+          });
+      }
       if (wasSignedOut && byId[order[index]]?.kind === 'account') render({ push: false });
     };
 
@@ -1807,10 +1838,89 @@
      * in a browser is already there when the app opens. Anything else here
      * buys a subscription nobody can find.
      */
+    /*
+     * Who a purchase belongs to before there is an account.
+     *
+     * With `payFirst` the reader buys first, so there is no Supabase id to
+     * configure with. RevenueCat's own anonymous id is the right thing to
+     * use — and specifically ITS format, `$RCAnonymousID:…`, because the
+     * merge-on-identify path only runs when the current id is one the SDK
+     * generated. An id we invent is treated as an identified customer and
+     * a later login follows the project's transfer rule instead of
+     * aliasing, which is a different and less certain thing.
+     *
+     * The SDK does not persist it. There is no localStorage, sessionStorage,
+     * indexedDB or cookie anywhere in purchases.js — the id lives in memory
+     * and dies with the page. Signing in with Google or Apple navigates away
+     * and comes back, so an id we did not store ourselves would be gone by
+     * the time the account exists, and the subscription would belong to a
+     * customer nobody can reach. So we generate it, write it down, and reuse
+     * it until it has been claimed.
+     */
+    const ANON_KEY = 'mindroll.funnel.rcAnon';
+    /*
+     * Set the moment a purchase succeeds, cleared the moment it is claimed.
+     *
+     * Without it the anonymous id left behind by somebody who browsed the
+     * offer and walked away would still be preferred on their next visit,
+     * and a reader who already had a subscription would be configured as a
+     * stranger and told they had none. The id matters only while it is
+     * holding something.
+     */
+    const PAID_KEY = 'mindroll.funnel.rcPaid';
+    let anonId = null;
+    const anonFor = (Purchases) => {
+      if (anonId) return anonId;
+      try {
+        anonId = localStorage.getItem(ANON_KEY) || null;
+      } catch {
+        anonId = null;
+      }
+      if (!anonId) {
+        anonId = Purchases.generateRevenueCatAnonymousAppUserId();
+        try {
+          localStorage.setItem(ANON_KEY, anonId);
+        } catch {
+          /* A browser with storage off still buys; it just cannot be
+             resumed after a redirect, and the claim below handles that. */
+        }
+      }
+      return anonId;
+    };
+    /** The anonymous id if it is holding a purchase nobody has claimed. */
+    const unclaimed = () => {
+      try {
+        return localStorage.getItem(PAID_KEY) ? localStorage.getItem(ANON_KEY) || null : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const forget = () => {
+      try {
+        localStorage.removeItem(ANON_KEY);
+        localStorage.removeItem(PAID_KEY);
+      } catch {
+        /* nothing to forget */
+      }
+    };
+
     let configured = null;
     const instance = async (Purchases) => {
       if (configured) return configured;
-      configured = Purchases.configure({ apiKey: boot.checkout.key, appUserId: user.id });
+      /*
+       * An unclaimed purchase wins over the signed-in id.
+       *
+       * Signing in with Google or Apple reloads this page, so by the time
+       * the claim runs there IS a user — and configuring under them would
+       * leave the purchase behind on the anonymous customer with nothing
+       * left pointing at it. Configure as the customer who owns the
+       * subscription, then alias that customer onto the account.
+       */
+      configured = Purchases.configure({
+        apiKey: boot.checkout.key,
+        appUserId: unclaimed() || user?.id || anonFor(Purchases),
+      });
       return configured;
     };
 
@@ -1823,11 +1933,39 @@
      * wait for one. A failure here is swallowed on purpose: this is a warm-up
      * nobody asked for, and the real attempt reports its own errors properly.
      */
+    /*
+     * Moving a paid-for subscription onto the account that just appeared.
+     *
+     * `identifyUser` is the aliasing call: from one of RevenueCat's own
+     * anonymous ids onto a real one it merges the two customers and the
+     * entitlement comes with it. It is only safe to call while the SDK is
+     * still configured as that anonymous customer, which is why `instance`
+     * above prefers the unclaimed id.
+     *
+     * Failure here is the worst outcome this funnel has — money taken and
+     * no access — so nothing is forgotten until the alias has actually
+     * returned, and the marker surviving means a later visit tries again.
+     */
+    claimPurchase = async (account) => {
+      const held = unclaimed();
+      if (!held || !account?.id || held === account.id) return false;
+      const Purchases = await loadSdk();
+      const purchases = await instance(Purchases);
+      const { customerInfo } = await purchases.identifyUser(account.id);
+      const active = Object.keys(customerInfo?.entitlements?.active || {});
+      if (!active.length) throw new Error('The subscription did not move across.');
+      forget();
+      return true;
+    };
+
     let offerings = null;
     const warmCheckout = () => {
       loadSdk()
         .then((Purchases) => {
-          if (!user) return null;
+          /* The warm-up needs an identity to fetch offerings against. With
+             `payFirst` the anonymous one is ready immediately, so the prices
+             are already in hand by the time the offer is on screen. */
+          if (!user && !boot.checkout.payFirst) return null;
           return instance(Purchases).then((purchases) => {
             if (!offerings) offerings = purchases.getOfferings();
             return offerings;
@@ -1949,8 +2087,13 @@
 
     if (checkout && boot.checkout) {
       const openCheckout = async () => {
-        /* No account, no identity to attach a subscription to. */
-        if (!user) {
+        /*
+         * Without `payFirst` there is no identity to attach a subscription
+         * to, so the reader is sent to make one. With it, the anonymous
+         * customer IS the identity, and the account screen is the next
+         * step anyway.
+         */
+        if (!user && !boot.checkout.payFirst) {
           index = order.indexOf('account');
           render();
           return;
@@ -2026,7 +2169,7 @@
             /* Drawn into the page. Without a target the SDK opens its own
                overlay, which is still ours but reads as a different place. */
             htmlTarget: till || undefined,
-            customerEmail: user.email || undefined,
+            customerEmail: user?.email || undefined,
           });
 
           /*
@@ -2040,6 +2183,17 @@
 
           const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
           if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
+          /* Written before anything else can fail: from here on there is
+             money on this anonymous customer, and the next screen's job is
+             to move it onto an account. */
+          if (!user) {
+            try {
+              localStorage.setItem(PAID_KEY, String(Date.now()));
+            } catch {
+              /* Storage is off. The claim below still works in this tab,
+                 which is the only tab a redirect-free signup uses. */
+            }
+          }
           unfit();
           if (till) till.hidden = true;
           next();
@@ -2126,7 +2280,12 @@
       };
 
       const mountExpress = async () => {
-        if (!expressAllowed || !user || expressMounting || expressHandle) return;
+        /* `user` used to be required here only because the SDK was
+           configured from it. An anonymous customer can hold a wallet
+           purchase just as well, and without this the Apple Pay button
+           would silently never appear once the account step moved. */
+        if (!expressAllowed || expressMounting || expressHandle) return;
+        if (!user && !boot.checkout.payFirst) return;
         if (typeof window.PaymentRequest === 'undefined' && !window.ApplePaySession) return;
         expressMounting = true;
         try {
@@ -2150,7 +2309,7 @@
           const result = await purchases.presentExpressPurchaseButton({
             rcPackage: pkg,
             htmlTarget: target,
-            customerEmail: user.email || undefined,
+            customerEmail: user?.email || undefined,
             walletButtonTheme: 'black',
             onButtonReady: (handle, available) => {
               expressHandle = handle;
@@ -2171,6 +2330,17 @@
 
           const active = Object.keys(result?.customerInfo?.entitlements?.active || {});
           if (!active.length) throw new Error('The payment went through but the plan did not open. We are on it — email us.');
+          /* Written before anything else can fail: from here on there is
+             money on this anonymous customer, and the next screen's job is
+             to move it onto an account. */
+          if (!user) {
+            try {
+              localStorage.setItem(PAID_KEY, String(Date.now()));
+            } catch {
+              /* Storage is off. The claim below still works in this tab,
+                 which is the only tab a redirect-free signup uses. */
+            }
+          }
           if (till) till.hidden = true;
           next();
         } catch (error) {
