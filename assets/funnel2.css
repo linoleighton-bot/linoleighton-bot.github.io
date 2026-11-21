@@ -220,6 +220,20 @@ body.page-funnel2 .ftaste {
   margin-top: auto;
 }
 
+/*
+ * The numbered scale needed the matching bottom margin too.
+ *
+ * `.fq` has the pair and centres; `.fscale--worded` was given the pair
+ * further down for exactly this reason. The numbered 1–5 row was left
+ * with only the top half, so it sank to the floor and stranded its
+ * question at the top of the phone with a third of the screen of nothing
+ * between them. Four screens in this funnel are numbered scales, which is
+ * why the gap was the first thing anyone noticed on a phone.
+ */
+body.page-funnel2 .fscale {
+  margin-bottom: auto;
+}
+
 body.page-funnel2 .fq {
   display: grid;
   gap: 0.6rem;
@@ -312,11 +326,23 @@ body.page-funnel2 .ftaste {
   margin: auto auto 1.4rem;
 }
 
+/*
+ * A hairline edge, for the jackets that are nearly the colour of paper.
+ *
+ * The drop shadow alone is enough for a dark jacket and does nothing for
+ * a pale one: the Penguin Great Ideas cover on this funnel is off-white
+ * on cream and simply dissolved, so the card looked like it had failed
+ * to load its image. An inset box-shadow is no good here — on a replaced
+ * element the browser paints it behind the image — so this is an outline
+ * pulled inwards, which draws on top and costs no layout.
+ */
 body.page-funnel2 .ftaste__cover {
   width: 9.4rem;
   height: auto;
   border-radius: 0.3rem;
   box-shadow: 0 10px 26px color-mix(in srgb, var(--ink) 16%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
+  outline-offset: -1px;
   margin-bottom: 1rem;
 }
 
@@ -4343,13 +4369,21 @@ body.page-funnel2 .fstep[data-step='gender'] .fq__option:nth-child(3)[data-chose
   font-weight: 600;
 }
 
-/* Apple Pay / Google Pay, drawn for the selected plan as soon as the offer
-   shows. When it is there it is the buy button; the card route steps back. */
+/*
+ * Apple Pay / Google Pay, drawn for the selected plan as soon as the offer
+ * shows. When it is there it is the buy button; the card route steps back.
+ *
+ * Ported back from the deploy repo, where it had been edited directly and
+ * lived only in the built output. Any rebuild of this file deleted a live
+ * payment feature, silently, because the source had never seen it. It is
+ * here now so that stops being true.
+ */
 .pw__express {
   width: 100%;
   margin: 1rem 0 0.5rem;
   min-height: 48px;
 }
+
 .fstep[data-wallet='on'] [data-checkout] {
   background: transparent;
   border-color: var(--line-strong);
