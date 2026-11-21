@@ -34,6 +34,24 @@
        * copied into a bug report or a shared link.
        */
       detectSessionInUrl: true,
+      /*
+       * Pinned, so the session survives the move to `auth.getmindroll.com`.
+       *
+       * supabase-js derives its storage key from the project ref in the URL
+       * when none is given — today that yields
+       * `sb-ruvsikvpldhtiwesoxjo-auth-token`, which is the live key in the
+       * browser. Point the client at the custom domain and the derived key
+       * changes, every signed-in reader silently appears logged out, and
+       * their session is orphaned under the old name. Naming it explicitly
+       * makes the hostname irrelevant: this is the exact value already in
+       * use, so writing it down changes nothing today and keeps everyone
+       * signed in on the day the URL moves.
+       *
+       * The funnel's own client has carried this since 1e0c2e2; the account
+       * page's did not, because this file was edited in the deploy repo and
+       * the two halves never met. That is now fixed in the source.
+       */
+      storageKey: 'sb-ruvsikvpldhtiwesoxjo-auth-token',
     },
   });
 
@@ -278,10 +296,30 @@
     oauth.clean();
   }
 
+  /*
+   * Only a genuine reset link opens the password form.
+   *
+   * `PASSWORD_RECOVERY` is not only fired when a reset link is followed:
+   * supabase-js replays it for a recovery session already in storage, so
+   * a reader who reset a password once could come back later, press
+   * "Sign in", and be shown "Choose a new password" on a page they
+   * opened to look at their account. That is what it looked like from
+   * the outside — an account page demanding a new password for no
+   * reason — and it is the kind of thing that makes somebody think they
+   * have been hacked.
+   *
+   * The link itself is the evidence. Supabase puts `type=recovery` in
+   * the URL, and `detectSessionInUrl` consumes it on load, so the check
+   * is made once here before anything can clean it away.
+   */
+  const fromResetLink = /[?&#]type=recovery(&|$)/.test(
+    `${location.search}${location.hash}`,
+  );
+
   client.auth.getSession().then(({ data }) => render(data.session));
   client.auth.onAuthStateChange((event, session) => {
     render(session);
-    if (event === 'PASSWORD_RECOVERY') recovering();
+    if (event === 'PASSWORD_RECOVERY' && fromResetLink) recovering();
   });
 
   /* ------------------------------------------------------ new password */
