@@ -977,9 +977,16 @@ body.page-funnel .site-footer {
    * explicit now, and balancing fights it.
    */
   font-size: clamp(1.6rem, 7.7vw, 2.75rem);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  /*
+   * Heavier than the rest of the funnel's headings on purpose: this is
+   * the only sentence on the only screen a paid click has to get past,
+   * and at 600 it carried the same weight as a question halfway through
+   * the flow. The tracking tightens a touch with it, because a heavier
+   * face at this size opens up without it.
+   */
+  font-weight: 750;
   margin: 0;
   text-wrap: nowrap;
 }
@@ -1167,22 +1174,30 @@ body.page-funnel .site-footer {
  * Tilted and overlapping the drawing so it reads as a caption on a moment
  * rather than as another line of marketing copy stacked above it.
  */
+/*
+ * Smaller than it was.
+ *
+ * At 15rem and 0.9375rem it was nearly two thirds the width of the
+ * phone and competed with the headline above it rather than reading as
+ * an aside on the drawing. It is an overheard thought, so it should be
+ * the quietest text on the screen, not the second loudest.
+ */
 .fhook__bubble {
   position: absolute;
-  top: 0.5rem;
-  left: 8%;
+  top: 0.4rem;
+  left: 7%;
   z-index: 1;
-  max-width: 15rem;
-  padding: 0.8rem 1.05rem 0.85rem;
-  border-radius: 20px;
+  max-width: 12.5rem;
+  padding: 0.6rem 0.8rem 0.65rem;
+  border-radius: 16px;
   background: #3A2420;
   color: #fff;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.32;
   text-align: left;
   transform: rotate(-3.5deg);
-  box-shadow: 0 14px 30px -12px rgba(58, 36, 32, 0.55);
+  box-shadow: 0 12px 26px -12px rgba(58, 36, 32, 0.55);
 }
 
 /*
@@ -1195,9 +1210,9 @@ body.page-funnel .site-footer {
 .fhook__bubble::after {
   content: '';
   position: absolute;
-  right: 2.25rem;
-  bottom: -0.6rem;
-  border-width: 0.7rem 0.55rem 0 0;
+  right: 1.9rem;
+  bottom: -0.5rem;
+  border-width: 0.58rem 0.46rem 0 0;
   border-style: solid;
   border-color: #3A2420 transparent transparent transparent;
 }
@@ -2378,21 +2393,18 @@ body.page-funnel .funnel__body {
   }
 
   /*
-   * The drawing is held to 5:4 on a phone.
+   * The drawing takes its own shape.
    *
-   * At its own 1:1 it is 390px tall on a 390px screen, which is 97px more
-   * than the slot has and pushes the quote under the button at rest. The
-   * subject is centred, so `cover` takes the crop off the top and bottom
-   * — a little paper and a little duvet — and nothing that carries the
-   * picture. Full width either way.
+   * There was a 5:4 `cover` cap here for a while, added when the opening
+   * image was a 1:1 engraving 97px taller than the slot. The drawing is
+   * 4:3 again, so the cap now crops a picture that already fits — it
+   * comes off, and the height follows the width as it did before.
    */
   .fhook__art {
     width: 100%;
-    max-width: none;
-    aspect-ratio: 5 / 4;
     height: auto;
+    max-width: none;
     max-height: none;
-    object-fit: cover;
   }
 
   .fhook__quote {
