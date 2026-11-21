@@ -33,8 +33,65 @@
   }
 
   const stepEls = new Map([...root.querySelectorAll('[data-step]')].map((el) => [el.dataset.step, el]));
-  const order = boot.steps.map((s) => s.id).filter((id) => stepEls.has(id));
+  /*
+   * Does the reader pay before making an account?
+   *
+   * Two ways in. `boot.checkout.payFirst` is the build switch, set by
+   * `FUNNEL_PAY_FIRST=1`, and is how this goes live for everyone.
+   * `?payfirst=1` turns it on for one visit, which is the only way to
+   * exercise the real thing: Supabase's redirect allow-list has no
+   * localhost entry, so signing in with Google cannot complete anywhere
+   * but getmindroll.com — and the moment this design exists for is
+   * exactly that redirect. The opt-in lets the whole flow be walked on
+   * the live domain without changing it for anybody else.
+   */
+  const payFirst =
+    boot.checkout?.payFirst === true || /[?&]payfirst=1(&|$)/.test(location.search);
+
+  /*
+   * The account step moves to the far side of the offer.
+   *
+   * Reordering this array is enough on its own: the steps all exist in
+   * the document already and are shown by id, never by their position in
+   * it, so nothing in the markup has to move. The guard makes it a no-op
+   * when the build has already put them in this order, so the two
+   * switches can both be on without the step being moved twice.
+   */
+  const order = (() => {
+    const base = boot.steps.map((s) => s.id).filter((id) => stepEls.has(id));
+    if (!payFirst) return base;
+    const account = base.indexOf('account');
+    const offer = base.indexOf('offer');
+    if (account === -1 || offer === -1 || account > offer) return base;
+    const out = base.slice();
+    out.splice(account, 1);
+    out.splice(out.indexOf('offer') + 1, 0, 'account');
+    return out;
+  })();
+
   const byId = Object.fromEntries(boot.steps.map((s) => [s.id, s]));
+
+  /*
+   * The account screen reads differently once the price has been paid.
+   *
+   * Its markup is rendered at build time and only shown and hidden after
+   * that, so swapping the data object alone changes nothing on screen —
+   * the words have to be written into the elements. Each one is set only
+   * if it is actually there, so a future change to that template cannot
+   * turn this into a crash on the screen right after someone has paid.
+   */
+  if (payFirst && byId.account?.paid) {
+    const paid = byId.account.paid;
+    Object.assign(byId.account, paid);
+    const screen = stepEls.get('account');
+    const put = (sel, text) => {
+      const node = screen?.querySelector(sel);
+      if (node && text) node.textContent = text;
+    };
+    put('.fs__eyebrow', paid.eyebrow);
+    put('.fs__title', paid.title);
+    put('.signin__lead', paid.body);
+  }
 
   const backBtn = root.querySelector('[data-back]');
   const countEl = root.querySelector('[data-count]');
@@ -1965,7 +2022,7 @@
           /* The warm-up needs an identity to fetch offerings against. With
              `payFirst` the anonymous one is ready immediately, so the prices
              are already in hand by the time the offer is on screen. */
-          if (!user && !boot.checkout.payFirst) return null;
+          if (!user && !payFirst) return null;
           return instance(Purchases).then((purchases) => {
             if (!offerings) offerings = purchases.getOfferings();
             return offerings;
@@ -2093,7 +2150,7 @@
          * customer IS the identity, and the account screen is the next
          * step anyway.
          */
-        if (!user && !boot.checkout.payFirst) {
+        if (!user && !payFirst) {
           index = order.indexOf('account');
           render();
           return;
@@ -2285,7 +2342,7 @@
            purchase just as well, and without this the Apple Pay button
            would silently never appear once the account step moved. */
         if (!expressAllowed || expressMounting || expressHandle) return;
-        if (!user && !boot.checkout.payFirst) return;
+        if (!user && !payFirst) return;
         if (typeof window.PaymentRequest === 'undefined' && !window.ApplePaySession) return;
         expressMounting = true;
         try {
