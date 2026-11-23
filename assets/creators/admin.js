@@ -49,6 +49,17 @@
   let tab = TABS.some(([id]) => id === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
   let sales = null;
   let state = null;
+
+  /*
+   * Balances. The page is shown only to the people the database allows to
+   * change a balance, and stays hidden while the database part is not
+   * installed, so the site and the database can go live at different times.
+   */
+  const BALANCES = ['balances', 'Balances', 'wallet'];
+  function openBalances() {
+    if (!TABS.includes(BALANCES)) TABS.splice(TABS.findIndex(([id]) => id === 'payouts') + 1, 0, BALANCES);
+    if (location.hash === '#balances') tab = 'balances';
+  }
   /* The funnel card: which creator (null = all) and which page's steps it shows. */
   let funnelCreator = null;
   let funnelPath = null;
@@ -70,6 +81,7 @@
     }
     setWho(user.email || 'Signed in');
     const { data: isAdmin } = await db.rpc('is_creator_admin');
+    if (isAdmin) db.rpc('creator_balance_admin').then(({ data, error }) => { if (!error && data === true) { openBalances(); if (state) render(); } }, () => {});
     if (!isAdmin) {
       view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'Access denied.'), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => db.auth.signOut() }, 'Sign out')));
       return;
@@ -159,7 +171,7 @@
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
-    const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, settings }[tab]();
+    const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, balances: balancesTab, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, cp.viewSwitch([['creator', 'Creator', () => location.assign(cp.demo ? '/creators/?demo' : '/creators/')], ['manager', 'Manager', () => location.assign(cp.demo ? '/creators/?demo#team' : '/creators/#team')], ['admin', 'Admin', null]], 'admin'), helpButton(), tab === 'alerts' ? null : bellButton));
@@ -2195,6 +2207,138 @@
     );
   }
 
+  /* -------------------------------------------------------------- balances */
+
+  /*
+   * Every creator's balance, and the four changes that can be made to it by
+   * hand. The database decides who may do this and writes each change to a
+   * log; nothing here is trusted. Amounts are typed in dollars and sent as
+   * whole cents.
+   */
+  const BAL_ACTIONS = { raise: 'Add money', take_out: 'Take money out', make_cashable: 'Make cashable', make_not_cashable: 'Make not cashable (hold)' };
+  const BAL_DID = { raise: 'Added', take_out: 'Took out', make_cashable: 'Made cashable', make_not_cashable: 'Held' };
+  let bal = null;
+  let balError = null;
+  let balLoading = false;
+  let balPick = null;
+
+  const balSample = () => ({
+    list: (state.creators || []).filter((c) => c.status !== 'rejected').slice(0, 8).map((c, i) => ({
+      id: c.id, code: c.code, name: c.display_name, status: c.status, payout_hold: false, last_change_at: null,
+      balance: { available_cents: [4200, 0, 12650, 900, 0, 30000, 2500, 0][i % 8], pending_cents: [1430, 0, 5720, 0, 286, 9990, 0, 0][i % 8], held_cents: [0, 0, 2500, 0, 0, 0, 0, 0][i % 8], paid_cents: [0, 0, 7500, 0, 0, 22000, 0, 0][i % 8] },
+    })),
+    log: [],
+  });
+
+  async function loadBalances() {
+    balLoading = true;
+    try {
+      const [list, log] = await Promise.all([cp.rpc('creator_admin_balances'), cp.rpc('creator_admin_balance_log', { p_limit: 200 })]);
+      bal = { list: list || [], log: log || [] };
+      balError = null;
+    } catch (e) {
+      balError = e.message === 'not_allowed' ? 'You are not allowed to see balances.' : e.message || 'Could not load the balances.';
+    }
+    balLoading = false;
+    render();
+  }
+
+  function balancesTab() {
+    if (cp.demo && !bal) bal = balSample();
+    if (balError) return section('Balances', null, h('p', { class: 'cp-bad' }, balError));
+    if (!bal) { if (!balLoading) loadBalances(); return section('Balances', null, h('p', { class: 'cp-muted' }, 'Loading…')); }
+
+    const cents = (c, key) => Number((c.balance || {})[key] || 0);
+    const picked = bal.list.find((c) => c.id === balPick) || null;
+
+    const list = section(
+      'Balances',
+      h('span', { class: 'cp-muted' }, 'Cashable can be paid out now. On its way is commission still in its waiting period. Held is money you have marked as not cashable.'),
+      table(
+        [
+          { label: 'Creator', cell: (c) => h('span', {}, h('b', {}, c.name), h('small', { class: 'cp-muted' }, ` · ${c.code}${c.payout_hold ? ' · payouts on hold' : ''}`)) },
+          { label: 'Cashable', num: true, cell: (c) => h('b', {}, money(cents(c, 'available_cents'))) },
+          { label: 'On its way', num: true, cell: (c) => money(cents(c, 'pending_cents')) },
+          { label: 'Held', num: true, cell: (c) => money(cents(c, 'held_cents')) },
+          { label: 'Paid so far', num: true, cell: (c) => money(cents(c, 'paid_cents')) },
+          { label: '', cell: (c) => h('button', { class: 'cp-link', type: 'button', 'aria-pressed': String(c.id === balPick), onclick: () => { balPick = c.id === balPick ? null : c.id; render(); } }, c.id === balPick ? 'Close' : 'Change') },
+        ],
+        bal.list,
+        'No creators yet.',
+      ),
+    );
+
+    let form = null;
+    if (picked) {
+      const action = h('select', { class: 'cp-input', 'aria-label': 'What to do' }, Object.entries(BAL_ACTIONS).map(([value, label]) => h('option', { value }, label)));
+      const part = h('select', { class: 'cp-input', 'aria-label': 'Which part of the balance' }, h('option', { value: 'cashable' }, 'Cashable part'), h('option', { value: 'held' }, 'Held part'));
+      const amount = h('input', { class: 'cp-input', type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'Amount in dollars, for example 25.00', 'aria-label': 'Amount in dollars' });
+      const reason = h('input', { class: 'cp-input', type: 'text', maxlength: '300', autocomplete: 'off', placeholder: 'Reason (kept in the log)', 'aria-label': 'Reason' });
+      const note = h('small', { class: 'cp-hint' });
+      const NOTES = {
+        raise: 'Adds money to this creator. Choose whether it can be cashed out now or is held.',
+        take_out: 'Removes money. It cannot take more than that part holds, and it never touches money already in a payout.',
+        make_cashable: 'Moves held money into the cashable part first. If that is not enough, commission still in its waiting period is released early, oldest sale first, one whole sale at a time, so the amount moved can be a little less than asked.',
+        make_not_cashable: 'Moves cashable money into the held part. The creator keeps it but cannot cash it out until you make it cashable again.',
+      };
+      const sync = () => { part.hidden = !['raise', 'take_out'].includes(action.value); note.textContent = NOTES[action.value]; };
+      action.addEventListener('change', sync);
+      sync();
+      const apply = confirmButton('Apply change', 'Confirm: change this balance', 'btn btn--primary btn--sm', async () => {
+        const text = amount.value.trim().replace(/^\$/, '').replace(/,/g, '');
+        if (!/^\d{1,5}(\.\d{1,2})?$/.test(text) || !(Number(text) > 0)) throw new Error('Enter an amount in dollars, for example 25 or 25.50.');
+        const asked = Math.round(Number(text) * 100);
+        const why = reason.value.trim();
+        if (why.length < 3) throw new Error('Give a reason. It is kept in the log.');
+        const what = action.value;
+        const cashable = part.value === 'cashable';
+        if (cp.demo) {
+          const b = picked.balance;
+          const from = what === 'take_out' ? (cashable ? 'available_cents' : 'held_cents') : what === 'make_not_cashable' ? 'available_cents' : what === 'make_cashable' ? 'held_cents' : null;
+          if (from && asked > b[from]) throw new Error(`Only ${money(b[from])} is there.`);
+          if (what === 'raise') b[cashable ? 'available_cents' : 'held_cents'] += asked;
+          if (what === 'take_out') b[from] -= asked;
+          if (what === 'make_cashable') { b.held_cents -= asked; b.available_cents += asked; }
+          if (what === 'make_not_cashable') { b.available_cents -= asked; b.held_cents += asked; }
+          bal.log.unshift({ id: `l${Date.now()}`, at: new Date().toISOString(), admin_email: 'you@example.com', name: picked.name, code: picked.code, action: what, amount_cents: asked, asked_cents: asked, cashable: ['raise', 'take_out'].includes(what) ? cashable : null, reason: why });
+          toast(`${BAL_DID[what]} ${money(asked)} for ${picked.name}. (Sample data: nothing was saved.)`);
+          balPick = null;
+          return render();
+        }
+        const out = await cp.rpc('creator_admin_adjust_balance', { p_creator: picked.id, p_action: what, p_amount_cents: asked, p_reason: why, p_cashable: cashable });
+        toast(out.amount_cents === out.asked_cents
+          ? `${BAL_DID[what]} ${money(out.amount_cents)} for ${picked.name}.`
+          : `${money(out.amount_cents)} of the ${money(out.asked_cents)} asked was made cashable for ${picked.name}. Commission is released one whole sale at a time.`);
+        balPick = null;
+        bal = null;
+        render();
+      });
+      form = section(
+        `Change ${picked.name}'s balance`,
+        h('span', { class: 'cp-muted' }, `Cashable ${money(cents(picked, 'available_cents'))} · On its way ${money(cents(picked, 'pending_cents'))} · Held ${money(cents(picked, 'held_cents'))}`),
+        h('div', { class: 'cp-form mr-bal' }, h('div', { class: 'cp-form__row' }, action, part, amount), reason, note, h('div', {}, apply)),
+      );
+    }
+
+    const log = section(
+      'Change log',
+      h('span', { class: 'cp-muted' }, 'Every change made here, newest first. It cannot be edited.'),
+      table(
+        [
+          { label: 'Date', cell: (l) => new Date(l.at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
+          { label: 'By', cell: (l) => l.admin_email },
+          { label: 'Creator', cell: (l) => h('b', {}, l.name) },
+          { label: 'Change', cell: (l) => `${BAL_DID[l.action] || l.action}${l.cashable == null ? '' : l.cashable ? ' (cashable)' : ' (held)'}` },
+          { label: 'Amount', num: true, cell: (l) => h('b', {}, money(l.amount_cents)) },
+          { label: 'Reason', cell: (l) => l.reason },
+        ],
+        bal.log,
+        'No changes yet.',
+      ),
+    );
+    return [list, form, log];
+  }
+
   /* -------------------------------------------------------------- settings */
 
   function settings() {
@@ -2505,6 +2649,7 @@
   } else if (cp.demo) {
     setWho('Sample data');
     state = demoState();
+    openBalances();
     render();
   } else if (!db) {
     view.replaceChildren(h('p', { class: 'cp-empty' }, 'This page could not load. Please refresh.'));

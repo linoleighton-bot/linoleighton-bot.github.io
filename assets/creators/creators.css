@@ -1528,3 +1528,7 @@ a.mr-handle:hover { color: var(--mr-accent); }
 .mr-drop span { font-size: 0.875rem; max-width: 34rem; }
 .mr-drop:hover, .mr-drop:focus-visible { border-color: var(--mr-accent); outline: none; }
 .mr-drop[data-drop], .mr-edit__row[data-drop] { border-color: var(--mr-accent); border-style: dashed; background: var(--mr-accent-soft); }
+
+/* Admin > Balances: the change form. */
+.mr-bal { display: grid; gap: 0.6rem; max-width: 46rem; }
+.mr-bal .cp-input[hidden] { display: none; }
