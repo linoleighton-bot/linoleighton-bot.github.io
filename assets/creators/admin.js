@@ -2279,7 +2279,7 @@
         }
         const saved = await ok(d.id ? db.from('creator_announcements').update(row).eq('id', d.id).select('id') : db.from('creator_announcements').insert(row).select('id'));
         if (!saved || !saved.length) throw new Error('That announcement no longer exists. Close this and look at the list again.');
-        toast(row.active ? 'Saved. Creators see it on their dashboard.' : 'Saved as a draft. Creators do not see it.');
+        toast(!row.active ? 'Saved as a draft. Creators do not see it.' : d.id ? 'Saved. Creators who already closed it will not see it again.' : 'Published. Creators see it on their dashboard.');
         annDraft = null;
         ann = null;
         render();

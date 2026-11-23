@@ -2025,7 +2025,7 @@
           top: [{ place: 1, name: 'Noor', score: 3 }, { place: 2, name: 'Maya', score: 2, you: true }, { place: 3, name: 'Theo Studies', score: 1 }],
           videos: [{ id: 'v4', title: 'POV: you finally remember what you read #Mindroll', views: 3100, approved: true }, { id: 'v5', title: 'Stop highlighting. Do this instead #Mindroll', views: 1840, approved: true }, { id: 'v6', title: 'Day 1 of reading 5 minutes #Mindroll', views: 420, approved: false }], results: [] },
       ],
-      announcements: [{ id: 'a1', title: 'Payouts now go out every Friday', body: 'Cash out any day as before. The money is sent on the Friday after you ask.', created_at: ago(1) }],
+      announcements: [{ id: 'a1', title: 'Sample announcement', body: 'Notes from the Mindroll team show up here. Close one with the cross and it stays closed.', created_at: ago(1) }],
       first_video: { state: 'open', started_at: new Date(Date.now() - 0.6 * 36e5).toISOString(), ends_at: new Date(Date.now() + 23.4 * 36e5).toISOString(), hours: 24, multiplier: 2, cap_cents: 100000, sale_days: 7, step_views: 50000, step_cents: 5000, video: null, earned_cents: 0 },
       team: {
         manager: { id: 'm1', display_name: 'Maya\'s team', code: 'maya_team', active: true, cut_rate: 0.5 },
