@@ -2221,6 +2221,7 @@
   let balError = null;
   let balLoading = false;
   let balPick = null;
+  let balJustPicked = false;
 
   const balSample = () => ({
     list: (state.creators || []).filter((c) => c.status !== 'rejected').slice(0, 8).map((c, i) => ({
@@ -2261,7 +2262,7 @@
           { label: 'On its way', num: true, cell: (c) => money(cents(c, 'pending_cents')) },
           { label: 'Held', num: true, cell: (c) => money(cents(c, 'held_cents')) },
           { label: 'Paid so far', num: true, cell: (c) => money(cents(c, 'paid_cents')) },
-          { label: '', cell: (c) => h('button', { class: 'cp-link', type: 'button', 'aria-pressed': String(c.id === balPick), onclick: () => { balPick = c.id === balPick ? null : c.id; render(); } }, c.id === balPick ? 'Close' : 'Change') },
+          { label: '', cell: (c) => h('button', { class: 'cp-link', type: 'button', 'aria-pressed': String(c.id === balPick), onclick: () => { balPick = c.id === balPick ? null : c.id; balJustPicked = balPick !== null; render(); } }, c.id === balPick ? 'Close' : 'Change') },
         ],
         bal.list,
         'No creators yet.',
@@ -2318,6 +2319,16 @@
         h('span', { class: 'cp-muted' }, `Cashable ${money(cents(picked, 'available_cents'))} · On its way ${money(cents(picked, 'pending_cents'))} · Held ${money(cents(picked, 'held_cents'))}`),
         h('div', { class: 'cp-form mr-bal' }, h('div', { class: 'cp-form__row' }, action, part, amount), reason, note, h('div', {}, apply)),
       );
+      /*
+       * The form sits above the list, and the page is brought to it. Under a
+       * list of forty creators it opened two screens below the button that
+       * was pressed, which looked like nothing had happened.
+       */
+      if (balJustPicked) {
+        balJustPicked = false;
+        const card = form;
+        requestAnimationFrame(() => { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); amount.focus({ preventScroll: true }); });
+      }
     }
 
     const log = section(
@@ -2336,7 +2347,7 @@
         'No changes yet.',
       ),
     );
-    return [list, form, log];
+    return [form, list, log];
   }
 
   /* -------------------------------------------------------------- settings */
