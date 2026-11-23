@@ -1532,3 +1532,18 @@ a.mr-handle:hover { color: var(--mr-accent); }
 /* Admin > Balances: the change form. */
 .mr-bal { display: grid; gap: 0.6rem; max-width: 46rem; }
 .mr-bal .cp-input[hidden] { display: none; }
+
+/* Admin > Announcements: the form and the list. */
+.mr-ann { max-width: 46rem; }
+.mr-ann textarea.cp-input { resize: vertical; min-height: 7rem; }
+.mr-ann__cell { display: grid; gap: 0.15rem; max-width: 34rem; }
+.mr-ann__cell small { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Creator dashboard: announcements from the team, closable one by one. */
+.mr-notes { display: grid; gap: 0.6rem; }
+.mr-note { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.9rem 0.6rem 0.9rem 1.1rem; border: 1px solid var(--mr-accent); border-radius: 1rem; background: var(--mr-accent-soft); color: var(--ink); }
+.mr-note__text { display: grid; gap: 0.25rem; flex: 1; min-width: 0; }
+.mr-note__text p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; color: var(--ink-soft); }
+.mr-note__close { flex: none; width: 2.75rem; height: 2.75rem; margin: -0.45rem 0; border: 0; border-radius: 50%; background: none; color: var(--ink-soft); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.mr-note__close:hover { background: rgba(23, 26, 31, 0.08); color: var(--ink); }
+.mr-note__close:focus-visible { outline: 2px solid var(--mr-accent); outline-offset: 2px; }

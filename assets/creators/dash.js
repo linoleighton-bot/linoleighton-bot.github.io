@@ -91,7 +91,7 @@
   let liveData = null;
   async function load(quiet = false) {
     try {
-      const [data, brief, team, picture, discordName, boost, added, adminNow] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false), cp.rpc('is_creator_admin').catch(() => false)]);
+      const [data, brief, team, picture, discordName, boost, added, adminNow, notes] = await Promise.all([cp.rpc('creator_dashboard'), cp.rpc('creator_brief').catch(() => null), cp.rpc('creator_manager_dashboard').catch(() => null), cp.rpc('creator_my_picture').catch(() => null), cp.rpc('creator_my_discord').catch(() => null), cp.rpc('creator_first_video').catch(() => null), cp.rpc('creator_my_addition').catch(() => false), cp.rpc('is_creator_admin').catch(() => false), cp.rpc('creator_my_announcements').catch(() => null)]);
       isAdmin = adminNow === true;
       /* A manager is a creator too: their first sign-in makes their own creator page, then loads it. */
       if (team && data && !data.creator && !cp.demo && !joinTried) { joinTried = true; if ((await cp.rpc('creator_manager_join').catch(() => null)) === 'joined') return load(quiet); }
@@ -100,7 +100,7 @@
       if (team && !data?.creator) team.discord_name = discordName;
       /* The team added this email: they are let in as soon as they add their account, even when applications are closed. */
       if (data && !data.creator && added === true) { data.added = true; data.applications_open = true; if (!applyDraft.added) { applyDraft.added = true; applyDraft.step = 3; } }
-      if (data) { data.brief = brief || null; data.team = team || null; data.first_video = keepBoost(boost); }
+      if (data) { data.brief = brief || null; data.team = team || null; data.first_video = keepBoost(boost); data.announcements = Array.isArray(notes) ? notes.filter((a) => !closedNotes.has(a.id)) : []; }
       const stamp = JSON.stringify(data);
       const apply = () => {
         const countOf = (d) => { try { return d?.creator?.status === 'active' && d.creator.terms_accepted !== false ? feedOf(d).length : null; } catch { return null; } };
@@ -546,6 +546,27 @@
     return h('section', { class: 'mr-panel mr-earn' }, h('div', { class: 'mr-panel__head' }, h('h2', {}, 'Bonuses you can earn'), h('span', {}, pill(`${data.creator.champion ? 'Champion' : tier?.name || 'Iron'} rates`, 'good'))), h('ul', { class: 'mr-earn__list' }, rows), h('p', { class: 'cp-muted cp-small' }, climb ? `${climb} ` : '', h('button', { class: 'cp-link', type: 'button', onclick: () => openPane('pay') }, 'See what every rank pays')));
   }
 
+  /*
+   * Announcements from the team, above every page of the dashboard until the
+   * creator closes them. Closing is remembered by the database, per creator,
+   * so it holds on every device. The text is shown as plain text.
+   */
+  const closedNotes = new Set();
+  function announcementBar(data) {
+    const list = data.announcements || [];
+    if (!list.length) return null;
+    return h('div', { class: 'mr-notes', role: 'region', 'aria-label': 'Announcements' }, list.map((a) => {
+      const close = h('button', { class: 'mr-note__close', type: 'button', 'aria-label': `Dismiss: ${a.title}` }, '\u00d7');
+      close.addEventListener('click', () => {
+        closedNotes.add(a.id);
+        data.announcements = list.filter((x) => x.id !== a.id);
+        renderDashboard(data);
+        if (!cp.demo) cp.rpc('creator_dismiss_announcement', { p_id: a.id }).catch(() => {});
+      });
+      return h('article', { class: 'mr-note' }, h('div', { class: 'mr-note__text' }, h('b', {}, a.title), a.body ? h('p', {}, a.body) : null), close);
+    }));
+  }
+
   /* The wallet opens once the creator has a video in the program (waiting for review counts). */
   function walletLock() {
     return h('section', { class: 'mr-lock' }, h('span', { class: 'mr-lock__icon', 'aria-hidden': 'true' }, '\u{1F512}'), h('h2', {}, 'Post your first video to unlock your wallet'), h('p', {}, 'Your wallet opens as soon as your first video is in. Anything you earn before then is kept safe and shows up here the moment it unlocks.'), h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openPane('videos') }, 'Post my first video'));
@@ -733,7 +754,7 @@
     const nav = h('nav', { class: 'mr-side', 'aria-label': mode === 'manager' ? 'Manager dashboard' : 'Your dashboard' }, panes.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'data-star': id === 'brief' || (id === 'start' && !(data.videos || []).length) || null, 'data-glow': id === 'connect' || null, 'aria-current': id === pane ? 'page' : null, onclick: () => openPane(id) }, icon(glyph), h('span', {}, label), id === 'start' && !(data.videos || []).length ? h('em', {}, 'New') : id === 'brief' ? h('em', {}, 'Read first') : count[id] ? h('b', {}, String(count[id])) : null)));
     const bellButton = pane === 'alerts' ? null : h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: () => openPane('alerts') }, icon('bell'), count.alerts ? h('b', {}, String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('div', { class: 'mr-head__who' }, creator.avatar_url ? cp.avatar({ ...creator, tier_level: data.incentives?.tier_level }, 'lg') : null, h('h1', {}, pane === 'home' ? `Hi, ${creator.display_name}` : panes.find(([id]) => id === pane)[1])), h('div', { class: 'mr-head__tools' }, cp.viewSwitch(views, mode), mode === 'manager' ? null : bellButton));
-    show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
+    show(h('div', { class: 'mr-shell', 'data-tour': tourStep !== null || null }, nav, h('div', { class: 'mr-main' }, head, tourStep === null ? announcementBar(data) : null, ...[body].flat().filter(Boolean))), tourStep !== null ? tourCard(data) : null);
     cp.tabbar({ label: mode === 'manager' ? 'Manager dashboard' : 'Your dashboard', items: panes.map(([id, label, glyph]) => [id, label, glyph, count[id], id === 'brief' ? 'Read first' : null]), main: mode === 'manager' ? panes.slice(0, 4).map(([id]) => id) : panes.some(([id]) => id === 'start') && !(data.videos || []).length ? ['start', 'home', 'videos', 'wallet'] : ['home', 'videos', 'wallet', 'campaigns'], current: pane, open: openPane, icon });
     cp.live.drawn();
   }
@@ -2004,6 +2025,7 @@
           top: [{ place: 1, name: 'Noor', score: 3 }, { place: 2, name: 'Maya', score: 2, you: true }, { place: 3, name: 'Theo Studies', score: 1 }],
           videos: [{ id: 'v4', title: 'POV: you finally remember what you read #Mindroll', views: 3100, approved: true }, { id: 'v5', title: 'Stop highlighting. Do this instead #Mindroll', views: 1840, approved: true }, { id: 'v6', title: 'Day 1 of reading 5 minutes #Mindroll', views: 420, approved: false }], results: [] },
       ],
+      announcements: [{ id: 'a1', title: 'Payouts now go out every Friday', body: 'Cash out any day as before. The money is sent on the Friday after you ask.', created_at: ago(1) }],
       first_video: { state: 'open', started_at: new Date(Date.now() - 0.6 * 36e5).toISOString(), ends_at: new Date(Date.now() + 23.4 * 36e5).toISOString(), hours: 24, multiplier: 2, cap_cents: 100000, sale_days: 7, step_views: 50000, step_cents: 5000, video: null, earned_cents: 0 },
       team: {
         manager: { id: 'm1', display_name: 'Maya\'s team', code: 'maya_team', active: true, cut_rate: 0.5 },

@@ -28,6 +28,7 @@
     users: 'M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM21 19v-1a4 4 0 0 0-3-3.9M15.5 3.2a3.5 3.5 0 0 1 0 6.6',
     play: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm5 4.5v7l6-3.5z',
     flag: 'M5 21V4h11l-2 4 2 4H5',
+    megaphone: 'M4 10v4h3l8 4V6l-8 4H4zm3 4v5h3v-3.7M18 9.5a4 4 0 0 1 0 5',
     trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4m-4 3h8',
     chart: 'M4 20V10m6 10V4m6 16v-7m5 7H2',
     wallet: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zm13 7h.01',
@@ -60,6 +61,12 @@
     if (!TABS.includes(BALANCES)) TABS.splice(TABS.findIndex(([id]) => id === 'payouts') + 1, 0, BALANCES);
     if (location.hash === '#balances') tab = 'balances';
   }
+  /* Announcements: the same idea. The page appears once the database has the table. */
+  const ANNOUNCE = ['announcements', 'Announcements', 'megaphone'];
+  function openAnnouncements() {
+    if (!TABS.includes(ANNOUNCE)) TABS.splice(TABS.findIndex(([id]) => id === 'alerts') + 1, 0, ANNOUNCE);
+    if (location.hash === '#announcements') tab = 'announcements';
+  }
   /* The funnel card: which creator (null = all) and which page's steps it shows. */
   let funnelCreator = null;
   let funnelPath = null;
@@ -82,6 +89,7 @@
     setWho(user.email || 'Signed in');
     const { data: isAdmin } = await db.rpc('is_creator_admin');
     if (isAdmin) db.rpc('creator_balance_admin').then(({ data, error }) => { if (!error && data === true) { openBalances(); if (state) render(); } }, () => {});
+    if (isAdmin) db.from('creator_announcements').select('id').limit(1).then(({ error }) => { if (!error) { openAnnouncements(); if (state) render(); } }, () => {});
     if (!isAdmin) {
       view.replaceChildren(h('div', { class: 'cp-card cp-narrow' }, h('h1', {}, 'Access denied.'), h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => db.auth.signOut() }, 'Sign out')));
       return;
@@ -171,7 +179,7 @@
       payouts: state.creators.filter((c) => c.cashout_requested_at).length,
     };
     const nav = h('nav', { class: 'mr-side', 'aria-label': 'Admin' }, TABS.map(([id, label, glyph]) => h('button', { class: 'mr-nav', type: 'button', 'aria-current': id === tab ? 'page' : null, onclick: go(id) }, icon(glyph), h('span', {}, label), count[id] ? h('b', {}, count[id] > 99 ? '99+' : String(count[id])) : null)));
-    const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, balances: balancesTab, settings }[tab]();
+    const body = { overview: home, alerts, creators, links: linksTab, referrals: referralsTab, managers: managersTab, brief: briefTab, rankings, campaigns, videos, revenue, bonuses, payouts, balances: balancesTab, announcements: announcementsTab, settings }[tab]();
     cp.root.dataset.help = helpOn() ? 'on' : 'off';
     const bellButton = h('button', { class: 'mr-bell', type: 'button', 'aria-label': `Notifications${count.alerts ? `, ${count.alerts} new` : ''}`, onclick: go('alerts') }, icon('bell'), count.alerts ? h('b', {}, count.alerts > 99 ? '99+' : String(count.alerts)) : null);
     const head = h('header', { class: 'mr-head' }, h('h1', {}, TABS.find(([id]) => id === tab)[1]), h('div', { class: 'mr-head__tools' }, cp.viewSwitch([['creator', 'Creator', () => location.assign(cp.demo ? '/creators/?demo' : '/creators/')], ['manager', 'Manager', () => location.assign(cp.demo ? '/creators/?demo#team' : '/creators/#team')], ['admin', 'Admin', null]], 'admin'), helpButton(), tab === 'alerts' ? null : bellButton));
@@ -2207,6 +2215,119 @@
     );
   }
 
+  /* --------------------------------------------------------- announcements */
+
+  /*
+   * Notes for every active creator. Each one sits at the top of their
+   * dashboard until that creator closes it. Admins write straight to the
+   * table and the database lets nobody else. The text being typed is kept out
+   * here, so a redraw never loses it.
+   */
+  const ANN_TITLE = 120;
+  const ANN_BODY = 2000;
+  let ann = null;
+  let annError = null;
+  let annLoading = false;
+  let annDraft = null;
+  let annJustOpened = false;
+
+  async function loadAnnouncements() {
+    annLoading = true;
+    try {
+      ann = (await ok(db.from('creator_announcements').select('id, title, body, active, created_at, updated_at').order('created_at', { ascending: false }))) || [];
+      annError = null;
+    } catch (e) {
+      annError = e.message || 'Could not load the announcements.';
+    }
+    annLoading = false;
+    render();
+  }
+
+  function announcementsTab() {
+    if (cp.demo && !ann) ann = [];
+    if (annError) return section('Announcements', null, h('p', { class: 'cp-bad' }, annError), h('div', {}, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => { annError = null; render(); } }, 'Try again')));
+    if (!ann) { if (!annLoading) loadAnnouncements(); return section('Announcements', null, h('p', { class: 'cp-muted' }, 'Loading…')); }
+
+    const open = (a) => { annDraft = a ? { id: a.id, title: a.title, body: a.body, active: a.active } : { id: null, title: '', body: '', active: true }; annJustOpened = true; render(); };
+    const when = (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+    let form = null;
+    if (annDraft) {
+      const d = annDraft;
+      const title = h('input', { class: 'cp-input', type: 'text', maxlength: String(ANN_TITLE), autocomplete: 'off', placeholder: 'Title, for example: Payouts move to Fridays', 'aria-label': 'Title', oninput: () => { d.title = title.value; } });
+      title.value = d.title;
+      const left = h('small', { class: 'cp-hint' });
+      const count = () => { left.textContent = `${ANN_BODY - body.value.length} characters left. Links are shown as plain text.`; };
+      const body = h('textarea', { class: 'cp-input', rows: '5', maxlength: String(ANN_BODY), placeholder: 'What creators should know (optional)', 'aria-label': 'Message', oninput: () => { d.body = body.value; count(); } });
+      body.value = d.body;
+      count();
+      const live = h('input', { type: 'checkbox', onchange: () => { d.active = live.checked; label(); } });
+      live.checked = d.active;
+      const save = h('button', { class: 'btn btn--primary btn--sm', type: 'button' });
+      const label = () => { save.textContent = d.active ? (d.id ? 'Save and show to creators' : 'Publish to creators') : 'Save as a draft'; };
+      label();
+      save.addEventListener('click', act(save, async () => {
+        const row = { title: d.title.trim(), body: d.body.trim(), active: d.active };
+        if (!row.title) throw new Error('Give it a title.');
+        if (cp.demo) {
+          const now = new Date().toISOString();
+          if (d.id) Object.assign(ann.find((a) => a.id === d.id), row, { updated_at: now });
+          else ann.unshift({ id: `a${Date.now()}`, ...row, created_at: now, updated_at: now });
+          toast('Saved. (Sample data: nothing was saved.)');
+          annDraft = null;
+          return render();
+        }
+        const saved = await ok(d.id ? db.from('creator_announcements').update(row).eq('id', d.id).select('id') : db.from('creator_announcements').insert(row).select('id'));
+        if (!saved || !saved.length) throw new Error('That announcement no longer exists. Close this and look at the list again.');
+        toast(row.active ? 'Saved. Creators see it on their dashboard.' : 'Saved as a draft. Creators do not see it.');
+        annDraft = null;
+        ann = null;
+        render();
+      }));
+      const cancel = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => { annDraft = null; render(); } }, 'Cancel');
+      form = section(
+        d.id ? 'Edit announcement' : 'New announcement',
+        null,
+        h('div', { class: 'cp-form mr-ann' }, title, body, left, h('label', { class: 'cp-check' }, live, 'Show to creators'), h('small', { class: 'cp-hint' }, d.id ? 'Creators who already closed this announcement will not see it again. To reach everyone again, write a new one.' : 'Every active creator sees it at the top of their dashboard until they close it.'), h('div', { class: 'cp-inline' }, save, cancel)),
+      );
+      if (annJustOpened) {
+        annJustOpened = false;
+        const card = form;
+        requestAnimationFrame(() => { card.scrollIntoView({ block: 'center', behavior: 'smooth' }); title.focus({ preventScroll: true }); });
+      }
+    }
+
+    const list = section(
+      'Announcements',
+      annDraft ? null : h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => open(null) }, 'New announcement'),
+      table(
+        [
+          { label: 'Announcement', cell: (a) => h('span', { class: 'mr-ann__cell' }, h('b', {}, a.title), a.body ? h('small', { class: 'cp-muted' }, a.body.length > 140 ? `${a.body.slice(0, 140)}…` : a.body) : null) },
+          { label: 'Status', cell: (a) => pill(a.active ? 'Showing' : 'Draft', a.active ? 'good' : null) },
+          { label: 'Written', cell: (a) => when(a.created_at) },
+          { label: '', cell: (a) => h('span', { class: 'cp-inline' },
+            h('button', { class: 'cp-link', type: 'button', onclick: () => open(a) }, 'Edit'),
+            confirmButton(a.active ? 'Hide' : 'Show', a.active ? 'Confirm: hide from creators' : 'Confirm: show to creators', 'cp-link', async () => {
+              if (cp.demo) { a.active = !a.active; toast('Changed. (Sample data: nothing was saved.)'); return render(); }
+              await ok(db.from('creator_announcements').update({ active: !a.active }).eq('id', a.id));
+              toast(a.active ? 'Hidden from creators.' : 'Creators see it now.');
+              ann = null;
+              render();
+            }),
+            confirmButton('Delete', 'Confirm: delete for good', 'cp-link', async () => {
+              if (cp.demo) { ann = ann.filter((x) => x !== a); toast('Deleted. (Sample data: nothing was saved.)'); }
+              else { await ok(db.from('creator_announcements').delete().eq('id', a.id)); toast('Deleted.'); ann = null; }
+              if (annDraft && annDraft.id === a.id) annDraft = null;
+              render();
+            })) },
+        ],
+        ann,
+        'No announcements yet.',
+      ),
+    );
+    return [form, list];
+  }
+
   /* -------------------------------------------------------------- balances */
 
   /*
@@ -2661,6 +2782,7 @@
     setWho('Sample data');
     state = demoState();
     openBalances();
+    openAnnouncements();
     render();
   } else if (!db) {
     view.replaceChildren(h('p', { class: 'cp-empty' }, 'This page could not load. Please refresh.'));
