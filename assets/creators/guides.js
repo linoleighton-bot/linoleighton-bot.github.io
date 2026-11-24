@@ -398,6 +398,7 @@
     const hero = sec('mr-welcome__hero',
       h('p', { class: 'mr-guide__eyebrow' }, 'Start here'),
       h('h2', {}, `Welcome in${creator.display_name ? `, ${creator.display_name}` : ''}.`),
+      videos ? null : h('p', {}, h('b', {}, 'You are accepted, so you can start now. '), 'Post your first video today. There is no start date to wait for.'),
       h('div', { class: 'mr-wl-hero__stack', 'aria-hidden': 'true' }, [hasViews ? ['views', 'Views'] : null, hasBase ? ['base', 'Base'] : null, ['sale', 'Commission']].filter(Boolean).map(([k, label], i) => h('span', { 'data-lane': k, style: `--i:${i}` }, label))),
       h('div', { class: 'mr-welcome__cta' },
         h('button', { class: 'btn btn--primary', type: 'button', onclick: go(editor) }, editor === 'make' ? 'Make my first video' : 'Start my first video'),

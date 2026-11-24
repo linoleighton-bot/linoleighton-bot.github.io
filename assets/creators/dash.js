@@ -157,7 +157,7 @@
           h(
             'ol',
             { class: 'cp-steps' },
-            h('li', {}, h('b', {}, 'Join'), 'Four quick questions and your TikTok or Instagram. Takes a minute.'),
+            h('li', {}, h('b', {}, 'Join'), 'Four quick questions and your TikTok or Instagram. Takes a minute. You can start posting the day you are accepted.'),
             h('li', {}, h('b', {}, 'Post'), 'Put #Mindroll in the caption and your link in your bio. Your videos show up here by themselves.'),
             h('li', {}, h('b', {}, 'Get paid'), 'Commission and bonuses are paid to you by PayPal, Venmo or Zelle.'),
           ),
@@ -309,7 +309,7 @@
 
   function renderWaiting(creator, previewNote) {
     const COPY = {
-      pending: ['You are all set', 'Your accounts have gone to the Mindroll team. This page becomes your dashboard as soon as we approve you.'],
+      pending: ['Your application is in', 'The Mindroll team is checking your accounts now. You can start the moment you are accepted: there is no start date and nothing else to do first.'],
       rejected: ['Your application was not accepted', 'You are not in the Mindroll creator program. Email us if you think this is a mistake.'],
       paused: ['Your creator account is paused', 'Email us if you think this is a mistake.'],
     };
@@ -317,7 +317,7 @@
     COPY.removed = ['You no longer have access', 'Your place in the Mindroll creator program has ended, so this dashboard is closed. Email us if you think this is a mistake.'];
     const [title, body] = COPY[creator.status === 'rejected' && creator.terms_accepted ? 'removed' : creator.status] || COPY.pending;
     show(
-      h('div', { class: 'cp-card cp-narrow' }, statusPill(creator.status), h('h1', {}, title), h('p', { class: 'cp-muted' }, body), previewNote && h('p', { class: 'cp-hint' }, previewNote), previewNote && h('p', {}, h('a', { class: 'btn btn--primary btn--sm', href: '/creators/?dashboard' }, 'See the dashboard after approval')), h('p', { class: 'cp-muted' }, 'Questions? ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))),
+      h('div', { class: 'cp-card cp-narrow' }, statusPill(creator.status), h('h1', {}, title), h('p', { class: 'cp-muted' }, body), creator.status === 'pending' ? h('p', {}, h('b', {}, 'How you will know: '), 'this page turns into your dashboard by itself the moment you are accepted. Come back here to check. You do not need to wait for a message from us.') : null, previewNote && h('p', { class: 'cp-hint' }, previewNote), previewNote && h('p', {}, h('a', { class: 'btn btn--primary btn--sm', href: '/creators/?dashboard' }, 'See the dashboard after approval')), h('p', { class: 'cp-muted' }, 'Questions? ', h('a', { href: 'mailto:teammindroll@gmail.com' }, 'teammindroll@gmail.com'))),
     );
     /*
      * Email the team. The function sends once per application, so calling it
@@ -350,7 +350,7 @@
         { class: 'cp-card cp-narrow cp-terms' },
         h('p', { class: 'cp-eyebrow' }, 'You are in'),
         h('h1', {}, 'Creator terms'),
-        h('p', { class: 'cp-muted' }, 'One page. Read it, accept it, and your dashboard opens.'),
+        h('p', { class: 'cp-muted' }, 'You are accepted and can start today. One page first: read it, accept it, and your dashboard opens.'),
         h('div', { class: 'cp-terms__text' }, String(data.settings?.terms_text || '').split(/\n\s*\n/).map((para) => h('p', {}, para))),
         h('label', { class: 'cp-check' }, agree, 'I have read and agree to these terms'),
         accept,
