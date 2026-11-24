@@ -784,7 +784,7 @@
         { class: 'cp-how' },
         step(1, 'Post about Mindroll', accounts.length ? `From ${accounts.join(' or ')}.` : 'From the account you linked.'),
         step(2, `Put ${tag} in the caption`, 'That is how we find the video. It shows up here by itself, and a video without the tag does not count.', h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, tag), copyButton(tag, 'Copy'))),
-        step(3, 'Share your link', 'Put it in your bio. Everyone who subscribes through it earns you commission.', h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link, 'Copy'))),
+        step(3, 'Share your link', 'Put it in your bio and in every caption. It is short enough to say out loud and to show on screen. Everyone who subscribes through it earns you commission.', h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, link.replace('https://', '')), copyButton(link, 'Copy'))),
         creator.handle_verified === false ? step(4, 'Show us the account is yours', 'Add this to your bio until we have checked it. You can take it out afterwards.', h('div', { class: 'cp-copyrow' }, h('code', { class: 'cp-mono' }, `mindroll-${creator.code}`), copyButton(`mindroll-${creator.code}`, 'Copy'))) : null,
       ),
     );
