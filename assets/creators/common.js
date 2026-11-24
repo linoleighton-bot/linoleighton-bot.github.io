@@ -1090,8 +1090,23 @@
     );
   }
 
+  /*
+   * A creator's link. getmindroll.com/code is resolved by the site's 404 page,
+   * which forwards to /start/?ref=code, so the short form only works for a
+   * code the 404 page accepts: the creator-code rule in ref.js, and not the
+   * name of a real page. Anything else keeps the long form. The list is the
+   * skip list in /404.html; change both together.
+   */
+  const LINK_TAKEN = ['app', 'account', 'admin', 'pro', 'start', 'start2', 'renew', 'creators', 'terms', 'privacy', 'support', 'assets', 'index', 'home', 'login', 'signin', 'signup', 'pricing', 'plans', 'blog', 'about', 'contact', 'help', 'faq', 'download', 'robots', 'sitemap'];
+  const creatorLink = (code, tag) => {
+    const c = String(code || '').toLowerCase();
+    const short = /^[a-z0-9_]{3,24}$/.test(c) && !LINK_TAKEN.includes(c);
+    if (short) return `https://getmindroll.com/${c}${tag ? `?v=${tag}` : ''}`;
+    return `https://getmindroll.com/start/?ref=${code}${tag ? `&v=${tag}` : ''}`;
+  };
+
   window.mindrollCreators = {
-    root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM,
+    root, client, demo, empty, loadEmpty, h, money, num, compact, pct, day, safeUrl, PLATFORM, creatorLink,
     toast, fn, rpc, act, confirmButton, signInPanel, pill, statusPill, tile, table, section,
     COLOR, segbar, hbars, timeChart, milestones, ladder, dollars, KINDS, fold, figure,
     /* Where an uploaded reference video is served from. */

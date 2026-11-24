@@ -772,7 +772,7 @@
   function howCard(data) {
     const { creator } = data;
     const tag = tagOf(data);
-    const link = `https://getmindroll.com/start/?ref=${creator.code}`;
+    const link = cp.creatorLink(creator.code);
     const accounts = accountsOf(creator);
     const step = (n, title, body, extra) => h('li', { class: 'cp-how__step' }, h('span', { class: 'cp-how__n', 'aria-hidden': 'true' }, String(n)), h('div', {}, h('b', {}, title), h('p', { class: 'cp-muted cp-small' }, body), extra));
     return h(
@@ -1180,7 +1180,7 @@
       return b;
     };
     const block = (eyebrow, title, ...body) => h('section', { class: 'mr-panel mr-brief' }, h('p', { class: 'mr-brief__eyebrow' }, eyebrow), h('h2', {}, title), ...body);
-    const link = `https://getmindroll.com/start/?ref=${data.creator.code}`;
+    const link = cp.creatorLink(data.creator.code);
     const ex = brief.examples || {}, ctas = brief.ctas || {}, assets = brief.assets || {}, must = brief.must || {}, tips = cp.briefTips(brief) || {};
     const videos = cp.briefVideos(brief);
     /* One platform's instructions: which platform, the one thing to do, then the detail. */
@@ -1358,7 +1358,7 @@
     const { creator } = data;
     const links = data.links || [];
     const clean = (value) => value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24);
-    const linkOf = (tag) => `https://getmindroll.com/start/?ref=${creator.code}${tag ? `&v=${tag}` : ''}`;
+    const linkOf = (tag) => cp.creatorLink(creator.code, tag);
     const input = h('input', { class: 'cp-input', placeholder: 'Name it, e.g. morning-hook', maxlength: '24', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Name for the link' });
     const out = h('code', { class: 'cp-mono' }, linkOf('').replace('https://', ''));
     const copy = h('button', { class: 'btn btn--ghost btn--sm', type: 'button' }, 'Copy');
